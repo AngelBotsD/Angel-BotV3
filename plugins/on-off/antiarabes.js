@@ -4,67 +4,66 @@ import { sticker } from '../lib/sticker.js'
 let handler = m => m
 
 handler.all = async function (m, { conn }) {
-  let user = global.db.data.users[m.sender]
   let chat = global.db.data.chats[m.chat]
+  if (!chat || chat.isBanned || !chat.autoresponder) return true
+  if (m.fromMe) return true
 
-const res = await fetch(`${kirito}/media/images/87411733_k.jpg`);
-  const thumb2 = Buffer.from(await res.arrayBuffer());
-const userJid = m.sender;
+  m.isBot = (
+    m.id?.startsWith('BAE5') && m.id.length === 16 ||
+    m.id?.startsWith('3EB0') && [12,20,22].includes(m.id.length) ||
+    m.id?.startsWith('B24E') && m.id.length === 20
+  )
+  if (m.isBot) return true
 
-  const fkontak = {
-    key: { fromMe: false, participant: userJid },
-    message: {
-      imageMessage: {
-        mimetype: 'image/jpeg',
-        caption: '𝗥𝗘𝗦𝗣𝗨𝗘𝗦𝗧𝗔 > 𝗕𝗢𝗧',
-        jpegThumbnail: thumb2
-      }
-    }
-  };
+  let text = (m.text || '').trim()
+  if (!text) return true
 
-  m.isBot = m.id.startsWith('BAE5') && m.id.length === 16 
-          || m.id.startsWith('3EB0') && (m.id.length === 12 || m.id.length === 20 || m.id.length === 22) 
-          || m.id.startsWith('B24E') && m.id.length === 20
-  if (m.isBot) return 
-
-  let prefixRegex = new RegExp('^[' + (opts?.prefix || '‎z/i!#$%+£¢€¥^°=¶∆×÷π√✓©®:;?&.,\\-').replace(/[|\\{}()[\]^$+*?.\-\^]/g, '\\$&') + ']')
-  if (prefixRegex.test(m.text)) return true
+  let prefixRegex = new RegExp('^[' + (opts?.prefix || '‎z/i!#$%+£¢€¥^°=¶∆×÷π√✓©®:;?&.,\\-')
+    .replace(/[|\\{}()[\]^$+*?.\-\^]/g, '\\$&') + ']')
+  if (prefixRegex.test(text)) return true
 
   if (m.sender?.toLowerCase().includes('bot')) return true
 
-  if (!chat.isBanned && chat.autoresponder) {
-    if (m.fromMe) return
+  const botJid = this.user.jid
 
-    let query = m.text || ''
-    let username = m.pushName || 'Usuario'
+  const isReplyToBot =
+    m.quoted &&
+    (m.quoted.sender === botJid || m.quoted.fromMe)
 
-    let isOrBot = /bot/i.test(query)
-    let isReply = m.quoted && m.quoted.sender === this.user.jid
-        let isMention = m.mentionedJid && m.mentionedJid.includes(this.user.jid) 
+  const isMentionBot =
+    m.mentionedJid &&
+    m.mentionedJid.includes(botJid)
 
-    if (!(isOrBot || isReply || isMention)) return
+  const isCallingBot =
+    /\b(bot|angel bot|ángel bot)\b/i.test(text)
 
-    await this.sendPresenceUpdate('composing', m.chat)
+  if (!(isReplyToBot || isMentionBot || isCallingBot)) return true
 
-    let txtDefault = `
-Eres ${botname}, una inteligencia artificial avanzada creada por ${etiqueta} para WhatsApp. Tu propósito es brindar respuestas claras, pero con una actitud empática y comprensiva.
+  await this.sendPresenceUpdate('composing', m.chat)
+
+  let username = m.pushName || 'Usuario'
+
+  let txtDefault = `
+Eres ${botname}, una inteligencia artificial avanzada creada por ${etiqueta} para WhatsApp.
+Responde de forma clara, natural y amigable.
 `.trim()
 
-    let logic = chat.sAutoresponder ? chat.sAutoresponder : txtDefault
+  let logic = chat.sAutoresponder || txtDefault
 
-    try {
-      const apiUrl = `https://g-mini-ia.vercel.app/api/mode-ia?prompt=${encodeURIComponent(query)}&id=${encodeURIComponent(username)}&logic=${encodeURIComponent(logic)}`
-      const res = await fetch(apiUrl)
-      const data = await res.json()
-      let result = data.result || data.answer || data.response || null
-      if (result && result.trim().length > 0) {
-        await this.reply(m.chat, result, fkontak, rcanal)
-      }
-    } catch (e) {
-      console.error(e)
-      await this.reply(m.chat, '⚠️ Ocurrió un error con la IA.', m)
-    }
+  try {
+    const apiUrl = `https://g-mini-ia.vercel.app/api/mode-ia?prompt=${encodeURIComponent(text)}&id=${encodeURIComponent(username)}&logic=${encodeURIComponent(logic)}`
+    const res = await fetch(apiUrl)
+    const data = await res.json()
+
+    let result = data.result || data.answer || data.response
+    if (!result) return true
+
+    await this.reply(m.chat, result.trim(), m, rcanal)
+  } catch (e) {
+    console.error(e)
+    await this.reply(m.chat, '⚠️ Error al responder con la IA.', m)
   }
+
   return true
 }
 
