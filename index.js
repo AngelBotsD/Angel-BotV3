@@ -51,13 +51,13 @@ global.wa = {
 }
 
 let { say } = cfonts
-console.log(chalk.magentaBright('\nIniciando MaycolPlus...'))
-say('𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍', {
+console.log(chalk.magentaBright('\nMejor Bot Do Momento Start...'))
+say('Angel Bot', {
 font: 'block',
 align: 'center',
 gradient: ['grey', 'white']
 })
-say('𝖧𝖾𝖼𝗁𝗈 𝖸 𝖮𝗉𝗍𝗂𝗆𝗂𝗓𝖺𝖽𝗈 𝖯𝗈𝗋 𝖠𝗇𝗀𝖾𝗅.𝗑𝗒𝗓', {
+say('Hecho Y Optimizado Por Angel.xyz', {
 font: 'console',
 align: 'center',
 colors: ['cyan', 'magenta', 'yellow']
