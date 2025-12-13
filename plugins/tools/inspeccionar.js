@@ -399,4 +399,96 @@ try {
 const chtitle = await conn.newsletterMetadata(ch.includes("@newsletter") ? "jid" : "invite", ch.includes("@newsletter") ? ch : channelUrl).then(data => data.name).catch(e => null)
 await conn.newsletterReactionMode(ch, mode)
 // await conn.reply(m.chat, `${emoji} El bot ha establecido el modo de reacciones como \`"${mode}"\` para el canal *${chtitle}*`, m)
-await conn.sendMessage(ch, { text: `${emoji} ${botname} ha establecido el modo de reacciones como \`"${mode}"\` para el canal *${c
+await conn.sendMessage(ch, { text: `${emoji} ${botname} ha establecido el modo de reacciones como \`"${mode}"\` para el canal *${chtitle}*`, contextInfo: {
+externalAdReply: {
+title: "【 🔔 𝐍𝐎𝐓𝐈𝐅𝐈𝐂𝐀𝐂𝐈𝐎́𝐍 🔔 】",
+body: '👑 𝙰𝚓𝚞𝚜𝚝𝚎𝚜 𝚎𝚗 𝚛𝚎𝚊𝚌𝚌𝚒𝚘𝚗𝚎𝚜.',
+thumbnailUrl: icono,
+sourceUrl: redes,
+mediaType: 1,
+showAdAttribution: false,
+renderLargerThumbnail: false
+}}}, { quoted: null })
+} catch (e) {
+reportError(e)
+}
+break
+
+// Modificar nombre del canal
+case isCommand10:
+if (!isOwner || !isROwner) return await conn.reply(m.chat, `${emoji2} No tienes permiso para usar este comando.`, m)
+if (!text) return await conn.reply(m.chat, `${emoji} Ingrese el ID o enlace de un canal de WhatsApp para que el bot modifique el nombre del canal.*\n\n
+*Parámetros de uso:
+*${usedPrefix + command}* \`id\` \`nombre\` 
+
+Ejemplo de uso:
+*${usedPrefix + command}* 12345@newsletter NombreDelcanal\n\nPuede obtener el ID usando el comando:\n*${usedPrefix}superinspect* enlace${txtBotAdminCh}`, m)
+const [id, ...nameParts] = text.split(' ')
+const name = nameParts.join(' ').trim()
+if (name.length > 99) return await conn.reply(m.chat, `${emoji2} El nombre del canal no puede tener más de 99 caracteres.`, m)
+if (text.includes("@newsletter")) {
+ch = id.trim()
+} else {
+ch = await conn.newsletterMetadata("invite", channelUrl).then(data => data.id).catch(e => null)
+}       
+try {
+const chtitle = await conn.newsletterMetadata(text.includes("@newsletter") ? "jid" : "invite", text.includes("@newsletter") ? ch : channelUrl).then(data => data.name).catch(e => null)
+await conn.newsletterUpdateName(ch, name)
+// await conn.reply(m.chat, `${emoji} El bot ha cambiado el nombre del canal *${name}*\n\n*Anterior nombre:* ${chtitle}\n*Nuevo nombre:* ${name}`, m) 
+await conn.sendMessage(ch, { text: `${emoji} ${botname} ha cambiado el nombre del canal *${name}*\n\n*Anterior nombre:* ${chtitle}\n*Nuevo nombre:* ${name}`, contextInfo: {
+externalAdReply: {
+title: "【 🔔 𝐍𝐎𝐓𝐈𝐅𝐈𝐂𝐀𝐂𝐈𝐎́𝐍 🔔 】",
+body: '👑 𝚄𝚗 𝚗𝚞𝚎𝚟𝚘 𝚗𝚘𝚖𝚋𝚛𝚎 𝚙𝚊𝚛𝚊 𝚎𝚕 𝚌𝚊𝚗𝚊𝚕.',
+thumbnailUrl: icono,
+sourceUrl: redes,
+mediaType: 1,
+showAdAttribution: false,
+renderLargerThumbnail: false
+}}}, { quoted: null })
+} catch (e) {
+reportError(e)
+}
+break
+
+// Modificar la descripción del canal
+case isCommand11:
+if (!isOwner || !isROwner) return await conn.reply(m.chat, `${emoji2} No tienes permiso para usar este comando.`, m)
+if (!text) return await conn.reply(m.chat, `${emoji} Ingrese el ID o enlace de un canal de WhatsApp para que el bot modifique la descripción del canal.\n\n
+Parámetros de uso:
+*${usedPrefix + command}* \`id\` \`descripción\` 
+
+Ejemplo de uso:
+*${usedPrefix + command}* 12345@newsletter DescripciónDelcanal\n\n*Puede obtener el ID usando el comando:*\n*${usedPrefix}superinspect* enlace${txtBotAdminCh}`, m)
+const [idch, ...descriptionParts] = text.split(' ')
+const description = descriptionParts.join(' ').trim()
+if (text.includes("@newsletter")) {
+ch = idch.trim()
+} else {
+ch = await conn.newsletterMetadata("invite", channelUrl).then(data => data.id).catch(e => null)
+}       
+try {
+const chtitle = await conn.newsletterMetadata(text.includes("@newsletter") ? "jid" : "invite", text.includes("@newsletter") ? ch : channelUrl).then(data => data.name).catch(e => null)
+await conn.newsletterUpdateDescription(ch, description)
+// await conn.reply(m.chat, `${emoji} El bot ha modificado la descripción del canal *${chtitle}*`, m) 
+await conn.sendMessage(ch, { text: `${emoji} ${botname} ha modificado la descripción del canal *${chtitle}*`, contextInfo: {
+externalAdReply: {
+title: "【 🔔 𝐍𝐎𝐓𝐈𝐅𝐈𝐂𝐀𝐂𝐈𝐎́𝐍 🔔 】",
+body: '👑 𝚄𝚗𝚊 𝚗𝚞𝚎𝚟𝚊 𝚍𝚎𝚜𝚌𝚛𝚒𝚙𝚌𝚒𝚘́𝚗 𝚊𝚕 𝚌𝚊𝚗𝚊𝚕.',
+thumbnailUrl: icono,
+sourceUrl: redes,
+mediaType: 1,
+showAdAttribution: false,
+renderLargerThumbnail: false
+}}}, { quoted: null })
+} catch (e) {
+reportError(e)
+}
+break
+
+//const channels = _.values(conn.chats).filter(c => c.id && c.id.endsWith("@newsletter"))
+
+}}
+handler.tags = ['tools']
+handler.help = ['nuevafotochannel', 'nosilenciarcanal', 'silenciarcanal', 'noseguircanal', 'seguircanal', 'avisoschannel', 'resiviravisos', 'inspect', 'inspeccionar', 'eliminarfotochannel', 'reactioneschannel', 'reaccioneschannel', 'nuevonombrecanal', 'nuevadescchannel']
+handler.command = ['nuevafotochannel', 'nosilenciarcanal', 'silenciarcanal', 'noseguircanal', 'seguircanal', 'avisoschannel', 'resiviravisos', 'inspect', 'inspeccionar', 'eliminarfotochannel', 'reactioneschannel', 'reaccioneschannel', 'nuevonombrecanal', 'nuevadescchannel']
+export default handler 
