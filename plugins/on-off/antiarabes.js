@@ -1,7 +1,7 @@
 let handler = m => m;
 
 handler.before = async function (m, { conn }) {
-  const prefijosProhibidos = ['91', '92', '222', '93', '265', '61', '62', '966', '229', '40', '49', '20', '963', '967', '234', '210', '249', '212'];
+  const prefijosProhibidos = ['91', '92', '222', '93', '234', '265', '61', '62', '966', '229', '40', '49', '20', '963', '967', '234', '210', '249', '212'];
 
   // SOLUCIÓN: Usar 'conn.user.jid' porque el handler ahora lo garantiza al pasar 'conn: this'.
   // Si conn.user no existiera, la condición se salta y evita el crash.
