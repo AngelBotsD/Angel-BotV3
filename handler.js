@@ -199,20 +199,19 @@ console.error(err)
 
 if (typeof plugin !== "function") continue
 
-const strRegex = str => str.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&")
+const strRegex = (str) => str.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&")
 const pluginPrefix = plugin.customPrefix || this.prefix || global.prefix
-const match = (
-pluginPrefix instanceof RegExp ? 
+const match = (pluginPrefix instanceof RegExp ?
 [[pluginPrefix.exec(m.text), pluginPrefix]] :
 Array.isArray(pluginPrefix) ?
-pluginPrefix.map(p => {
-const regex = p instanceof RegExp ? p : new RegExp(strRegex(p))
+pluginPrefix.map(prefix => {
+const regex = prefix instanceof RegExp ?
+prefix : new RegExp(strRegex(prefix))
 return [regex.exec(m.text), regex]
-}) :
-typeof pluginPrefix === "string" ?
+}) : typeof pluginPrefix === "string" ?
 [[new RegExp(strRegex(pluginPrefix)).exec(m.text), new RegExp(strRegex(pluginPrefix))]] :
-[]
-).find(p => p[1])
+[[[], new RegExp]]
+).find(prefix => prefix[1])
 
 if (!match) continue
 
