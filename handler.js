@@ -8,7 +8,12 @@ import fetch from "node-fetch"
 import ws from "ws"
 
 const strRegex = str => str.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&")
-const ___dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), "plugins")
+
+const ___dirname = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "plugins"
+)
+
 const isNumber = x => typeof x === "number" && !isNaN(x)
 const delay = ms => isNumber(ms) && new Promise(r => setTimeout(r, ms))
 
@@ -28,7 +33,7 @@ export async function handler(chatUpdate) {
   if (!msgId) return
   if (global.processedMessages.has(msgId)) return
   global.processedMessages.add(msgId)
-  setTimeout(() => global.processedMessages.delete(msgId), 15000)
+  setTimeout(() => global.processedMessages.delete(msgId), 60000)
 
   if (m.key.fromMe) return
   if (global.db.data == null) await global.loadDatabase()
@@ -43,11 +48,21 @@ export async function handler(chatUpdate) {
 
       if (user) {
         if (!("name" in user)) user.name = m.name
+        if (!("genre" in user)) user.genre = ""
+        if (!("birth" in user)) user.birth = ""
+        if (!("marry" in user)) user.marry = ""
+        if (!("description" in user)) user.description = ""
+        if (!("packstickers" in user)) user.packstickers = null
         if (!("premium" in user)) user.premium = false
         if (!("banned" in user)) user.banned = false
         if (!("bannedReason" in user)) user.bannedReason = ""
       } else global.db.data.users[m.sender] = {
         name: m.name,
+        genre: "",
+        birth: "",
+        marry: "",
+        description: "",
+        packstickers: null,
         premium: false,
         banned: false,
         bannedReason: ""
@@ -84,11 +99,15 @@ export async function handler(chatUpdate) {
       if (settings) {
         if (!("self" in settings)) settings.self = false
         if (!("restrict" in settings)) settings.restrict = true
+        if (!("jadibotmd" in settings)) settings.jadibotmd = true
         if (!("antiPrivate" in settings)) settings.antiPrivate = false
+        if (!("gponly" in settings)) settings.gponly = false
       } else global.db.data.settings[this.user.jid] = {
         self: false,
         restrict: true,
-        antiPrivate: false
+        jadibotmd: true,
+        antiPrivate: false,
+        gponly: false
       }
     } catch (e) {
       console.error(e)
@@ -115,9 +134,16 @@ export async function handler(chatUpdate) {
 
     if (settings.self && !isOwners) return
 
+    if (
+      settings.gponly &&
+      !isOwners &&
+      !m.chat.endsWith("g.us") &&
+      !/code|p|ping|qr|estado|status|infobot|botinfo|report|reportar|invite|join|logout|suggest|help|menu/gim.test(m.text)
+    ) return
+
     if (opts["queque"] && m.text && !isPrems) {
       const queque = this.msgqueque
-      const time = 1000 * 15
+      const time = 1000 * 5
       const previousID = queque[queque.length - 1]
       queque.push(m.id || m.key.id)
 
@@ -129,8 +155,6 @@ export async function handler(chatUpdate) {
 
     if (m.isBaileys) return
 
-    const isCommand = typeof m.text === "string" && m.text.length > 0
-
     let usedPrefix
     let groupMetadata = {}
     let participants = []
@@ -140,19 +164,23 @@ export async function handler(chatUpdate) {
     let isAdmin = false
     let isBotAdmin = false
 
-    if (m.isGroup && (isCommand || m.mentionedJid?.length)) {
+    if (m.isGroup) {
       try {
         global.groupCache ||= new Map()
-        let cached = global.groupCache.get(m.chat)
+        const cached = global.groupCache.get(m.chat)
 
-        if (!cached || (Date.now() - cached.time > 15000)) {
-          cached = { data: await this.groupMetadata(m.chat), time: Date.now() }
-          global.groupCache.set(m.chat, cached)
+        if (cached && Date.now() - cached.time < 60000) {
+          groupMetadata = cached.data
+        } else {
+          groupMetadata = await this.groupMetadata(m.chat)
+          global.groupCache.set(m.chat, { data: groupMetadata, time: Date.now() })
+          if (global.groupCache.size > 200) {
+            const firstKey = global.groupCache.keys().next().value
+            global.groupCache.delete(firstKey)
+          }
         }
 
-        groupMetadata = cached.data
         participants = groupMetadata.participants || []
-
         const userParticipant = participants.find(p => p.id === m.sender)
         isRAdmin = userParticipant?.admin === "superadmin" || m.sender === groupMetadata.owner
         isAdmin = isRAdmin || userParticipant?.admin === "admin"
@@ -167,13 +195,14 @@ export async function handler(chatUpdate) {
       }
     }
 
-    if (m.quoted) {
-      Object.defineProperty(m, "_quoted", {
-        value: smsg(this, m.quoted),
-        enumerable: false,
-        configurable: true
-      })
-    }
+if (m.quoted) {
+  Object.defineProperty(m, '_quoted', {
+    value: smsg(this, m.quoted),
+    enumerable: false,
+    configurable: true
+  })
+}
+    const isCommand = typeof m.text === "string" && m.text.length > 0
 
     for (const name in global.plugins) {
       const plugin = global.plugins[name]
@@ -183,7 +212,7 @@ export async function handler(chatUpdate) {
 
       const __filename = join(___dirname, name)
 
-      if (typeof plugin.all === "function" && !isCommand) {
+      if (typeof plugin.all === "function") {
         try {
           await plugin.all.call(this, m, {
             chatUpdate,
@@ -201,13 +230,18 @@ export async function handler(chatUpdate) {
       if (!opts["restrict"])
         if (plugin.tags && plugin.tags.includes("admin")) continue
 
-      // ===========================
-      // Prefijo fijo "."
-      // ===========================
-      const prefix = "."
-      const match = m.text.startsWith(prefix)
-        ? [[m.text.slice(prefix.length).split(" ")[0], prefix]]
-        : [[[], null]]
+      const pluginPrefix = plugin.customPrefix || conn.prefix || global.prefix
+      const match = (pluginPrefix instanceof RegExp
+        ? [[pluginPrefix.exec(m.text), pluginPrefix]]
+        : Array.isArray(pluginPrefix)
+          ? pluginPrefix.map(prefix => {
+              const regex = prefix instanceof RegExp ? prefix : new RegExp(strRegex(prefix))
+              return [regex.exec(m.text), regex]
+            })
+          : typeof pluginPrefix === "string"
+            ? [[new RegExp(strRegex(pluginPrefix)).exec(m.text), new RegExp(strRegex(pluginPrefix))]]
+            : [[[], new RegExp]]
+      ).find(prefix => prefix[1])
 
       if (typeof plugin.before === "function") {
         if (await plugin.before.call(this, m, {
@@ -234,8 +268,8 @@ export async function handler(chatUpdate) {
 
       if (typeof plugin !== "function") continue
 
-      if ((usedPrefix = (match[0] || "")[1] || "")) {
-        const noPrefix = m.text.slice(usedPrefix.length)
+      if ((usedPrefix = (match[0] || "")[0])) {
+        const noPrefix = m.text.replace(usedPrefix, "")
         let [command, ...args] = noPrefix.trim().split(" ").filter(v => v)
         let _args = noPrefix.trim().split(" ").slice(1)
         let text = _args.join(" ")
@@ -321,7 +355,6 @@ export async function handler(chatUpdate) {
             chat,
             settings
           })
-          break
         } catch (err) {
           m.error = err
           console.error(err)
@@ -345,24 +378,17 @@ export async function handler(chatUpdate) {
   }
 }
 
-// Listener para limpiar cache cuando alguien sale/entra o cambian admins
-export function initGroupListener(conn) {
-  conn.ev.on('group-participants.update', update => {
-    if (global.groupCache?.has(update.id)) global.groupCache.delete(update.id)
-  })
-}
-
 global.dfail = (type, m, conn) => {
   const msg = {
     rowner: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋*`,
     owner: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋*`,
-    mods: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝗋 𝖽𝖾𝗌𝖺𝗋𝗋𝗈𝗅𝗅𝖺𝖽𝗈𝗋𝖾𝗌 𝖮𝖿𝗂𝖼𝗂𝗮𝗅𝖾𝗌*`,
+    mods: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝗋 𝖽𝖾𝗌𝖺𝗋𝗋𝗈𝗅𝗅𝖺𝖽𝗈𝗋𝖾𝗌 𝖮𝖿𝗂𝖼𝗂𝖺𝗅𝖾𝗌*`,
     premium: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖫𝗈 𝖯𝗎𝖾𝖽𝖾𝗇 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝗋 𝖴𝗌𝗎𝖺𝗋𝗂𝗈𝗌 𝖯𝗋𝖾𝗆𝗂𝗎𝗆*`,
     group: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖥𝗎𝗇𝖼𝗂𝗈𝗇𝖺 𝖤𝗇 𝖦𝗋𝗎𝗉𝗈𝗌*`,
     private: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖲𝖾 𝖯𝗎𝖾𝖽𝖾 𝖮𝖼𝗎𝗉𝖺𝗋 𝖤𝗇 𝖤𝗅 𝖯𝗋𝗂𝗏𝖺𝖽𝗈 𝖣𝖾𝗅 𝖡𝗈𝗍*`,
     admin: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖠𝖽𝗆𝗂𝗇𝗂𝗌𝗍𝗋𝖺𝖽𝗈𝗋𝖾𝗌*`,
     botAdmin: `*𝖭𝖾𝖼𝖾𝗌𝗂𝗍𝗈 𝗌𝖾𝗋 𝖠𝖽𝗆𝗂𝗇 𝖯𝖺𝗋𝖺 𝖴𝗌𝖺𝗋 𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈*`,
-    unreg: `*𝖭𝗈 𝖤𝗌𝖺𝗌 𝖱𝖾𝗀𝗂𝗌𝗍𝗋𝖺𝖽𝗈, 𝖴𝗌𝖺 .𝗋𝖾𝗀 (𝗇𝖺𝗆𝖾) 19*`,
+    unreg: `*𝖭𝗈 𝖤𝗌𝗍𝖺𝗌 𝖱𝖾𝗀𝗂𝗌𝗍𝗋𝖺𝖽𝗈, 𝖴𝗌𝖺 .𝗋𝖾𝗀 (𝗇𝖺𝗆𝖾) 19*`,
     restrict: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖠𝗁 𝖲𝗂𝖽𝗈 𝖣𝖾𝗌𝖺𝖻𝗂𝗅𝗂𝗍𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋*`
   }[type]
 
