@@ -92,7 +92,7 @@ const handler = async (m, { conn, args, isOwner, isAdmin }) => {
   )
 }
 
-handler.command = ["addco"]
+handler.command = ["add"]
 handler.tags = ["tools"]
 handler.help = ["addco <comando>"]
 
