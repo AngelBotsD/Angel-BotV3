@@ -1,10 +1,8 @@
-// plugins/kick.js
 import fs from "fs";
 import path from "path";
 
 const DIGITS = (s = "") => String(s || "").replace(/\D/g, "");
 
-/** Busca un participante por dígitos (coincide por p.id o p.jid) */
 function findParticipantByDigits(parts = [], digits = "") {
   if (!digits) return null;
   return parts.find(
@@ -17,7 +15,6 @@ const handler = async (msg, { conn }) => {
   const isGroup  = chatId.endsWith("@g.us");
   const isFromMe = !!msg.key.fromMe;
 
-  // autor (puede venir @lid). Si tu index ya define msg.realJid, úsalo para el número
   const senderRaw = msg.key.participant || msg.key.remoteJid;
   const senderNum = DIGITS(
     typeof msg.realJid === "string" ? msg.realJid : senderRaw
@@ -32,7 +29,6 @@ const handler = async (msg, { conn }) => {
     return;
   }
 
-  // owners y bot
   const ownerPath = path.resolve("owner.json");
   const owners = fs.existsSync(ownerPath)
     ? JSON.parse(fs.readFileSync(ownerPath, "utf-8"))
@@ -76,18 +72,33 @@ const handler = async (msg, { conn }) => {
     return;
   }
 
-  // Obtener mencionados o citado
-  const ctx = msg.message?.extendedTextMessage?.contextInfo || {};
-  const mentioned = Array.isArray(ctx.mentionedJid) ? ctx.mentionedJid : [];
-  const quotedJid = ctx.participant || null;
+  let targetDigits = new Set();
+  const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+  if (Array.isArray(ctx.mentionedJid)) {
+    for (const j of ctx.mentionedJid) targetDigits.add(DIGITS(j))
+  }
 
-  // Construir candidatos (por dígitos), de-duplicados
-  const targetDigits = new Set(
-    [
-      ...mentioned.map(j => DIGITS(j)),
-      quotedJid ? DIGITS(quotedJid) : ""
-    ].filter(Boolean)
-  );
+  const quoted = ctx.quotedMessage
+  if (quoted) {
+    const st = quoted.stickerMessage
+    if (st) {
+      const jsonPath = "./comandos.json"
+      if (fs.existsSync(jsonPath)) {
+        const map = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}")
+        const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
+        let hash
+        if (Buffer.isBuffer(rawSha)) hash = rawSha.toString("base64")
+        else if (ArrayBuffer.isView(rawSha)) hash = Buffer.from(rawSha).toString("base64")
+        else hash = rawSha.toString()
+        if (map[hash] === ".kick") {
+          const userQuoted = quoted.contextInfo?.participant
+          if (userQuoted) targetDigits.add(DIGITS(userQuoted))
+        }
+      }
+    } else if (quoted.participant) {
+      targetDigits.add(DIGITS(quoted.participant))
+    }
+  }
 
   if (targetDigits.size === 0) {
     await conn.sendMessage(
@@ -122,7 +133,6 @@ const handler = async (msg, { conn }) => {
     }
 
     const targetGroupId = targetP.id || targetP.jid;
-
     const isTargetAdmin =
       targetP.admin === "admin" || targetP.admin === "superadmin";
     const isTargetOwner =
