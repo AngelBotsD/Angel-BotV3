@@ -7,13 +7,12 @@
 "scripts": {
 "start": "node index.js"
 },
-  "author": "Angel",
-  "license": "ISC",
-  "engines": { "node": ">=18.17" },
-  "dependencies": {
-    "@whiskeysockets/baileys": "github:ds6/buils",
-    "awesome-phonenumber": "^5.10.0",
-    "axios": "^0.24.0",
+"author": "Angel",
+"engines": { "node": ">=18.17" },
+"dependencies": {
+"@whiskeysockets/baileys": "github:ds6/buils",
+"awesome-phonenumber": "^5.10.0",
+"axios": "^0.24.0",
     "boxen": "^7.1.1",
     "cfonts": "^2.10.0",
     "ytdl-core": "^4.11.4",
@@ -46,6 +45,7 @@
     "syntax-error": "^1.4.0",
     "qrcode-terminal": "^0.12.0",
     "util": "^0.12.4",
+    "node-fetch": "^3.2.0",
     "yargs": "^17.3.1",
     "better-sqlite3": "^8.5.3",
     "sharp": "^0.32.6"
