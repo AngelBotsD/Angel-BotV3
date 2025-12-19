@@ -1,42 +1,89 @@
-import fs from 'fs';
-import path from 'path';
+import fs from "fs"
+import path from "path"
 
-const jsonPath = path.resolve('./comandos.json');
+const handler = async (msg, { conn, args }) => {
+  const chatId = msg.key.remoteJid
+  const isGroup = chatId.endsWith("@g.us")
+  const senderId = msg.key.participant || msg.key.remoteJid
+  const senderNum = senderId.replace(/[^0-9]/g, "")
+  const isOwner = global.owner.some(([id]) => id === senderNum)
+  const isFromMe = msg.key.fromMe
 
-function getStickerHash(st) {
-  const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash;
-  if (!rawSha) return null;
-  if (Buffer.isBuffer(rawSha)) return rawSha.toString('base64');
-  if (ArrayBuffer.isView(rawSha)) return Buffer.from(rawSha).toString('base64');
-  return rawSha.toString();
+  if (isGroup && !isOwner && !isFromMe) {
+    const metadata = await conn.groupMetadata(chatId)
+    const participant = metadata.participants.find(p => p.id === senderId)
+    const isAdmin = participant?.admin === "admin" || participant?.admin === "superadmin"
+
+    if (!isAdmin) {
+      return conn.sendMessage(
+        chatId,
+        { text: "🚫 *Solo los administradores, el owner o el bot pueden usar este comando.*" },
+        { quoted: msg }
+      )
+    }
+  } else if (!isGroup && !isOwner && !isFromMe) {
+    return conn.sendMessage(
+      chatId,
+      { text: "🚫 *Solo el owner o el mismo bot pueden usar este comando en privado.*" },
+      { quoted: msg }
+    )
+  }
+
+  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage
+  if (!quoted?.stickerMessage) {
+    return conn.sendMessage(
+      chatId,
+      { text: "❌ *Responde a un sticker para asignarle un comando.*" },
+      { quoted: msg }
+    )
+  }
+
+  const comando = args.join(" ").trim()
+  if (!comando) {
+    return conn.sendMessage(
+      chatId,
+      { text: "⚠️ *Especifica el comando a asignar. Ejemplo:* addco kick" },
+      { quoted: msg }
+    )
+  }
+
+  const fileSha = quoted.stickerMessage.fileSha256?.toString("base64")
+  if (!fileSha) {
+    return conn.sendMessage(
+      chatId,
+      { text: "❌ *No se pudo obtener el ID único del sticker.*" },
+      { quoted: msg }
+    )
+  }
+
+  const dataDir = process.cwd()
+  const jsonPath = path.join(dataDir, "comandos.json")
+
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true })
+  }
+
+  if (!fs.existsSync(jsonPath)) {
+    fs.writeFileSync(jsonPath, "{}")
+  }
+
+  const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}")
+
+  data[fileSha] = comando
+  fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2))
+
+  await conn.sendMessage(chatId, {
+    react: { text: "✅", key: msg.key }
+  })
+
+  return conn.sendMessage(chatId, {
+    text: `✅ *Sticker vinculado al comando con exito:* \`${comando}\``,
+    quoted: msg
+  })
 }
 
-async function handler(m, { conn }) {
-  const st = m.message?.stickerMessage || m.message?.ephemeralMessage?.message?.stickerMessage;
-  if (!st) return conn.sendMessage(m.chat, { text: '❌ Responde a un sticker para asignarle un comando.' }, { quoted: m });
+handler.command = ["addco"]
+handler.tags = ["tools"]
+handler.help = ["addco <comando>"]
 
-  const text = m.text?.trim();
-  if (!text) return conn.sendMessage(m.chat, { text: '❌ Indica el comando a asociar. Ejemplo: .addco .kick' }, { quoted: m });
-
-  if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}');
-  const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}');
-
-  const hash = getStickerHash(st);
-  if (!hash) return conn.sendMessage(m.chat, { text: '❌ No se pudo obtener el hash del sticker.' }, { quoted: m });
-
-  const newCommand = text.startsWith('.') ? text : '.' + text;
-  if (map[hash]) return conn.sendMessage(m.chat, { text: `⚠️ Este sticker ya está vinculado al comando: ${map[hash]}` }, { quoted: m });
-
-  map[hash] = newCommand;
-  fs.writeFileSync(jsonPath, JSON.stringify(map, null, 2));
-
-  return conn.sendMessage(m.chat, { text: `✅ Sticker vinculado al comando: ${map[hash]}` }, { quoted: m });
-}
-
-// Ahora sí, propiedades estilo handler
-handler.command = /^(addco)$/i;
-handler.group = true;
-handler.admin = true;
-handler.rowner = true;
-
-export default handler;
+export default handler
