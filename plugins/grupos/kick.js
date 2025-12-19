@@ -37,6 +37,6 @@ export async function handler(m, { conn }) {
   return conn.sendMessage(m.chat, { text: `✅ Sticker vinculado al comando: ${map[hash]}` }, { quoted: m });
 }
 
-handler.command = ['addco'];
+handler.command = ['add'];
 handler.rowner = true; // solo el dueño del bot puede usarlo
 export default handler;
