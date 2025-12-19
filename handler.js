@@ -125,50 +125,56 @@ console.error(e)
 
 if (typeof m.text !== "string") m.text = ""
 
+/* === STICKER → COMANDO GLOBAL === */
 try {
-  const st =
-    m.message?.stickerMessage ||
-    m.message?.ephemeralMessage?.message?.stickerMessage ||
-    m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
-    m.message?.ephemeralMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage
+  // Detectar sticker
+  const st = m.message?.stickerMessage || m.message?.ephemeralMessage?.message?.stickerMessage || null;
+  if (st) {
+    // Crear comandos.json si no existe
+    const jsonPath = './comandos.json';
+    if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}');
 
-  if (!st) return
+    // Leer JSON
+    const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}');
 
-  const body = m.text || ""
-  const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || "."
-  if (body.startsWith(pref)) return
+    // Generar posibles hashes del sticker
+    const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash;
+    const candidates = [];
+    if (rawSha) {
+      if (Buffer.isBuffer(rawSha)) {
+        candidates.push(rawSha.toString("base64"));
+      } else if (ArrayBuffer.isView(rawSha)) {
+        candidates.push(Buffer.from(rawSha).toString("base64"));
+      } else if (typeof rawSha === "string") {
+        candidates.push(rawSha);
+      }
+    }
 
-  const jsonPath = "./comandos.json"
-  if (!fs.existsSync(jsonPath)) return
+    // Buscar comando asociado
+    let mapped = null;
+    for (const k of candidates) {
+      if (map[k] && map[k].trim()) {
+        mapped = map[k].trim();
+        break;
+      }
+    }
 
-  const map = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}")
+    if (mapped) {
+      // Asegurar prefijo
+      const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || ".";
+      const injected = mapped.startsWith(pref) ? mapped : pref + mapped;
 
-  const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
-  if (!rawSha) return
+      // Inyectar como m.text para que el handler lo vea como comando
+      m.text = injected.toLowerCase();
 
-  const candidates = []
-  if (Buffer.isBuffer(rawSha)) candidates.push(rawSha.toString("base64"))
-  else if (ArrayBuffer.isView(rawSha)) candidates.push(Buffer.from(rawSha).toString("base64"))
-  else if (typeof rawSha === "string") candidates.push(rawSha)
-
-  let mapped = null
-  for (const k of candidates) {
-    if (map[k]?.trim()) {
-      mapped = map[k].trim()
-      break
+      // Debug
+      console.log("✅ Sticker detectado, comando inyectado:", m.text);
     }
   }
-
-  if (!mapped) return
-
-  const injected = mapped.startsWith(pref) ? mapped : pref + mapped
-  m.text = injected.toLowerCase()
-
-  console.log("✅ Sticker detectado → comando inyectado:", m.text)
-
 } catch (e) {
-  console.error("❌ Error Sticker→cmd:", e)
+  console.error("❌ Error Sticker→cmd:", e);
 }
+/* === FIN STICKER → COMANDO === */
 
 const user = global.db.data.users[m.sender]
 try {
