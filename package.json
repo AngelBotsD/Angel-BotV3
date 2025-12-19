@@ -38,6 +38,7 @@
     "moment-timezone": "^0.5.43",
     "mongoose": "^6.2.1",
     "yt-search": "^2.10.3",
+    "node-cache": "^5.1.2",
     "node-fetch": "2.x",
     "pino": "^8.14.1",
     "savetubedl": "^3.0.0",
