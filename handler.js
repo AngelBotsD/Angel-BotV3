@@ -124,49 +124,71 @@ console.error(e)
 }
 if (typeof m.text !== "string") m.text = ""
 
-/* === STICKER → COMANDO GLOBAL === */
+/* === STICKER → COMANDO (GLOBAL) usando ./comandos.json — para Suki === */
 try {
   const st =
     m.message?.stickerMessage ||
     m.message?.ephemeralMessage?.message?.stickerMessage ||
-    m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
     null;
 
   if (st && fs.existsSync("./comandos.json")) {
-    const map = JSON.parse(fs.readFileSync("./comandos.json", "utf-8") || "{}");
-
+    // 1) Generar CLAVES posibles para el sticker (base64 y "126,67,...")
     const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash;
-    let hash = null;
-    if (Buffer.isBuffer(rawSha)) hash = rawSha.toString("base64");
-    else if (ArrayBuffer.isView(rawSha)) hash = Buffer.from(rawSha).toString("base64");
-    else if (typeof rawSha === "string") hash = rawSha;
+    const candidates = [];
 
-    if (hash && map[hash]) {
-      let mapped = map[hash].trim();
-      const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || ".";
-      if (!mapped.startsWith(pref)) mapped = pref + mapped;
-
-      // Inyectar el texto del comando
-      m.text = mapped.toLowerCase();
-
-      // Si el sticker es respuesta a un mensaje, añadir automáticamente al target
-      const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-      if (quoted) {
-        m.message.extendedTextMessage = {
-          text: mapped,
-          contextInfo: {
-            quotedMessage: quoted,
-            participant: m.message?.extendedTextMessage?.contextInfo?.participant || null,
-            remoteJid: m.key.remoteJid,
-            mentionedJid: []
-          }
-        };
+    if (rawSha) {
+      if (Buffer.isBuffer(rawSha)) {
+        candidates.push(rawSha.toString("base64"));              // base64 (Buffer)
+        candidates.push(Array.from(rawSha).toString());          // "126,67,..."
+      } else if (ArrayBuffer.isView(rawSha)) { // Uint8Array, etc.
+        const buf = Buffer.from(rawSha);
+        candidates.push(buf.toString("base64"));
+        candidates.push(Array.from(rawSha).toString());
+      } else if (typeof rawSha === "string") {
+        candidates.push(rawSha); // ya viene como string
       }
+    }
 
-      // Marcas internas opcionales para depuración
+    // 2) Buscar comando en ./comandos.json probando todas las claves
+    let mapped = null;
+    const map = JSON.parse(fs.readFileSync("./comandos.json", "utf-8") || "{}") || {};
+    for (const k of candidates) {
+      if (k && typeof map[k] === "string" && map[k].trim()) {
+        mapped = map[k].trim();
+        break;
+      }
+    }
+
+    if (mapped) {
+      // 3) Asegurar prefijo si el comando se guardó sin prefijo
+      const ensurePrefixed = (t) => {
+        const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || ".";
+        return (Array.isArray(global.prefixes) && global.prefixes.some(p => t.startsWith(p)))
+          ? t
+          : (pref + t);
+      };
+      const injectedText = ensurePrefixed(mapped);
+
+      // 4) Inyectar el "texto" del comando en el mensaje
+      //    (agregamos extendedTextMessage PERO conservamos stickerMessage para que otras lógicas sigan viéndolo como sticker)
+      const ctx = st.contextInfo || {};
+      m.message.extendedTextMessage = {
+        text: injectedText,
+        contextInfo: {
+          quotedMessage: ctx.quotedMessage || null,
+          participant: ctx.participant || null,
+          stanzaId: ctx.stanzaId || "",
+          remoteJid: ctx.remoteJid || m.key.remoteJid,
+          mentionedJid: Array.isArray(ctx.mentionedJid) ? ctx.mentionedJid : []
+        }
+      };
+
+      // 5) Actualizar el buffer de texto que usa el parser de comandos
+      messageContent = injectedText;
+
+      // (Opcional) marcas de depuración
       m._stickerCmdInjected = true;
-      m._stickerCmdText = mapped;
-      console.log("✅ Sticker detectado → comando inyectado:", m.text);
+      m._stickerCmdText = injectedText;
     }
   }
 } catch (e) {
