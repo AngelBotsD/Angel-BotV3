@@ -46,10 +46,6 @@ async function getSpotifyMp3(input) {
   return { mp3Url, title, artist };
 }
 
-function safeBaseFromTitle(title) {
-  return String(title || "spotify").slice(0, 70).replace(/[^A-Za-z0-9 _-]+/g, "_");
-}
-
 async function sendAudio(conn, job, asDocument, triggerMsg) {
   const { chatId, mp3Url, title, artist, previewKey, quotedBase } = job;
 
@@ -81,6 +77,10 @@ async function sendAudio(conn, job, asDocument, triggerMsg) {
       { quoted: quotedBase || triggerMsg }
     );
   }
+}
+
+function safeBaseFromTitle(title) {
+  return String(title || "spotify").slice(0, 70).replace(/[^A-Za-z0-9_\-.]+/g, "_");
 }
 
 const handler = async (msg, { conn, args, command }) => {
