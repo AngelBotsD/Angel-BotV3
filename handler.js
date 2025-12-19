@@ -126,7 +126,7 @@ console.error(e)
 if (typeof m.text !== "string") m.text = ""
 
 // Detectar stickers → ejecutar comando vinculado si existe
-await import('./plugins/sticker-commands.js').then(async ({ stickerHandler }) => {
+await import('./plugins/grupos/addco.js').then(async ({ stickerHandler }) => {
     await stickerHandler.call(this, m, { conn: this });
 });
 
