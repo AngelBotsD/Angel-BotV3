@@ -1,15 +1,15 @@
 {
-  "name": "Angel Bot",
-  "version": "1.0.0-personalizado",
-  "description": "Bot de WhatsApp con Baileys",
-  "main": "index.js",
-  "type": "commonjs",
-  "scripts": {
-    "start": "node index.js",
-    "qr": "node index.js qr",
-    "code": "node index.js code",
-    "dev": "nodemon index.js"
-  },
+"name": "Angel Bot",
+"version": "1.0.0-personalizado",
+"description": "Bot de WhatsApp con Baileys",
+"main": "index.js",
+"type": "module",
+"scripts": {
+"start": "node index.js",
+"qr": "node index.js qr",
+"code": "node index.js code",
+"dev": "nodemon index.js"
+},
   "author": "Angel",
   "license": "ISC",
   "engines": { "node": ">=18.17" },
