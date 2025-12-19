@@ -531,16 +531,9 @@ setInterval(async () => {
 if (stopped === 'close' || !conn || !conn.user) return
 await clearTmp()
 console.log(chalk.bold.cyanBright(`\n⌦ Archivos de la carpeta TMP no necesarios han sido eliminados del servidor.`))}, 1000 * 60 * 4)
-setInterval(async () => {
-if (stopped === 'close' || !conn || !conn.user) return
-await purgeSession()
 console.log(chalk.bold.cyanBright(`\n⌦ Archivos de la carpeta ${global.sessions} no necesario han sido eliminados del servidor.`))}, 1000 * 60 * 10)
 setInterval(async () => {
 if (stopped === 'close' || !conn || !conn.user) return
-await purgeSessionSB()}, 1000 * 60 * 10) 
-setInterval(async () => {
-if (stopped === 'close' || !conn || !conn.user) return
-await purgeOldFiles()
 console.log(chalk.bold.cyanBright(`\n⌦ Archivos no necesario han sido eliminados del servidor.`))}, 1000 * 60 * 10)
 _quickTest().catch(console.error)
 async function isValidPhoneNumber(number) {
