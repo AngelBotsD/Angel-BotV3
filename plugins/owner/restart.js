@@ -22,5 +22,5 @@ const handler = async (msg, { conn }) => {
   setTimeout(() => process.exit(1), 3000);
 };
 
-handler.command = ["rest"];
+handler.command = ["rest", "restart"];
 export default handler;
