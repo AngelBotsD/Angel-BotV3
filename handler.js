@@ -153,10 +153,12 @@ try {
     // Buscar comando asociado
     let mapped = null;
     for (const k of candidates) {
-      if (map[k] && map[k].trim()) {
-        mapped = map[k].trim();
-        break;
-      }
+      if (map[k]) {
+  const data = map[k]
+  if (data.chat !== m.chat) break
+  mapped = data.command?.trim()
+  break
+}
     }
 
     if (mapped) {
