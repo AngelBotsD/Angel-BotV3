@@ -6,10 +6,13 @@ const API_URL = 'https://mayapi.ooguy.com/ai-pukamind'
 
 const handler = async (m, { conn }) => {
   try {
-    // ID del bot
-    const botJid = conn.user.id.split(':')[0] + '@s.whatsapp.net'
+    if (!m.message) return
 
-    // Mensajes de texto
+    // JID del bot
+    const botJid = conn.user.id.split(':')[0] + '@s.whatsapp.net'
+    const botNum = botJid.split('@')[0]
+
+    // Obtener texto real
     const text =
       m.text ||
       m.message?.conversation ||
@@ -18,27 +21,39 @@ const handler = async (m, { conn }) => {
 
     if (!text) return
 
-    // Verificar mención al bot
-    const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || []
-    if (!mentioned.includes(botJid)) return
+    // Detectar mención (COMPATIBLE ds6)
+    const mentionedJids =
+      m.message?.extendedTextMessage?.contextInfo?.mentionedJid || []
 
-    // Quitar la mención del texto
+    const isMentioned =
+      mentionedJids.includes(botJid) ||
+      text.includes(`@${botNum}`)
+
+    if (!isMentioned) return
+
+    // Limpiar texto quitando la mención
     const cleanText = text
-      .replace(new RegExp(`@${botJid.split('@')[0]}`, 'g'), '')
+      .replace(new RegExp(`@${botNum}`, 'g'), '')
       .trim()
 
-    if (!cleanText) return m.reply('👀 Mencióname y dime algo.')
+    if (!cleanText) {
+      return conn.sendMessage(
+        m.chat,
+        { text: '👀 Mencióname y dime algo.' },
+        { quoted: m }
+      )
+    }
 
-    // Llamada a la API
+    // Llamar API
     const url = `${API_URL}?q=${encodeURIComponent(cleanText)}&apikey=${API_KEY}`
     const res = await fetch(url)
     const json = await res.json()
 
-    if (!json.status) {
-      return m.reply('❌ Error al responder.')
+    if (!json.status || !json.result) {
+      return m.reply('❌ La IA no respondió.')
     }
 
-    // Responder mencionando al usuario
+    // Responder
     await conn.sendMessage(
       m.chat,
       {
@@ -48,12 +63,13 @@ const handler = async (m, { conn }) => {
       { quoted: m }
     )
 
-  } catch (e) {
-    console.error(e)
+  } catch (err) {
+    console.error('Angel IA error:', err)
   }
 }
 
+// 👇 ESTO ES CLAVE EN ESA BUILD
+handler.command = /.*/
 handler.customPrefix = /@/i
-handler.command = new RegExp('')
 
 export default handler
