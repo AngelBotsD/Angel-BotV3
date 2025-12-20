@@ -62,7 +62,6 @@ export async function handler(m, { conn }) {
 }
 
 handler.command = ['delco']
-handler.admin = true
-handler.owner = true
-
+handler.group = true;
+handler.admin = true;
 export default handler
