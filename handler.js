@@ -7,44 +7,77 @@ import chalk from "chalk"
 import fetch from "node-fetch"
 import ws from "ws"
 
-const isNumber = x => typeof x === "number" && !isNaN(x)
-const delay = ms => isNumber(ms) && new Promise(resolve => setTimeout(function () {
-clearTimeout(this)
-resolve()
-}, ms))
+export async function handler(chatUpdate) {
+  this.msgqueque = this.msgqueque || []
+  this.uptime = this.uptime || Date.now()
+  if (!chatUpdate) return
 
-} else global.db.data.chats[m.chat] = {
-isBanned: false,
-isMute: false,
-welcome: false,
-sWelcome: "",
-sBye: "",
-detect: true,
-primaryBot: null,
-modoadmin: false,
-antiLink: true,
-nsfw: false,
-economy: true,
-gacha: true
-}
-const settings = global.db.data.settings[this.user.jid]
-if (typeof settings !== "object") {
-global.db.data.settings[this.user.jid] = {}
-}
-if (settings) {
-if (!("self" in settings)) settings.self = false
-if (!("restrict" in settings)) settings.restrict = true
-if (!("jadibotmd" in settings)) settings.jadibotmd = true
-if (!("antiPrivate" in settings)) settings.antiPrivate = false
-if (!("gponly" in settings)) settings.gponly = false
-} else global.db.data.settings[this.user.jid] = {
-self: false,
-restrict: true,
-jadibotmd: true,
-antiPrivate: false,
-gponly: false
-}} catch (e) {
-console.error(e)
+  this.pushMessage(chatUpdate.messages).catch(console.error)
+  let m = chatUpdate.messages[chatUpdate.messages.length - 1]
+  if (!m) return
+
+  if (global.db.data == null) await global.loadDatabase()
+
+  try {
+    m = smsg(this, m) || m
+    if (!m) return
+
+    const user = global.db.data.users[m.sender]
+    if (typeof user !== "object") {
+      global.db.data.users[m.sender] = {}
+    }
+
+    const chat = global.db.data.chats[m.chat]
+    if (typeof chat !== "object") {
+      global.db.data.chats[m.chat] = {}
+    }
+
+    if (chat) {
+      if (!("isMute" in chat)) chat.isMute = false
+      if (!("welcome" in chat)) chat.welcome = false
+      if (!("sWelcome" in chat)) chat.sWelcome = ""
+      if (!("sBye" in chat)) chat.sBye = ""
+      if (!("detect" in chat)) chat.detect = true
+      if (!("primaryBot" in chat)) chat.primaryBot = null
+      if (!("modoadmin" in chat)) chat.modoadmin = false
+      if (!("antiLink" in chat)) chat.antiLink = true
+      if (!("nsfw" in chat)) chat.nsfw = false
+    } else {
+      global.db.data.chats[m.chat] = {
+        isMute: false,
+        welcome: false,
+        sWelcome: "",
+        sBye: "",
+        detect: true,
+        primaryBot: null,
+        modoadmin: false,
+        antiLink: true,
+        nsfw: false
+      }
+    }
+
+    const settings = global.db.data.settings[this.user.jid]
+    if (typeof settings !== "object") {
+      global.db.data.settings[this.user.jid] = {}
+    }
+
+    if (settings) {
+      if (!("self" in settings)) settings.self = false
+      if (!("restrict" in settings)) settings.restrict = true
+      if (!("antiPrivate" in settings)) settings.antiPrivate = false
+      if (!("gponly" in settings)) settings.gponly = false
+    } else {
+      global.db.data.settings[this.user.jid] = {
+        self: false,
+        restrict: true,
+        antiPrivate: false,
+        gponly: false
+      }
+    }
+
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 if (typeof m.text !== "string") m.text = ""
