@@ -1,4 +1,5 @@
 import axios from "axios"
+import { Sticker } from "wa-sticker-formatter"
 
 const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
 const API_KEY = global.APIKeys.may || ""
@@ -18,28 +19,29 @@ const handler = async (m, { conn, text }) => {
 
   try {
     const res = await axios.get(`${API_BASE}/brat`, {
-      params: { text, apikey: API_KEY },
-      timeout: 30000,
-      validateStatus: () => true
+      params: { text, apikey: API_KEY }
     })
 
-    const data = res.data
-    if (data?.status !== true) throw data?.message || "Error API"
+    if (!res.data?.status) throw "Error API"
 
-    const img = data?.result?.url
-    if (!img) throw "Sticker no disponible"
+    const imgUrl = res.data.result.url
 
-    // ⬇️ descargar imagen
-    const imgBuff = await axios.get(img, {
+    const img = await axios.get(imgUrl, {
       responseType: "arraybuffer"
     })
 
-    // ⬇️ enviar como sticker real
+    const sticker = new Sticker(img.data, {
+      type: "full",
+      pack: "Angel Bot",
+      author: "Angxl/333",
+      quality: 100
+    })
+
+    const stickerBuffer = await sticker.toBuffer()
+
     await conn.sendMessage(
       m.chat,
-      {
-        sticker: imgBuff.data
-      },
+      { sticker: stickerBuffer },
       { quoted: m }
     )
 
@@ -56,8 +58,5 @@ const handler = async (m, { conn, text }) => {
   }
 }
 
-handler.help = ["brat <texto>"]
-handler.tags = ["maker"]
 handler.command = ["brat"]
-
 export default handler
