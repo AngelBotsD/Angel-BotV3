@@ -1,7 +1,6 @@
 import axios from "axios";
 
 const handler = async (m, { conn, text }) => {
-  // Si no hay texto, tomar el del mensaje citado
   if (!text && m.quoted?.text) text = m.quoted.text;
   if (!text) {
     return conn.sendMessage(
@@ -25,15 +24,16 @@ const handler = async (m, { conn, text }) => {
       { headers: { apikey: API_KEY } }
     );
 
-    // Verificar que la API devolvió URL
-    if (!r.data?.url) {
+    // Verificar que la API devolvió image_url
+    const stickerUrl = r.data?.data?.image_url;
+    if (!stickerUrl) {
       throw new Error("La API no devolvió la URL del sticker");
     }
 
     // Enviar sticker
     await conn.sendMessage(
       m.chat,
-      { sticker: { url: r.data.url }, ...global.rcanal },
+      { sticker: { url: stickerUrl }, ...global.rcanal },
       { quoted: m }
     );
 
@@ -42,9 +42,7 @@ const handler = async (m, { conn, text }) => {
 
   } catch (e) {
     console.error(e);
-    // Reacción de error
     await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
-    // Mensaje de error seguro
     return conn.sendMessage(
       m.chat,
       { text: `Ocurrió un error al generar el sticker.\n\n💡 Razón: ${e.message}`, ...global.rcanal },
