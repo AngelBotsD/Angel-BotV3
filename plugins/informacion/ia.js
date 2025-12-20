@@ -1,54 +1,34 @@
-// plugins/angel-mention.js
+// plugins/angel.js
 import fetch from 'node-fetch'
 
 const API_KEY = 'may-0595dca2'
 const API_URL = 'https://mayapi.ooguy.com/ai-pukamind'
 
-const handler = async (m, { conn }) => {
+const handler = async (m, { text, conn }) => {
+  if (!text) {
+    return m.reply('✏️ Escribe algo para preguntarle a Angel IA.\n\nEjemplo:\n.angel Hola oye jeje')
+  }
+
   try {
-    if (!m.message) return
-
-    const botJid = conn.user.id.split(':')[0] + '@s.whatsapp.net'
-    const botNum = botJid.split('@')[0]
-
-    const text =
-      m.text ||
-      m.message?.conversation ||
-      m.message?.extendedTextMessage?.text ||
-      ''
-
-    if (!text) return
-
-    const mentioned =
-      m.message?.extendedTextMessage?.contextInfo?.mentionedJid || []
-
-    const isMentioned =
-      mentioned.includes(botJid) ||
-      text.includes(`@${botNum}`)
-
-    if (!isMentioned) return
-
-    const cleanText = text.replace(new RegExp(`@${botNum}`, 'g'), '').trim()
-    if (!cleanText) return m.reply('👀 dime algo después de mencionarme.')
-
-    const url = `${API_URL}?q=${encodeURIComponent(cleanText)}&apikey=${API_KEY}`
+    const url = `${API_URL}?q=${encodeURIComponent(text)}&apikey=${API_KEY}`
     const res = await fetch(url)
     const json = await res.json()
 
-    if (!json?.status) return
+    if (!json.status) {
+      return m.reply('❌ Error en la API.')
+    }
 
-    await conn.sendMessage(
-      m.chat,
-      { text: json.result, mentions: [m.sender] },
-      { quoted: m }
-    )
+    const respuesta = json.result || 'No hubo respuesta 😿'
+    await m.reply(respuesta)
 
   } catch (e) {
     console.error(e)
+    m.reply('⚠️ Ocurrió un error al conectar con la IA.')
   }
 }
 
-// 🔥 ESTO ES LO IMPORTANTE
-handler.all = true
+handler.command = ['angel']
+handler.help = ['angel <texto>']
+handler.tags = ['ia']
 
 export default handler
