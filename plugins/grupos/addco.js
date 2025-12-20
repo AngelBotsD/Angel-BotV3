@@ -57,6 +57,5 @@ export async function handler(m, { conn }) {
 
 handler.command = ['addco']
 handler.admin = true
-handler.owner = true
-
+handler.group = true
 export default handler
