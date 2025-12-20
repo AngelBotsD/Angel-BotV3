@@ -1,28 +1,21 @@
 import fetch from "node-fetch";
 import yts from "yt-search";
 
-const ADONIX_API = "https://api-adonix.ultraplus.click";
-const API_KEY = "Angxlllll";
+// Configuración de MayAPI
+const MAYAPI_BASE = "https://mayapi.ooguy.com/ai-pukamind";
+const API_KEY = "may-0595dca2";
 
-// Obtener audio SOLO con Adonix
+// Obtener audio solo con MayAPI
 const getAudioUrl = async (videoUrl) => {
-  const url = `${ADONIX_API}/api/ytmp3?url=${encodeURIComponent(videoUrl)}&apikey=${API_KEY}&quality=64`;
+  const url = `https://mayapi.ooguy.com/ytmp3?url=${encodeURIComponent(videoUrl)}&apikey=${API_KEY}&quality=64`;
 
   const res = await fetch(url, { timeout: 10_000 });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   const data = await res.json();
+  const audioUrl = data?.result?.download?.url || data?.download || null;
 
-  // Ajusta según la respuesta real de Adonix
-  const audioUrl =
-    data?.result?.download ||
-    data?.result?.url ||
-    data?.download ||
-    null;
-
-  if (!audioUrl) {
-    throw new Error("No se pudo obtener el audio");
-  }
+  if (!audioUrl) throw new Error("No se pudo obtener el audio desde MayAPI");
 
   return audioUrl;
 };
@@ -41,15 +34,13 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     if (!video) throw "❌ No se encontró el video";
 
     // Límite 10 minutos
-    if (video.seconds > 600) {
-      throw "❌ El audio es muy largo (máx. 10 minutos)";
-    }
+    if (video.seconds > 600) throw "❌ El audio es muy largo (máx. 10 minutos)";
 
     // Info del video
     await conn.sendMessage(m.chat, {
       text: `01:27 ━━━━━⬤────── 05:48
 *⇄ㅤ      ◁        ❚❚        ▷        ↻*
-╴Angel Bot`,
+╴𝗘𝗹𝗶𝘁𝗲 𝗕𝗼𝘁 𝗚𝗹𝗼𝗯𝗮𝗹`,
       contextInfo: {
         externalAdReply: {
           title: video.title.slice(0, 60),
@@ -63,7 +54,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
       }
     }, { quoted: m });
 
-    // Obtener audio con Adonix
+    // Obtener audio con MayAPI
     const audioUrl = await getAudioUrl(video.url);
 
     // Enviar audio
@@ -83,11 +74,11 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     await conn.sendMessage(m.chat, {
       text: typeof err === "string"
         ? err
-        : "⚠️ Error al procesar el audio, intenta con otra canción"
+        : "⚠️ Error al procesar el audio desde MayAPI, intenta con otra canción"
     }, { quoted: m });
   }
 };
 
-handler.command = ["playaudio"];
+handler.command = ["play", "playaudio", "ytmusic"];
 handler.exp = 0;
 export default handler;
