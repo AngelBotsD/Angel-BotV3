@@ -17,8 +17,8 @@ function fmtDur(sec) {
 
 const handler = async (msg, { conn, text, usedPrefix, command }) => {
   const chatId = msg.key.remoteJid
-
   const url = String(text || "").trim()
+
   if (!url) {
     return conn.sendMessage(chatId, {
       text: `✳️ Usa:\n${usedPrefix}${command} <url>\nEj:\n${usedPrefix}${command} https://youtu.be/xxxx`
@@ -34,42 +34,54 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
 
     const apiUrl = `${API_BASE}/ytdl?url=${encodeURIComponent(url)}&type=Mp4&apikey=${API_KEY}`
     const { data } = await axios.get(apiUrl)
-    if (!data?.status || !data.result?.url) throw new Error(data?.message || "No se pudo obtener el video")
 
-    const videoUrl = data.result.url
-    const title = data.result.title || "YouTube"
-    const durTxt = data.result.duration ? fmtDur(data.result.duration) : "—"
+    if (!data?.status || !data.result?.url) {
+      throw new Error(data?.message || "No se pudo obtener el video")
+    }
 
-    await conn.sendMessage(chatId, {
-      video: { url: videoUrl },
-      mimetype: "video/mp4",
-      caption: `
+    const {
+      url: videoUrl,
+      title = "YouTube",
+      duration,
+      quality = "HD",
+      author = "Desconocido"
+    } = data.result
+
+    const caption = `
 > *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
 ⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${fmtDur(duration)}
+⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}
+⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${API_BASE}
 
-» 𝙑𝙄𝘿𝙀𝙊 𝙀𝙉𝙑𝙄𝘼𝘿𝙊  🎧
+» 𝙑𝙄𝘿𝙀𝙊 𝙀𝙉𝙑𝙄𝘼𝘿𝙊 🎧  
 » 𝘿𝙄𝙎𝙁𝙍𝙐𝙏𝘼𝙇𝙊 𝘾𝘼𝙈𝙋𝙀𝙊𝙉..
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`\
+> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 𝗁𝖾𝗋𝗇𝖺𝗇𝖽𝖾𝗓.𝗑𝗒𝗓\`\`\`
+`.trim()
+
+    await conn.sendMessage(chatId, {
+      video: { url: videoUrl },
+      mimetype: "video/mp4",
+      caption
     }, { quoted: msg })
 
     await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
 
   } catch (err) {
     console.error("ytmp4 error:", err)
-    await conn.sendMessage(chatId, { text: `❌ Error: ${err?.message || "Fallo interno"}` }, { quoted: msg })
+    await conn.sendMessage(chatId, {
+      text: `❌ Error: ${err?.message || "Fallo interno"}`
+    }, { quoted: msg })
   }
 }
 
-handler.command  = ["ytmp4", "yta4"]
-handler.help     = ["𝖸𝗍𝗆𝗉4 <𝗎𝗋𝗅>"]
-handler.tags     = ["𝖣𝖤𝖲𝖢𝖠𝖱𝖦𝖠𝖲"]
+handler.command = ["ytmp4", "yta4"]
+handler.help = ["ytmp4 <url>"]
+handler.tags = ["descargas"]
 
 export default handler
