@@ -19,7 +19,7 @@ const handler = async (m, { conn, text }) => {
 
     // POST a la API
     const r = await axios.post(
-      "https://api-sky.ultraplus.click/brat",
+      "https://api-sky.ultraplus.click",
       { text: text, size: 512 },
       { headers: { apikey: API_KEY } }
     );
