@@ -52,7 +52,7 @@ const handler = async (msg, { conn, wa }) => {
      return conn.sendMessage(
       chatId,
       {
-        text: `⚠️ *Responde a una imagen o video para crear un sticker.*\n\n✳️ Ejemplo:\n${pref}s (respondiendo a una imagen)`,
+        text: `⚠️ *Responde a una imagen o video para crear un sticker.`,
       },
       { quoted: msg }
     );
