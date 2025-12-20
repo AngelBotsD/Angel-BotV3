@@ -1,51 +1,45 @@
-const handler = async (m, { conn, text }) => {
-  if (!text && m.quoted?.text) text = m.quoted.text;
+import axios from "axios";
 
-  if (!text) {
-    return conn.sendMessage(
-      m.chat,
-      {
-        text: "𝖠𝗀𝗋𝖾𝗀𝖺 𝖳𝖾𝗑𝗍𝗈 𝖮 𝖱𝖾𝗌𝗉𝗈𝗇𝖽𝖾 𝖠 𝖴𝗇 𝖬𝖾𝗇𝗌𝖺𝗃𝖾 𝖯𝖺𝗋𝖺 𝖢𝗋𝖾𝖺𝗋 𝖤𝗅 𝖲𝗍𝗂𝖼𝗄𝖾𝗋 𝖡𝗋𝖺𝗍",
-        ...global.rcanal
-      },
-      { quoted: m }
-    );
-  }
+let handler = async (m, { args, conn }) => {
+  const text = args.join(" ");
+  if (!text) return m.reply("✏️ Escribe un texto para generar el brat");
 
   try {
-    await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } });
+    // Reacción al recibir el comando
+    await conn.sendMessage(m.chat, {
+      react: { text: "🕒", key: m.key }
+    });
 
-        const url = `https://api.siputzx.my.id/api/m/brat?text=${encodeURIComponent(text)}`
+    const r = await axios.post(
+      "https://api-sky.ultraplus.click/brat",
+      { text },
+      {
+        headers: {
+          apikey: "Angxlllll"
+        }
+      }
+    );
 
+    // Enviar imagen que devuelve la API
     await conn.sendMessage(
       m.chat,
-      {
-        sticker: { url },
-        packname: "",
-        author: "",
-        ...global.rcanal
-      },
+      { image: { url: r.data.url } },
       { quoted: m }
     );
 
-    await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+    // Reacción al terminar
+    await conn.sendMessage(m.chat, {
+      react: { text: "✅", key: m.key }
+    });
 
   } catch (e) {
     console.error(e);
-    await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
-
-    return conn.sendMessage(
-      m.chat,
-      {
-        text: "𝖮𝖼𝗎𝗋𝗋𝗂𝗈 𝖴𝗇 𝖤𝗋𝗋𝗈𝗋 𝖠𝗅 𝖦𝖾𝗇𝖾𝗋𝖺𝗋 𝖤𝗅 𝖲𝗍𝗂𝖼𝗄𝖾𝗋",
-        ...global.rcanal
-      },
-      { quoted: m }
-    );
+    m.reply("❌ Error al generar el brat");
   }
 };
 
-handler.help = ["𝖡𝗋𝖺𝗍 <𝖳𝖾𝗑𝗍𝗈>"]
-handler.tags = ["𝖲𝖳𝖨𝖢𝖪𝖤𝖱𝖲"]
-handler.command = /^brat$/i;
+handler.help = ["brat <texto>"];
+handler.tags = ["tools"];
+handler.command = ["brat"];
+
 export default handler;
