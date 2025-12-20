@@ -178,27 +178,39 @@ try {
 
 const user = global.db.data.users[m.sender]
 try {
-const actual = user.name || ""
-const nuevo = m.pushName || await this.getName(m.sender)
-if (typeof nuevo === "string" && nuevo.trim() && nuevo !== actual) {
-user.name = nuevo
-}} catch {}
+  const actual = user.name || ""
+  const nuevo = m.pushName || await this.getName(m.sender)
+  if (typeof nuevo === "string" && nuevo.trim() && nuevo !== actual) {
+    user.name = nuevo
+  }
+} catch {}
+
 const chat = global.db.data.chats[m.chat]
-const settings = global.db.data.settings[this.user.jid]  
-const isPrems = isROwner || user?.premium === true
+const settings = global.db.data.settings[this.user.jid]
+
 const isOwner = isROwner || m.fromMe
-const isPrems = isROwner || global.prems.map(v => v.replace(/[^0-9]/g, "") + "@lid").includes(m.sender) || user.premium == true
-const isOwners = [this.user.jid, ...global.owner.map((number) => number + "@lid")].includes(m.sender)
+const isOwners = [this.user.jid, ...global.owner.map(n => n + "@lid")].includes(m.sender)
+
 if (settings.self && !isOwners) return
-if (settings.gponly && !isOwners && !m.chat.endsWith('g.us') && !/code|p|ping|qr|estado|status|infobot|botinfo|report|reportar|invite|join|logout|suggest|help|menu/gim.test(m.text)) return
-if (opts["queque"] && m.text && !(isPrems)) {
-const queque = this.msgqueque, time = 1000 * 5
-const previousID = queque[queque.length - 1]
-queque.push(m.id || m.key.id)
-setInterval(async function () {
-if (queque.indexOf(previousID) === -1) clearInterval(this)
-await delay(time)
-}, time)
+
+if (
+  settings.gponly &&
+  !isOwners &&
+  !m.chat.endsWith("g.us") &&
+  !/code|p|ping|qr|estado|status|infobot|botinfo|report|reportar|invite|join|logout|suggest|help|menu/gim.test(m.text)
+) return
+
+if (opts["queque"] && m.text) {
+  const queque = this.msgqueque
+  const time = 1000 * 5
+  const previousID = queque[queque.length - 1]
+
+  queque.push(m.id || m.key.id)
+
+  setInterval(async function () {
+    if (queque.indexOf(previousID) === -1) clearInterval(this)
+    await delay(time)
+  }, time)
 }
 
 if (m.isBaileys) return
