@@ -49,7 +49,7 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     await conn.sendMessage(m.chat, {
       text: `01:27 ━━━━━⬤────── 05:48
 *⇄ㅤ      ◁        ❚❚        ▷        ↻*
-╴𝗘𝗹𝗶𝘁𝗲 𝗕𝗼𝘁 𝗚𝗹𝗼𝗯𝗮𝗹`,
+╴Angel Bot`,
       contextInfo: {
         externalAdReply: {
           title: video.title.slice(0, 60),
