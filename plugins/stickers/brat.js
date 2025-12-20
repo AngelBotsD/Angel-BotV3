@@ -18,10 +18,7 @@ const handler = async (m, { conn, text }) => {
 
   try {
     const res = await axios.get(`${API_BASE}/brat`, {
-      params: {
-        text,
-        apikey: API_KEY
-      },
+      params: { text, apikey: API_KEY },
       timeout: 30000,
       validateStatus: () => true
     })
@@ -32,10 +29,16 @@ const handler = async (m, { conn, text }) => {
     const img = data?.result?.url
     if (!img) throw "Sticker no disponible"
 
+    // ⬇️ descargar imagen
+    const imgBuff = await axios.get(img, {
+      responseType: "arraybuffer"
+    })
+
+    // ⬇️ enviar como sticker real
     await conn.sendMessage(
       m.chat,
       {
-        sticker: { url: img }
+        sticker: imgBuff.data
       },
       { quoted: m }
     )
