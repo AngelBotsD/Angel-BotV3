@@ -1,45 +1,33 @@
 import axios from "axios";
 
-let handler = async (m, { args, conn }) => {
-  const text = args.join(" ");
-  if (!text) return m.reply("✏️ Escribe un texto para generar el brat");
+const API_URL = "https://api-sky.ultraplus.click/brat";
+const API_KEY = process.env.API_KEY || "Angxlllll";
+
+let handler = async (m, { text }) => {
+  if (!text) return m.reply("✏️ Escribe un texto para usar brat");
 
   try {
-    // Reacción al recibir el comando
-    await conn.sendMessage(m.chat, {
-      react: { text: "🕒", key: m.key }
-    });
-
     const r = await axios.post(
-      "https://api-sky.ultraplus.click/brat",
+      API_URL,
       { text },
-      {
-        headers: {
-          apikey: "Angxlllll"
-        }
-      }
+      { headers: { apikey: API_KEY } }
     );
 
-    // Enviar imagen que devuelve la API
-    await conn.sendMessage(
-      m.chat,
-      { image: { url: r.data.url } },
-      { quoted: m }
-    );
+    console.log(r.data);
 
-    // Reacción al terminar
-    await conn.sendMessage(m.chat, {
-      react: { text: "✅", key: m.key }
-    });
+    if (!r.data || !r.data.result)
+      return m.reply("❌ La API no devolvió texto");
+
+    await m.reply(r.data.result);
 
   } catch (e) {
     console.error(e);
-    m.reply("❌ Error al generar el brat");
+    m.reply("❌ Error usando el comando brat");
   }
 };
 
+handler.command = /^brat$/i;
 handler.help = ["brat <texto>"];
-handler.tags = ["tools"];
-handler.command = ["brat"];
+handler.tags = ["texto"];
 
 export default handler;
