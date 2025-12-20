@@ -260,7 +260,6 @@ export async function handler(chatUpdate) {
             groupMetadata,
             userGroup,
             botGroup,
-            isROwner,
             isOwner,
             isRAdmin,
             isAdmin,
