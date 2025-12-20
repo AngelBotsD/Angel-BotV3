@@ -1,219 +1,184 @@
-import axios from "axios";
+import axios from "axios"
+import yts from "yt-search"
+import fs from "fs"
+import path from "path"
+import { promisify } from "util"
+import { pipeline } from "stream"
 
-const API_BASE = process.env.API_BASE || "https://api-sky.ultraplus.click";
-const API_KEY  = process.env.API_KEY  || "Russellxz";
+const streamPipe = promisify(pipeline)
+const MAX_FILE_SIZE = 60 * 1024 * 1024
 
-const AXIOS_TIMEOUT = 0;
-axios.defaults.timeout = AXIOS_TIMEOUT;
-axios.defaults.maxBodyLength = Infinity;
-axios.defaults.maxContentLength = Infinity;
-
-function isYouTube(u) {
-  return /^https?:\/\//i.test(u) && /(youtube.com|youtu.be|music.youtube.com)/i.test(u);
-}
-
-function fmtDur(s) {
-  const n = Number(s || 0);
-  const h = Math.floor(n / 3600);
-  const m = Math.floor((n % 3600) / 60);
-  const sec = n % 60;
-  return (h ? `${h}:` : "") + `${m.toString().padStart(2,"0")}:${sec.toString().padStart(2,"0")}`;
-}
-
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-const pendingYTV = Object.create(null);
-
-async function callSkyYtVideo(url){
-  const endpoints = ["/api/download/yt.js", "/api/download/yt.php"];
-  const headers = {
-    Authorization: `Bearer ${API_KEY}`,
-    "X-API-Key": API_KEY,
-    Accept: "application/json"
-  };
-  const params = { url, format: "video" };
-
-  let lastErr = null;
-
-  for (const ep of endpoints) {
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const r = await axios.get(`${API_BASE}${ep}`, {
-          params,
-          headers,
-          timeout: AXIOS_TIMEOUT,
-          maxRedirects: 5,
-          validateStatus: () => true
-        });
-
-        if (r.status >= 500 || r.status === 429 || r.status === 403) {  
-          lastErr = new Error(`HTTP ${r.status}${r.data?.error ? ` - ${r.data.error}` : ""}`);  
-          await sleep(1000 * attempt);  
-          continue;  
-        }  
-
-        if (r.status !== 200) {  
-          lastErr = new Error(`HTTP ${r.status}`);  
-          await sleep(1000 * attempt);  
-          continue;  
-        }  
-
-        const ok = r.data && r.data.status === "true" && r.data.data;  
-        if (!ok) {  
-          lastErr = new Error(`API inválida: ${JSON.stringify(r.data)}`);  
-          await sleep(1000 * attempt);  
-          continue;  
-        }  
-
-        const d = r.data.data || {};  
-        const mediaUrl = d.video || d.audio;  
-        if (!mediaUrl) {  
-          lastErr = new Error("El API no devolvió video.");  
-          await sleep(1000 * attempt);  
-          continue;  
-        }  
-
-        return { mediaUrl, meta: d };  
-      } catch (e) {  
-        lastErr = e;  
-        await sleep(1000 * attempt);  
-      }  
-    }
+const handler = async (msg, { conn, text }) => {
+  if (!text || !text.trim()) {
+    return conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "🎬 Ingresa el link de un video de YouTube" },
+      { quoted: msg }
+    )
   }
 
-  throw lastErr || new Error("No se pudo obtener el video.");
-}
-
-const handler = async (msg, { conn, args, command }) => {
-  const jid  = msg.key.remoteJid;
-  const url  = (args.join(" ") || "").trim();
-  const pref = global.prefixes?.[0] || ".";
-
-  if (!url) {
-    return conn.sendMessage(jid, {
-      text: `✳️ *Usa:*\n${pref}${command} <url>\nEj: ${pref}${command} https://youtu.be/xxxxxx`
-    }, { quoted: msg });
+  if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/i.test(text.trim())) {
+    return conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "⚠️ Solo se permiten links de YouTube.\n\nEjemplo:\n.play2 https://youtu.be/dQw4w9WgXcQ" },
+      { quoted: msg }
+    )
   }
-  if (!isYouTube(url)) {
-    return conn.sendMessage(jid, { text: "❌ URL de YouTube inválida." }, { quoted: msg });
-  }
+
+  await conn.sendMessage(msg.key.remoteJid, {
+    react: { text: "🕒", key: msg.key }
+  })
+
+  const videoUrl = text.trim()
+  const posibles = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
+
+  let videoDownloadUrl = null
+  let calidadElegida = "Desconocida"
+  let apiUsada = "Desconocida"
+  let errorLogs = []
 
   try {
-    await conn.sendMessage(jid, { react: { text: "⏱️", key: msg.key } });
-
-    const { mediaUrl, meta } = await callSkyYtVideo(url);  
-    const title = meta.title || "YouTube Video";  
-    const dur   = meta.duration ? fmtDur(meta.duration) : "—";  
-    const thumb = meta.thumbnail || "";  
-
-    const caption =
-      `⚡ 𝗬𝗼𝘂𝗧𝘂𝗯𝗲 — 𝗩𝗶𝗱𝗲𝗼
-
-Elige cómo enviarlo:
-👍 𝗩𝗶𝗱𝗲𝗼 (normal)
-❤️ 𝗩𝗶𝗱𝗲𝗼 𝗰𝗼𝗺𝗼 𝗱𝗼𝗰𝘂𝗺𝗲𝗻𝘁𝗼
-— 𝗼 responde: 1 = video · 2 = documento
-
-✦ 𝗧𝗶́𝘁𝘂𝗹𝗼: ${title}
-✦ 𝗗𝘂𝗿𝗮𝗰𝗶𝗼́𝗻: ${dur}
-✦ 𝗦𝗼𝘂𝗿𝗰𝗲: api-sky.ultraplus.click
-────────────
-`;
-
-    let selectorMsg;  
-    if (thumb) {  
-      selectorMsg = await conn.sendMessage(jid, { image: { url: thumb }, caption }, { quoted: msg });  
-    } else {  
-      selectorMsg = await conn.sendMessage(jid, { text: caption }, { quoted: msg });  
-    }  
-
-    pendingYTV[selectorMsg.key.id] = {  
-      chatId: jid,  
-      mediaUrl,  
-      title,  
-      baseMsg: msg  
-    };  
-
-    await conn.sendMessage(jid, { react: { text: "✅", key: msg.key } });  
-
-    if (!conn._ytvListener) {  
-      conn._ytvListener = true;  
-      conn.ev.on("messages.upsert", async (ev) => {  
-        for (const m of ev.messages) {  
-          try {  
-            if (m.message?.reactionMessage) {  
-              const { key: reactedKey, text: emoji } = m.message.reactionMessage;  
-              const job = pendingYTV[reactedKey.id];  
-              if (job) {  
-                const asDoc = emoji === "❤️";  
-                await sendVideo(conn, job, asDoc, m);  
-                delete pendingYTV[reactedKey.id];  
-              }  
-            }  
-
-            const ctx = m.message?.extendedTextMessage?.contextInfo;  
-            const replyTo = ctx?.stanzaId;  
-            const txt = (m.message?.conversation || m.message?.extendedTextMessage?.text || "").trim().toLowerCase();  
-            if (replyTo && pendingYTV[replyTo]) {  
-              const job = pendingYTV[replyTo];  
-              if (txt === "1" || txt === "2") {  
-                const asDoc = txt === "2";  
-                await sendVideo(conn, job, asDoc, m);  
-                delete pendingYTV[replyTo];  
-              } else if (txt) {  
-                await conn.sendMessage(job.chatId, {  
-                  text: "⚠️ Responde con *1* (video) o *2* (documento), o reacciona con 👍 / ❤️."  
-                }, { quoted: job.baseMsg });  
-              }  
-            }  
-          } catch (e) {  
-            console.error("ytmp4 listener error:", e);  
-          }  
-        }  
-      });  
+    const tryApi = (apiName, urlBuilder) => {
+      return new Promise(async (resolve, reject) => {
+        let intentos = 0
+        const maxIntentos = 2
+        const attempt = async () => {
+          intentos++
+          const controller = new AbortController()
+          try {
+            for (const q of posibles) {
+              const apiUrl = urlBuilder(q)
+              const r = await axios.get(apiUrl, {
+                timeout: 60000,
+                signal: controller.signal
+              })
+              if (r.data?.status && (r.data?.result?.url || r.data?.data?.url)) {
+                resolve({
+                  url: r.data.result?.url || r.data.data?.url,
+                  quality: r.data?.result?.quality || r.data?.data?.quality || q,
+                  api: apiName,
+                  controller
+                })
+                return
+              }
+            }
+            throw new Error(`${apiName}: No entregó un URL válido`)
+          } catch (err) {
+            if (intentos < maxIntentos) {
+              console.log(`${apiName} abortado, reintentando... (${intentos}/${maxIntentos})`)
+              await attempt() // reintento silencioso
+            } else {
+              reject(new Error(`${apiName}: ${err.message}`))
+            }
+          }
+        }
+        attempt()
+      })
     }
 
-  } catch (err) {
-    console.error("ytmp4 error:", err?.message || err);
+    const mayApi = tryApi("MayAPI", q =>
+      `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&quality=${q}&apikey=may-0595dca2`
+    )
+
+    const neoxApi = tryApi("NeoxR", q =>
+      `https://api.neoxr.eu/api/youtube?url=${encodeURIComponent(videoUrl)}&type=video&quality=${q}&apikey=russellxz`
+    )
+
+    const adonixApi = tryApi("AdonixAPI", q =>
+      `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=${q}`
+    )
+
+    let winner
     try {
-      await conn.sendMessage(jid, { text: `❌ ${err?.message || "Error procesando el enlace."}` }, { quoted: msg });
-      await conn.sendMessage(jid, { react: { text: "❌", key: msg.key } });
-    } catch {}
+      winner = await Promise.any([mayApi, neoxApi, adonixApi])
+    } catch (err) {
+      throw new Error(
+        "No se pudo obtener el video en ninguna calidad.\n\nLogs:\n" +
+        errorLogs.join("\n")
+      )
+    }
+
+    ;[mayApi, neoxApi, adonixApi].forEach(p => {
+      if (p !== winner && p.controller) {
+        p.controller.abort()
+      }
+    })
+
+    videoDownloadUrl = winner.url
+    calidadElegida = winner.quality
+    apiUsada = winner.api
+
+    const info = await yts(videoUrl)
+    const videoInfo = info.videos?.[0] || {}
+    const title = videoInfo.title || "Desconocido"
+    const artista = videoInfo.author?.name || "Desconocido"
+    const duration = videoInfo.timestamp || "Desconocida"
+
+    const tmp = path.join(process.cwd(), "tmp")
+    if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
+    const file = path.join(tmp, `${Date.now()}_vid.mp4`)
+
+    const dl = await axios.get(videoDownloadUrl, { responseType: "stream", timeout: 0 })
+    let totalSize = 0
+    dl.data.on("data", chunk => {
+      totalSize += chunk.length
+      if (totalSize > MAX_FILE_SIZE) {
+        dl.data.destroy()
+      }
+    })
+
+    await streamPipe(dl.data, fs.createWriteStream(file))
+
+    const stats = fs.statSync(file)
+    if (stats.size > MAX_FILE_SIZE) {
+      fs.unlinkSync(file)
+      throw new Error("El archivo excede el límite de 60 MB permitido por WhatsApp.")
+    }
+
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      {
+        video: fs.readFileSync(file),
+        mimetype: "video/mp4",
+        fileName: `${title}.mp4`,
+        caption: `
+> *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
+
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
+⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${calidadElegida}
+⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝚙𝚒:* ${apiUsada}
+
+» 𝙑𝙄𝘿𝙀𝙊 𝙀𝙉𝙑𝙄𝘼𝘿𝙊  🎧
+» 𝘿𝙄𝙎𝙁𝙍𝙐𝙏𝘼𝙇𝙊 𝘾𝘼𝙈𝙋𝙀𝙊𝙉..
+
+⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
+
+> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 o.𝗑𝗒𝗓\`\`\`
+ `.trim(),
+        supportsStreaming: true,
+        contextInfo: { isHd: true }
+      },
+      { quoted: msg }
+    )
+
+    fs.unlinkSync(file)
+
+    await conn.sendMessage(msg.key.remoteJid, {
+      react: { text: "✅", key: msg.key }
+    })
+
+  } catch (e) {
+    console.error(e)
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      { text: `⚠️ Error al descargar el video:\n\n${e.message}` },
+      { quoted: msg }
+    )
   }
-};
-
-async function sendVideo(conn, job, asDocument, triggerMsg){
-  const { chatId, mediaUrl, title, baseMsg } = job;
-
-  await conn.sendMessage(chatId, { react: { text: asDocument ? "📁" : "🎬", key: triggerMsg.key } });
-  await conn.sendMessage(chatId, { text: `⏳ Enviando ${asDocument ? "como documento" : "video"}…` }, { quoted: baseMsg });
-
-  const caption =
-    `⚡ 𝗬𝗼𝘂𝗧𝘂𝗯𝗲 𝗩𝗶𝗱𝗲𝗼 — 𝗟𝗶𝘀𝘁𝗼
-
-✦ 𝗧𝗶́𝘁𝘂𝗹𝗼: ${title}
-✦ 𝗦𝗼𝘂𝗿𝗰𝗲: api-sky.ultraplus.click
-`;
-
-  if (asDocument) {
-    await conn.sendMessage(chatId, {
-      document: { url: mediaUrl },
-      mimetype: "video/mp4",
-      fileName: `${title}.mp4`,
-      caption
-    }, { quoted: baseMsg });
-  } else {
-    await conn.sendMessage(chatId, {
-      video: { url: mediaUrl },
-      mimetype: "video/mp4",
-      caption
-    }, { quoted: baseMsg });
-  }
-
-  await conn.sendMessage(chatId, { react: { text: "✅", key: triggerMsg.key } });
 }
 
-handler.command = ["ytmp4","ytv"];
-handler.help = ["𝖸𝗍𝗆𝗉4 <𝗎𝗋𝗅>"];
-handler.tags = ["𝖣𝖤𝖲𝖢𝖠𝖱𝖦𝖠𝖲"];
-export default handler;
+handler.command = ["ytmp4"]
+
+export default handler
