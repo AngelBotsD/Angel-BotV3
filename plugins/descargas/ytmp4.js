@@ -85,7 +85,7 @@ const handler = async (msg, { conn, text }) => {
     )
 
     const adonixApi = tryApi("AdonixAPI", q =>
-      `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}&quality=${q}`
+      `https://api-adonix.ultraplus.click/download/ytmp4?apikey=Angxlllll&url=${encodeURIComponent(videoUrl)}&quality=${q}`
     )
 
     let winner
