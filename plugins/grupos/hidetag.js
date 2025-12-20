@@ -51,11 +51,10 @@ const handler = async (m, { conn, participants }) => {
 
   const fkontak = {
     key: {
-      participants: '0@s.whatsapp.net',
-      remoteJid: 'status@broadcast',
-      fromMe: false,
-      id: 'Angel'
-    },
+  remoteJid: m.chat,
+  fromMe: false,
+  id: 'Angel'
+},
     message: {
       locationMessage: {
         name: '𝖧𝗈𝗅𝖺, 𝖲𝗈𝗒 𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍',
