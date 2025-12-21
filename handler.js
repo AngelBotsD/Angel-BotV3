@@ -5,7 +5,7 @@ import fs, { unwatchFile, watchFile } from "fs"
 import chalk from "chalk"
 import ws from "ws"
 
-const strRegex = str => str.replace(/[|\{}()[]^$+*?.]/g, "\$&")
+const strRegex = str => str.replace(/[|{}()[]^$+*?.]/g, "$&")
 const ___dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), "plugins")
 
 global.processedMessages ||= new Set()
