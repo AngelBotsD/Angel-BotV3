@@ -39,8 +39,8 @@ const handler = async (msg, { conn, text }) => {
   const tryDownloadParallel = async () => {
     const apis = [
       { name: "MayAPI", url: `https://mayapi.ooguy.com/ytdl?url=${encodeURIComponent(videoUrl)}&type=mp4&apikey=may-0595dca2` },
-      { name: "AdonixAPI", url: `https://api-adonix.ultraplus.click/download/ytmp4?apikey=AdonixKeyz11c2f6197&url=${encodeURIComponent(videoUrl)}` },
-      { name: "Adofreekey", url: `https://api-adonix.ultraplus.click/download/ytmp4?apikey=Adofreekey&url=${encodeURIComponent(videoUrl)}` }
+      { name: "AdonixAPI", url: `https://api-adonix.ultraplus.click/download/ytmp4?apikey=Angxlllll&url=${encodeURIComponent(videoUrl)}` },
+      { name: "Adofreekey", url: `https://api-adonix.ultraplus.click/download/ytmp4?apikey=Angxlllll&url=${encodeURIComponent(videoUrl)}` }
     ]
 
     const tasks = apis.map(api =>
