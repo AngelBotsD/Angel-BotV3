@@ -339,13 +339,7 @@ export async function handler(chatUpdate) {
 
 global.dfail = (type, m, conn) => {
     const messages = {
-        rowner: `
-┏━━━━━━━━━━━━━━━━╮
-┃ *〘 ${global.comando} 〙*
-┃ ➣ 𝑆𝑜𝑙𝑜 𝑝𝑎𝑟𝑎 𝑙𝑜𝑠 𝐶𝑟𝑒𝑎𝑑𝑜𝑟𝑒𝑠 ↷
-┃ » 𝑁𝑜 𝑖𝑛𝑠𝑖𝑠𝑡𝑎𝑠...
-┗━━━━━━━━━━━━━━━━╯
-`,
+        rowner: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋*`,
         owner: `
 ┏━━━━━━━━━━━━━━━━╮
 ┃ *〘 ${global.comando} 〙*
