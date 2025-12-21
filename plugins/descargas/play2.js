@@ -8,9 +8,9 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
   const chatId = msg.key.remoteJid
   const query = String(text || "").trim()
 
-  if (!query || /^https?:\/\//i.test(query)) {
+  if (!query) {
     return conn.sendMessage(chatId, { 
-      text: `✳️ Usa solo texto (no links):\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree` 
+      text: `✳️ Debes escribir solo texto:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree` 
     }, { quoted: msg })
   }
 
