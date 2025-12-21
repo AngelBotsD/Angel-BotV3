@@ -98,7 +98,7 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
 }
 
 
-handler.command = ["play", "ytplay"]
+handler.command = ["play2", "ytplay2"]
 handler.help    = ["play <texto o url>"]
 handler.tags    = ["descargas"]
 
