@@ -1,72 +1,87 @@
 import axios from "axios"
 
-const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
-const API_KEY  = global.APIKeys.may || ""
+const API_BASE = (process.env.API_BASE || "https://api-sky.ultraplus.click").replace(/\/+$/, "")
+const API_KEY  = process.env.API_KEY  || "Russellxz"
 
-function isYouTube(url = "") {
-  return /^https?:\/\//i.test(url) && /(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(url)
+const isYouTube = (u = "") =>
+  /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)\//i.test(String(u || ""))
+
+function safeBaseFromTitle(title) {
+  return String(title || "youtube").slice(0, 70).replace(/[^A-Za-z0-9_\-.]+/g, "_")
 }
 
-const handler = async (msg, { conn, text, usedPrefix, command }) => {
+async function getYTFromSkyAudio(url) {
+  const endpoint = `${API_BASE}/youtube-mp3`
+  const r = await axios.post(
+    endpoint,
+    { url },
+    {
+      timeout: 120000,
+      headers: {
+        "Content-Type": "application/json",
+        apikey: API_KEY,
+        Accept: "application/json, */*"
+      },
+      validateStatus: () => true
+    }
+  )
+  const data = typeof r.data === "object" ? r.data : null
+  if (!data) throw new Error("Respuesta no JSON del servidor")
+  const ok =
+    data.status === true ||
+    data.status === "true" ||
+    data.ok === true ||
+    data.success === true
+  if (!ok) throw new Error(data.message || data.error || "Error en la API")
+  const result = data.result || data.data || data
+  const audioSrc = result?.media?.audio
+  if (!audioSrc) throw new Error("No se pudo obtener audio")
+  return {
+    title: result?.title || "YouTube Audio",
+    thumbnail: result?.thumbnail || result?.image || "",
+    audio: audioSrc
+  }
+}
+
+const handler = async (msg, { conn, args, command }) => {
   const chatId = msg.key.remoteJid
-
-  const url = String(text || "").trim()
-  if (!url) {
-    return conn.sendMessage(chatId, {
-      text: `✳️ Usa:\n${usedPrefix}${command} <url>\nEj:\n${usedPrefix}${command} https://youtu.be/xxxx`
-    }, { quoted: msg })
-  }
-
-  if (!isYouTube(url)) {
-    return conn.sendMessage(chatId, { text: "❌ URL de YouTube inválida." }, { quoted: msg })
-  }
-
+  const pref = global.prefixes?.[0] || "."
+  const text = (args.join(" ") || "").trim()
+  if (!text) return conn.sendMessage(chatId, { text: `✳️ Usa:\n${pref}${command} <URL YouTube>\nEj: ${pref}${command} https://youtu.be/dQw4w9WgXcQ` }, { quoted: msg })
+  if (!isYouTube(text)) return conn.sendMessage(chatId, { text: `❌ Enlace inválido. Usa URL de YouTube.` }, { quoted: msg })
   try {
-    await conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } })
+    await conn.sendMessage(chatId, { react: { text: "⏱️", key: msg.key } })
+    const d = await getYTFromSkyAudio(text)
+    const title = d.title || "YouTube"
+    const thumb = d.thumbnail
+    const caption = `⚡ 𝗬𝗼𝘂𝗧𝘂𝗯𝗲 𝗠𝗣𝟯
 
-    const apiUrl = `${API_BASE}/ytdl?url=${encodeURIComponent(url)}&type=Mp3&apikey=${API_KEY}`
-    const { data } = await axios.get(apiUrl)
-    if (!data?.status || !data.result?.url) throw new Error(data?.message || "No se pudo obtener el audio")
+🎵 𝗧𝗶́𝘁𝘂𝗹𝗼: ${title}
 
-    const audioUrl = data.result.url
-    const thumb = data.result.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg" // fallback thumbnail
-
-    const infoCaption =
-`> *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
-
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝗅𝗈:* Desconocido
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝗋𝚝𝗂𝚜𝚝𝗮:* Desconocido
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝗋𝗮𝗖𝗂ó𝗇:* Desconocida
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝗅𝗂𝗱𝗮𝗱:* 128kbps
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝗉𝗂:* MayAPI
-
-» 𝙰𝗎𝗗𝗜𝗢 𝙴𝗡𝗩𝗜𝗔𝗗𝗢  🎧
-» 𝘿𝗜𝗦𝗙𝗥𝗨𝗧𝗔𝗟𝗢 𝘾𝗔𝗠𝗣𝗘𝗢𝗡..
-
-> \`\`\`© 𝖯𝗈𝗐𝗲𝗋𝗲𝗱 𝖻𝗒 o.𝗑𝗒𝗓\`\`\``
-
-    await conn.sendMessage(chatId, {
-      image: { url: thumb },
-      caption: infoCaption
-    }, { quoted: msg })
-
-    await conn.sendMessage(chatId, {
-      audio: { url: audioUrl },
-      mimetype: "audio/mpeg",
-      ptt: false,
-      fileName: `${Date.now()}.mp3`
-    }, { quoted: msg })
-
+🔗 𝗔𝗣𝗜: https://api-sky.ultraplus.click`
+    if (thumb && thumb.startsWith("http")) await conn.sendMessage(chatId, { image: { url: thumb }, caption }, { quoted: msg })
+    else await conn.sendMessage(chatId, { text: caption }, { quoted: msg })
+    await conn.sendMessage(chatId, { text: "⏳ Espere, descargando su canción..." }, { quoted: msg })
+    await conn.sendMessage(
+      chatId,
+      {
+        audio: { url: d.audio },
+        mimetype: "audio/mpeg",
+        fileName: `${safeBaseFromTitle(title)}.mp3`,
+        ptt: false
+      },
+      { quoted: msg }
+    )
     await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
-
   } catch (err) {
-    console.error("ytmp3 error:", err)
-    await conn.sendMessage(chatId, { text: `❌ Error: ${err?.message || "Fallo interno"}` }, { quoted: msg })
+    await conn.sendMessage(chatId, { text: `❌ *Error:* ${err?.message || "Fallo al procesar el audio."}` }, { quoted: msg })
+    await conn.sendMessage(chatId, { react: { text: "❌", key: msg.key } })
   }
 }
 
-handler.command  = ["ytmp3", "yta3"]
-handler.help     = ["𝖸𝗍𝗆𝗉3 <𝗎𝗋𝗅>"]
-handler.tags     = ["𝖣𝖤𝖲𝖢𝖠𝖱𝖦𝖠𝖲"]
+handler.command = ["ytmp3", "yta3"]
+handler.help = ["𝖸𝗍𝗆𝗉3 <𝗎𝗋𝗅>"]
+handler.tags = ["𝖣𝖤𝖲𝖢𝖠𝖱𝖦𝖠𝖲"]
+handler.register = true
 
 export default handler
