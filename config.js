@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 
 global.owner = [
 [ '576014222810', 'Angel', true ]
-]
+];
 global.emoji = '📎'
 global.emoji2 = '🏞️'
 global.namebot = '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍'
