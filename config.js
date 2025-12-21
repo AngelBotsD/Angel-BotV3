@@ -3,11 +3,8 @@ import chalk from 'chalk'
 import { fileURLToPath } from 'url'
 
 global.owner = [
-'576014222810', 'Angel', 'true'
-'205819731832938',
-'226044783132714',
-'217158512549931'
-]
+'576014222810', 'Angel', true]
+
 global.emoji = '📎'
 global.emoji2 = '🏞️'
 global.namebot = '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍'
