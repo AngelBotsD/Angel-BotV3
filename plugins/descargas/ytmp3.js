@@ -29,13 +29,14 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
     if (!data?.status || !data.result?.url) throw new Error(data?.message || "No se pudo obtener el audio")
 
     const audioUrl = data.result.url
+    const thumb = data.result.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg" // fallback thumbnail
 
-    const caption =
+    const infoCaption =
 `> *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
 
 ⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝗅𝗈:* Desconocido
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝗋𝚝𝗂𝚜𝚝𝗮:* Desconocido
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝗋𝗮𝚌𝗂ó𝗇:* Desconocida
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝗋𝗮𝗖𝗂ó𝗇:* Desconocida
 ⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝗅𝗂𝗱𝗮𝗱:* 128kbps
 ⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝗉𝗂:* MayAPI
 
@@ -45,11 +46,15 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
 > \`\`\`© 𝖯𝗈𝗐𝗲𝗋𝗲𝗱 𝖻𝗒 o.𝗑𝗒𝗓\`\`\``
 
     await conn.sendMessage(chatId, {
+      image: { url: thumb },
+      caption: infoCaption
+    }, { quoted: msg })
+
+    await conn.sendMessage(chatId, {
       audio: { url: audioUrl },
       mimetype: "audio/mpeg",
       ptt: false,
-      fileName: `${Date.now()}.mp3`,
-      caption
+      fileName: `${Date.now()}.mp3`
     }, { quoted: msg })
 
     await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
