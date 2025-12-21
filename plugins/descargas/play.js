@@ -1,75 +1,49 @@
-import axios from "axios"
-import yts from "yt-search"
+import axios from "axios";
+import yts from "yt-search";
 
-const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
-const API_KEY  = global.APIKeys.may || ""
+const API_BASE = (global.APIs.may || "").replace(/\/+$/, "");
+const API_KEY = global.APIKeys.may || "";
 
 const handler = async (msg, { conn, text, usedPrefix, command }) => {
-  const chatId = msg.key.remoteJid
-  if (!text) return conn.sendMessage(chatId, {
-    text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción o texto>\nEj:\n${usedPrefix}${command} Lemon Tree`
-  }, { quoted: msg })
+  const chatId = msg.key.remoteJid;
+  if (!text) return conn.sendMessage(chatId, { text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree` }, { quoted: msg });
 
-  await conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } })
-
-  let title = "Desconocido"
-  let author = "Desconocido"
-  let duration = "Desconocida"
-  let videoUrl = null
-  let thumb = null
-  let quality = "128kbps"
+  await conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } });
 
   try {
-    const search = await yts(text)
-    if (!search?.videos?.length) throw new Error("No se encontró ningún resultado")
-    const video = search.videos[0]
-    title = video.title || title
-    author = video.author?.name || author
-    duration = video.timestamp || duration
-    thumb = video.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg"
-    const videoLink = video.url
+    // Iniciar búsqueda y API simultáneamente
+    const searchPromise = yts(text);
 
-    const { data } = await axios.get(`${API_BASE}/ytdl?url=${encodeURIComponent(videoLink)}&type=Mp3&apikey=${API_KEY}`)
-    if (!data?.status || !data.result?.url) throw new Error(data?.message || "No se pudo obtener el audio")
-    videoUrl = data.result.url
+    // Esperar búsqueda para obtener el primer video
+    const search = await searchPromise;
+    if (!search?.videos?.length) throw new Error("No se encontró ningún resultado");
 
-    const infoCaption =
-`> *𝚈𝚃𝗣𝗟𝗔𝗬 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗥*
+    const video = search.videos[0];
+    const { title, author, timestamp: duration, thumbnail: thumb, url: videoLink } = video;
 
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝗅𝗈:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝗋𝗍𝗂𝗌𝗍𝗮:* ${author}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝗋𝗮𝗖𝗂ó𝗇:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝗅𝗂𝗱𝗮𝗱:* ${quality}
-⭒ ִֶָ७ ꯭🌐˙⋆｡ - *𝙰𝗉𝗂:* MayAPI
+    // Mientras se prepara el audio, enviamos info rápida
+    const infoCaption = `🎵 *Título:* ${title}\n🎤 *Artista:* ${author?.name || "Desconocido"}\n⏱ *Duración:* ${duration}\n🌐 *API:* MayAPI\n\nGenerando audio...`;
+    conn.sendMessage(chatId, { image: { url: thumb }, caption: infoCaption }, { quoted: msg });
 
-» 𝘼𝗨𝗗𝗜𝗢 𝙴𝗡𝗩𝗜𝗔𝗗𝗢 🎧  
-» 𝘿𝗜𝗦𝗙𝗥𝗨𝗧𝗔𝗟𝗢 𝘾𝗔𝙈𝗣𝗘𝗢𝗡..
+    // Obtener URL del audio apenas tenemos el videoLink
+    const audioPromise = axios.get(`${API_BASE}/ytdl?url=${encodeURIComponent(videoLink)}&type=Mp3&apikey=${API_KEY}`);
 
-⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
+    const { data } = await audioPromise;
+    if (!data?.status || !data.result?.url) throw new Error(data?.message || "No se pudo obtener el audio");
+    const videoUrl = data.result.url;
 
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝗲𝖽 𝖻𝗒 𝖠𝗇𝗀𝖾𝗅.𝗑𝗒𝗓\`\`\``
-
-    await conn.sendMessage(chatId, { image: { url: thumb }, caption: infoCaption }, { quoted: msg })
-
-    await conn.sendMessage(chatId, {
-      audio: { url: videoUrl },
-      mimetype: "audio/mpeg",
-      fileName: `${title}.mp3`,
-      ptt: false
-    }, { quoted: msg })
-
-    await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
+    // Enviar audio apenas esté listo
+    conn.sendMessage(chatId, { audio: { url: videoUrl }, mimetype: "audio/mpeg", fileName: `${title}.mp3`, ptt: false }, { quoted: msg });
+    conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
 
   } catch (err) {
-    console.error("play error:", err)
-    await conn.sendMessage(chatId, {
-      text: `❌ Error: ${err?.message || "Fallo interno"}`
-    }, { quoted: msg })
+    console.error("play error:", err);
+    conn.sendMessage(chatId, { text: `❌ Error: ${err?.message || "Fallo interno"}` }, { quoted: msg });
   }
-}
+};
 
-handler.command = ["play", "ytplay"]
-handler.help = ["play <texto>"]
-handler.tags = ["descargas"]
+handler.command = ["play", "ytplay"];
+handler.help = ["play <texto>"];
+handler.tags = ["descargas"];
 
-export default handler
+export default handler;
