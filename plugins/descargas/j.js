@@ -125,7 +125,7 @@ Selecciona el formato 👇
   }
 }
 
-handler.command = ["play", "ytplay"]
+handler.command = ["playa", "ytplaya"]
 handler.help = ["play <texto>"]
 handler.tags = ["descargas"]
 
