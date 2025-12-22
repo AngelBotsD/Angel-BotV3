@@ -97,11 +97,6 @@ if (m.isGroup) {
   } catch {}
 }
 
-const ___dirname = path.join(
-path.dirname(fileURLToPath(import.meta.url)),
-"plugins"
-)
-
 for (const name in global.plugins) {
 const plugin = global.plugins[name]
 if (!plugin || plugin.disabled) continue
@@ -122,7 +117,6 @@ settings
 }
 
 /* prefijos */
-const strRegex = s => s.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&")
 const prefix = plugin.customPrefix || global.prefix || "."
 const match = (prefix instanceof RegExp
 ? [[prefix.exec(m.text), prefix]]
