@@ -35,7 +35,7 @@ let handler = async (m, { conn }) => {
       desc: '𝖬𝗂𝖾𝗆𝖻𝗋𝗈 𝖮𝖿𝗂𝖼𝗂𝖺𝗅 𝖣𝖾𝗅 𝖤𝗊𝗎𝗂𝗉𝗈 𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍 ⚙️',
       image: 'https://cdn.russellxz.click/ejemplo3.jpeg',
       buttons: [
-        { name: 'WhatsApp', url: 'https://wa.me/5210000000000' }
+        { name: 'WhatsApp', url: 'https://wa.me/5212213479743' }
       ]
     }
   ]
