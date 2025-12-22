@@ -8,9 +8,6 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
   const chatId = msg.key.remoteJid
   const input = String(text || "").trim()
 
-  // ===============================
-  // 👉 CLICK DE BOTONES
-  // ===============================
   if (input.startsWith("audio|") || input.startsWith("video|")) {
     const [type, url] = input.split("|")
 
@@ -55,9 +52,6 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
     return
   }
 
-  // ===============================
-  // 👉 COMANDO NORMAL: play <texto>
-  // ===============================
   if (!input) {
     return conn.sendMessage(chatId, {
       text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree`
