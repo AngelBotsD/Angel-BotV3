@@ -52,7 +52,7 @@ ${cmds.map(cmd => `⭒ ִֶָ७ ꯭🔳˙⋆｡ - ${cmd}`).join('\n')}
   await conn.sendMessage(
     m.chat,
     {
-      image: { url: "https://cdn.russellxz.click/ed011861.jpg" },
+      image: { url: "https://files.catbox.moe/u1lwcu.jpg" },
       caption: menuText,
       buttons: [
         {
