@@ -34,6 +34,7 @@
 "lowdb":"^2.1.0",
 "node-cache":"^5.1.2",
 "node-fetch":"^3.2.0",
+"mongoose": "^6.2.1",
 "pino":"^8.14.1",
 "syntax-error":"^1.4.0",
 "ws":"^8.16.0",
