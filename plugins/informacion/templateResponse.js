@@ -1,29 +1,31 @@
-let handler = async (m, { conn, usedPrefix, command }) => {
+let handler = async (m, { conn }) => {
 
-    //m.react('🕑');
+  // contador por usuario
+  conn.packCount = conn.packCount || {}
+  let user = m.sender
+  conn.packCount[user] = (conn.packCount[user] || 0) + 1
 
-    let txt = 'Pack 🔥';
-    let img = 'https://delirius-apiofc.vercel.app/nsfw/girls';
+  let img = 'https://delirius-apiofc.vercel.app/nsfw/girls'
+  let txt = `*Pack 🔥*\n\n👤 Usuario: @${user.split('@')[0]}\n📦 Packs vistos: ${conn.packCount[user]}`
 
-    let buttons = [
-        {
-            buttonId: `.pack`,
-            buttonText: { displayText: "Ver más" },
-            type: 1
-        }
-    ];
-    await conn.sendMessage(
-        m.chat,
-        {
-            image: { url: img },
-            caption: txt,
-            buttons: buttons,
-            viewOnce: true
-        },
-        { quoted: m }
-    );
-};
+  let msg = {
+    image: { url: img },
+    caption: txt,
+    footer: 'Angel Bot 😈',
+    mentions: [user],
+    interactiveButtons: [
+      {
+        name: 'quick_reply',
+        buttonParamsJson: JSON.stringify({
+          display_text: 'Ver más 🔥',
+          id: '.pack'
+        })
+      }
+    ]
+  }
 
-handler.command = ['pack'];
+  await conn.sendMessage(m.chat, msg, { quoted: m })
+}
 
-export default handler;
+handler.command = ['pack']
+export default handler
