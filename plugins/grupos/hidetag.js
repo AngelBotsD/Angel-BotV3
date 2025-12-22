@@ -48,28 +48,29 @@ async function downloadMedia(msgContent, type) {
 
 const handler = async (m, { conn, participants }) => {
 
-  /* === SOLO GRUPOS === */
   if (!m.isGroup)
-    return m.reply('❌ Este comando solo funciona en grupos')
+  return m.reply('❌ Este comando solo funciona en grupos')
 
-  /* === IGNORAR MENSAJES DEL BOT === */
-  if (m.key.fromMe) return
+const normalize = jid => jid.replace(/[^0-9]/g, '')
+const senderNum = normalize(m.sender)
 
-  /* === VALIDAR ADMIN === */
-const sender = conn.decodeJid(m.sender)
-const me = participants.find(p => conn.decodeJid(p.id) === sender)
+const me = participants.find(p =>
+  normalize(p.id || p.jid || '') === senderNum
+)
 
 const isAdmin = !!(
-  me?.admin === 'admin' ||
-  me?.admin === 'superadmin' ||
-  me?.isAdmin === true ||
-  me?.isSuperAdmin === true
+  me &&
+  (
+    me.admin === 'admin' ||
+    me.admin === 'superadmin' ||
+    me.admin === 1 ||
+    me.isAdmin === true ||
+    me.isSuperAdmin === true
+  )
 )
 
 if (!isAdmin)
   return m.reply('❌ No eres administrador del grupo')
-
-  /* =============================== */
 
   const fkontak = {
     key: {
