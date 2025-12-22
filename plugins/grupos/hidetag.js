@@ -56,15 +56,18 @@ const handler = async (m, { conn, participants }) => {
   if (m.key.fromMe) return
 
   /* === VALIDAR ADMIN === */
-  const sender = conn.decodeJid(m.sender)
-  const me = participants.find(p => conn.decodeJid(p.id) === sender)
+const sender = conn.decodeJid(m.sender)
+const me = participants.find(p => conn.decodeJid(p.id) === sender)
 
-  const isAdmin =
-    me?.admin === 'admin' ||
-    me?.admin === 'superadmin'
+const isAdmin = !!(
+  me?.admin === 'admin' ||
+  me?.admin === 'superadmin' ||
+  me?.isAdmin === true ||
+  me?.isSuperAdmin === true
+)
 
-  if (!isAdmin)
-    return m.reply('❌ No eres administrador del grupo')
+if (!isAdmin)
+  return m.reply('❌ No eres administrador del grupo')
 
   /* =============================== */
 
