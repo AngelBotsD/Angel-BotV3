@@ -26,9 +26,9 @@ const handler = async (m, { conn }) => {
       ? `https://chat.whatsapp.com/${code}`
       : "Sin enlace disponible"
 
+    // Imagen del grupo
     let ppBuffer = null
     const fallback = "https://files.catbox.moe/xr2m6u.jpg"
-
     try {
       const url = await conn.profilePictureUrl(chatId, "image").catch(() => null)
       if (url && !["not-authorized", "not-exist"].includes(url)) {
@@ -36,17 +36,18 @@ const handler = async (m, { conn }) => {
         if (res.ok) ppBuffer = Buffer.from(await res.arrayBuffer())
       }
     } catch {}
-
     if (!ppBuffer) {
       const res = await fetch(fallback)
       if (res.ok) ppBuffer = Buffer.from(await res.arrayBuffer())
     }
 
+    // Preparar imagen para WhatsApp
     const media = await prepareWAMessageMedia(
       { image: ppBuffer },
       { upload: conn.waUploadToServer }
     )
 
+    // Mensaje interactivo híbrido
     const message = {
       interactiveMessage: {
         header: {
@@ -67,6 +68,13 @@ const handler = async (m, { conn }) => {
               buttonParamsJson: JSON.stringify({
                 display_text: "📋 Copiar link",
                 copy_code: link
+              })
+            },
+            {
+              name: "cta_url",
+              buttonParamsJson: JSON.stringify({
+                display_text: "🔗 Abrir enlace",
+                url: link
               })
             }
           ]
