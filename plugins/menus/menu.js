@@ -14,7 +14,6 @@ let handler = async (m, { conn }) => {
   }).replace('a. m.', 'A.M').replace('p. m.', 'P.M')
 
   let userId = m.mentionedJid?.[0] || m.sender
-  let user = global.db.data.users[userId]
   let name = conn.getName(userId)
 
   let _uptime = process.uptime() * 1000
@@ -60,11 +59,12 @@ ${cmds.map(cmd => `⭒ 🔳 - ${cmd}`).join('\n')}
   await conn.sendMessage(
     m.chat,
     {
-      video: { url: "https://cdn.russellxz.click/cbb1d265.mp4" },
+      image: { url: "https://cdn.russellxz.click/cbb1d265.mp4" }, // ⚠️ WhatsApp interpreta como video; si quieres GIF real, debes subir .gif
       caption: menuText,
       buttons,
       headerType: 4,
-      gifPlayback: true
+      gifPlayback: true,
+      contextInfo: { mentionedJid: [userId] }
     },
     { quoted: m }
   )
