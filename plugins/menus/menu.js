@@ -2,6 +2,8 @@ import fs from 'fs'
 
 let handler = async (m, { conn, args }) => {
 
+  await conn.sendMessage(m.chat, { react: { text: '🔥', key: m.key } })
+
   let d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" }))
   let locale = 'es'
   let week = d.toLocaleDateString(locale, { weekday: 'long' })
@@ -33,9 +35,9 @@ let handler = async (m, { conn, args }) => {
 \`\`\`${week}, ${date}
 ${hourNow} 𝖬𝖾𝗑𝗂𝖼𝗈 𝖢𝗂𝗍𝗒\`\`\`
 
-👋🏻 Hola @${userId.split('@')[0]} 𝖬𝗎𝖼𝗁𝗈 𝖦𝗎𝗌𝗍𝗈, 𝖬𝗂 𝖭𝗈𝗆𝖻𝗋𝖾 𝖾𝗌 𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍, 𝖤𝗌𝗉𝖾𝗋𝗈 𝖰𝗎𝖾 𝖳𝖾 𝖲𝖾𝖺 𝖣𝖾 𝖬𝗎𝖼𝗁𝖺 𝖴𝗍𝗂𝗅𝗂𝖽𝖺𝖽, 𝖦𝗋𝖺𝖼𝗂𝖺𝗌 𝖯𝗈𝗋 𝖳𝗎 𝖯𝗋𝖾𝖿𝖾𝗋𝖾𝗇𝖼𝗂𝖺 🏞️.
+👋🏻 Hola @${userId.split('@')[0]} 𝖬𝖾 𝖫𝗅𝖺𝗆𝗈 𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍, 𝖤𝗌𝗉𝖾𝗋𝗈 𝖰𝗎𝖾 𝖲𝖾𝖺 𝖣𝖾 𝖬𝗎𝖼𝗁𝖺 𝖴𝗍𝗂𝗅𝗂𝖽𝖺𝖽 🏞️
 
-𝖳𝗂𝖾𝗆𝗉𝗈 𝖰𝗎𝖾 𝖤𝗁 𝖤𝗌𝗍𝖺𝖽𝗈 𝖠𝖼𝗍𝗂𝗏𝗈: ${uptime} 🏞️
+𝖳𝗂𝖾𝗆𝗉𝗈 𝖠𝖼𝗍𝗂𝗏𝗈: ${uptime} 🏞️
 `.trim()
 
   for (let [tag, cmds] of Object.entries(categories)) {
@@ -50,9 +52,8 @@ ${cmds.map(cmd => `⭒ ִֶָ७ ꯭🔳˙⋆｡ - ${cmd}`).join('\n')}
   await conn.sendMessage(
     m.chat,
     {
-      video: { url: "https://cdn.russellxz.click/cbb1d265.mp4" },
+      image: { url: "https://cdn.russellxz.click/ed011861.jpg" },
       caption: menuText,
-      gifPlayback: true,
       buttons: [
         {
           buttonId: '.owner',
@@ -66,9 +67,7 @@ ${cmds.map(cmd => `⭒ ִֶָ७ ꯭🔳˙⋆｡ - ${cmd}`).join('\n')}
         }
       ],
       headerType: 4,
-      ...(global.rcanal || {}),
       contextInfo: {
-        ...(global.rcanal?.contextInfo || {}),
         mentionedJid: [userId]
       }
     },
