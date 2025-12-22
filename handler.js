@@ -1,9 +1,12 @@
-
 import { smsg } from "./lib/simple.js"
 import { fileURLToPath } from "url"
 import path, { join } from "path"
 import fs, { unwatchFile, watchFile } from "fs"
 import chalk from "chalk"
+import ws from "ws"
+
+const strRegex = str => str.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&")
+const ___dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), "plugins")
 
 const isNumber = x => typeof x === "number" && !isNaN(x)
 const delay = ms => isNumber(ms) && new Promise(resolve => setTimeout(resolve, ms))
