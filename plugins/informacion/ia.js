@@ -13,7 +13,7 @@ let handler = async (m, { conn, usedPrefix }) => {
 
     const buttons = [
         {
-            buttonId: `${usedPrefix}mp4meme`,
+            buttonId: `${usedPrefix}memev`,
             buttonText: { displayText: "🔄 Ver más" },
             type: 1
         }
