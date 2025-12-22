@@ -205,34 +205,30 @@ if (m.isBaileys) return
 m.exp += Math.ceil(Math.random() * 10)
 let usedPrefix
 let groupMetadata = {}
-let participants = []
-let userGroup = {}
-let botGroup = {}
-let isRAdmin = false
-let isAdmin = false
-let isBotAdmin = false
+  let participants = []
+  let userGroup = {}
+  let botGroup = {}
+  let isAdmin = false
+  let isRAdmin = false
+  let isBotAdmin = false
 
-if (m.isGroup) {
-    try {
-        groupMetadata = await this.groupMetadata(m.chat)  // <-- Cambiar conn por this
-        participants = groupMetadata.participants || []
-
-        // Buscar al usuario actual
-        const userParticipant = participants.find(p => p.id === m.sender)
-        isRAdmin = userParticipant?.admin === 'superadmin' || m.sender === groupMetadata.owner
-        isAdmin = isRAdmin || userParticipant?.admin === 'admin'
-
-        // Buscar al bot
-        const botParticipant = participants.find(p => p.id === this.user.jid)  // <-- Cambiar conn por this
-        isBotAdmin = botParticipant?.admin === 'admin' || botParticipant?.admin === 'superadmin'
-
-        // Mantener compatibilidad con código antiguo
-        userGroup = userParticipant || {}
-        botGroup = botParticipant || {}
-    } catch (e) {
-        console.error('Error obteniendo metadata del grupo:', e)
+  if (m.isGroup) {
+    const cache = global.groupCache.get(m.chat)
+    if (cache && Date.now() - cache.time < 90_000) {
+      groupMetadata = cache.data
+    } else {
+      groupMetadata = await this.groupMetadata(m.chat)
+      global.groupCache.set(m.chat, { data: groupMetadata, time: Date.now() })
     }
-}
+
+    participants = groupMetadata.participants || []
+    userGroup = participants.find(p => p.id === m.sender) || {}
+    botGroup = participants.find(p => p.id === this.user.jid) || {}
+
+    isRAdmin = userGroup.admin === "superadmin" || m.sender === groupMetadata.owner
+    isAdmin = isRAdmin || userGroup.admin === "admin"
+    isBotAdmin = botGroup.admin === "admin" || botGroup.admin === "superadmin"
+  }
 
 const ___dirname = path.join(path.dirname(fileURLToPath(import.meta.url)), "plugins")
 for (const name in global.plugins) {
