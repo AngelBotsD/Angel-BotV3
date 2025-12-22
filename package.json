@@ -17,7 +17,6 @@
 },
 "directories":{
 "lib":"lib",
-"src":"src",
 "plugins":"plugins"
 },
 "dependencies":{
