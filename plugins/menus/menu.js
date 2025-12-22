@@ -1,6 +1,6 @@
 import fs from 'fs'
 
-let handler = async (m, { conn, args }) => {
+let handler = async (m, { conn }) => {
 
   let d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" }))
   let locale = 'es'
@@ -34,9 +34,9 @@ let handler = async (m, { conn, args }) => {
 \`\`\`${week}, ${date} 
 ${hourNow} 𝖬𝖾𝗑𝗂𝖼𝗈 𝖢𝗂𝗍𝗒\`\`\`
 
-👋🏻 Hola @${userId.split('@')[0]} 𝖬𝗎𝖼𝗁𝗈 𝖦𝗎𝗌𝗍𝗈, 𝖬𝗂 𝖭𝗈𝗆𝖻𝗋𝖾 𝖾𝗌 𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍, 𝖤𝗌𝗉𝖾𝗋𝗈 𝖰𝗎𝖾 𝖳𝖾 𝖲𝖾𝖺 𝖣𝖾 𝖬𝗎𝖼𝗁𝖺 𝖴𝗍𝗂𝗅𝗂𝖽𝖺𝖽, 𝖦𝗋𝖺𝖼𝗂𝖺𝗌 𝖯𝗈𝗋 𝖳𝗎 𝖯𝗋𝖾𝖿𝖾𝗋𝖾𝗇𝖼𝗂𝖺 🏞️.
+👋🏻 Hola @${userId.split('@')[0]}, mi nombre es Angel Bot, espero que te sea de mucha utilidad 🏞️.
 
-𝖳𝗂𝖾𝗆𝗉𝗈 𝖰𝗎𝖾 𝖤𝗁 𝖤𝗌𝗍𝖺𝖽𝗈 𝖠𝖼𝗍𝗂𝗏𝗈: ${uptime} 🏞️
+Tiempo que he estado activo: ${uptime} 🏞️
 `.trim()
 
   for (let [tag, cmds] of Object.entries(categories)) {
@@ -44,7 +44,7 @@ ${hourNow} 𝖬𝖾𝗑𝗂𝖼𝗈 𝖢𝗂𝗍𝗒\`\`\`
     menuText += `
 
 ╭─── ${tagName} ──╮
-${cmds.map(cmd => `⭒ ִֶָ७ ꯭🔳˙⋆｡ - ${cmd}`).join('\n')}
+${cmds.map(cmd => `⭒ 🔳 - ${cmd}`).join('\n')}
 ╰──────────╯`
   }
 
@@ -64,19 +64,13 @@ ${cmds.map(cmd => `⭒ ִֶָ७ ꯭🔳˙⋆｡ - ${cmd}`).join('\n')}
       caption: menuText,
       buttons,
       headerType: 4,
-      gifPlayback: true,
-      ...(global.rcanal || {}),
-      contextInfo: {
-        ...(global.rcanal?.contextInfo || {}),
-        mentionedJid: [userId]
-      }
+      gifPlayback: true
     },
     { quoted: m }
   )
 }
 
 handler.command = ['menu', 'menú', 'help', 'ayuda']
-handler.rcanal = true
 
 export default handler
 
