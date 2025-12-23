@@ -202,7 +202,11 @@ console.error(e)
 }
 
 const pluginPrefix = plugin.customPrefix || global.prefix
-if (!m.text.startsWith(pluginPrefix)) continue
+if (
+  pluginPrefix instanceof RegExp
+    ? !pluginPrefix.test(m.text)
+    : !m.text.startsWith(pluginPrefix)
+) continue
 const noPrefix = m.text.slice(pluginPrefix.length).trim()
 const [command, ...args] = noPrefix.split(/\s+/)
 const isAccept = Array.isArray(plugin.command) ? plugin.command.includes(command) : plugin.command === command
