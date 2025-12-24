@@ -28,7 +28,7 @@ may: 'https://mayapi.ooguy.com'
 
 global.APIKeys = {
 sky: 'Angxlllll',
-may: 'may-0595dca2'
+may: 'may-684934ab'
 }
 
 const file = fileURLToPath(import.meta.url)
