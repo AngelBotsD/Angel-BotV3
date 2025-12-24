@@ -20,7 +20,7 @@ let handler = async (m, { conn }) => {
 
   if (!query) {
     return m.reply(
-      '¡Hola!\nMi nombre es Elite Bot\n¿En qué te puedo ayudar? ♥️'
+      '¡Hola!\nMi nombre es Angel Bot\n¿En qué te puedo ayudar? ♥️'
     );
   }
 
