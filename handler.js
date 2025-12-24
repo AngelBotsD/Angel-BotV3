@@ -154,10 +154,10 @@ settings
 } catch (err) {
 console.error(err)
 }}
-if (!opts["restrict"])
+if (!opts["restrict"]) {
 if (plugin.tags && plugin.tags.includes("admin")) {
 continue
-}
+}}
 const strRegex = (str) => str.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&")
 const pluginPrefix = plugin.customPrefix || conn.prefix || global.prefix
 const match = (pluginPrefix instanceof RegExp ?
