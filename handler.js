@@ -39,55 +39,6 @@ m.exp = 0
 
 if (typeof m.text !== "string") m.text = ""
 
-const normalize = v => String(v || "")
-  .trim()
-  .replace(/:.+$/, "")
-  .toLowerCase()
-
-const botJid = normalize(this?.user?.id || this?.user?.jid)
-
-const mentioned =
-  m.message?.extendedTextMessage?.contextInfo?.mentionedJid ||
-  m?.mentionedJid ||
-  []
-
-const isBotMentioned = mentioned
-  .map(normalize)
-  .includes(botJid)
-
-console.log({
-  bot: botJid,
-  mentioned,
-  normalized: mentioned.map(normalize),
-  isBotMentioned
-})
-
-
-
-if (isBotMentioned) {
-
-  const body =
-    m.message?.extendedTextMessage?.text ||
-    m.message?.conversation ||
-    ""
-
-  const textAfter = body.replace(/@\S+/g, "").trim()
-
-  console.log("ME MENCIONARON", { botJid, mentioned, textAfter })
-
-  await this.sendMessage(
-    m.chat,
-    { text: textAfter || "¿Qué pasó? 👀" },
-    { quoted: m }
-  )
-
-  return
-}
-
-
-
-
-
 const user = global.db.data.users[m.sender] ||= {
 name: m.name,
 exp: 0,
