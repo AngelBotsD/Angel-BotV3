@@ -10,7 +10,6 @@ import ws from "ws"
 const isNumber = x => typeof x === "number" && !isNaN(x)
 const delay = ms => isNumber(ms) && new Promise(resolve => setTimeout(resolve, ms))
 
-/* ===== FIX LID / OWNER / ADMIN ===== */
 const DIGITS = (s = "") => String(s).replace(/\D/g, "")
 
 const OWNER_NUMBERS = (global.owner || []).map(v =>
