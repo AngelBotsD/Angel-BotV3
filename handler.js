@@ -300,12 +300,15 @@ await plugin.call(this, m, extra)
 m.error = err
 console.error(err)
 } finally {
+} finally {
 if (typeof plugin.after === "function") {
 try {
 await plugin.after.call(this, m, extra)
 } catch (err) {
 console.error(err)
-}}}}}} catch (err) {
+}}
+}
+} catch (err) {
 console.error(err)
 } finally {
 if (opts["queque"] && m.text) {
