@@ -93,7 +93,8 @@ const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
     return 'other'
   }
 
-  let teks = `*╭━* 𝘼𝘾𝙏𝙄𝙑𝙀𝙉𝙎𝙀𝙉 乂\n\n*${groupName}*\n👤 𝙄𝙉𝙏𝙀𝙂𝙍𝘼𝙉𝙏𝙀𝙎: *${participants.length}*\n${pesan}\n`
+  let teks = `*!  MENCION GENERAL  !*
+   *PARA *${participants.length}* MIEMBROS* 🔊`
 
   let grouped = {}
 
