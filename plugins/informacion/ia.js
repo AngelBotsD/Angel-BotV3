@@ -2,7 +2,7 @@ import axios from "axios"
 import fs from "fs"
 import path from "path"
 
-const API_URL = "https://mayapi.ooguy.com/ai-venice"
+const API_URL = "https://mayapi.ooguy.com"
 const API_KEY = process.env.MAYAPI_KEY || "may-684934ab"
 const MAX_TIMEOUT = 60000
 
