@@ -46,7 +46,7 @@ const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
 
   await conn.sendMessage(m.chat, { react: { text: '🗣️', key: m.key } })
 
-  let teks = `*!  MENCION GENERAL  !*\n   *PARA ${participants.length} MIEMBROS* 🔊\n\n`
+  let teks = `*!  MENCION GENERAL  !*\n   *PARA ${participants.length} MIEMBROS* 🗣️\n\n`
 
   let grouped = {}
 
