@@ -40,37 +40,43 @@ m.exp = 0
 if (typeof m.text !== "string") m.text = ""
 
 
-
-// Normaliza JIDs
+// ——— NORMALIZA EL JID ———
 const normalize = jid => jid?.replace(/:[0-9]+/g, "").toLowerCase()
-
-// JID real del bot
 const botJid = normalize(conn?.user?.id || conn?.user?.jid)
 
-// Detectar menciones
-const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || []
-const isBotMentioned = mentioned.map(normalize).includes(botJid)
+// ——— OBTENER MENCIONES REALMENTE ———
+m.mentionedJid =
+  m.message?.extendedTextMessage?.contextInfo?.mentionedJid ||
+  m.mentionedJid ||
+  []
 
-// Detectar @bot + texto
-const body =
-  m.message?.extendedTextMessage?.text ||
-  m.message?.conversation ||
-  ""
+// ——— ¿MENCIONARON AL BOT? ———
+const isBotMentioned = m.mentionedJid
+  .map(normalize)
+  .includes(botJid)
 
 if (isBotMentioned) {
-  // Si quieres detectar texto después de mencionar:
+
+  const body =
+    m.message?.extendedTextMessage?.text ||
+    m.message?.conversation ||
+    ""
+
   const textAfter = body.replace(/@\S+/g, "").trim()
 
-  console.log("Me mencionaron:", { mentioned, botJid, textAfter })
+  console.log("ME MENCIONARON", { botJid, mentioned: m.mentionedJid, textAfter })
 
   if (!textAfter) {
     await conn.sendMessage(m.chat, { text: "¿Qué pasó? 👀" }, { quoted: m })
   } else {
-    await conn.sendMessage(m.chat, { text: `Dijiste: ${textAfter}` }, { quoted: m })
+    await conn.sendMessage(m.chat, { text: textAfter }, { quoted: m })
   }
 
   return
 }
+
+
+
 
 
 const user = global.db.data.users[m.sender] ||= {
