@@ -4,7 +4,7 @@ import path from 'path'
 export async function before(m, { conn }) {
   try {
     const nombreBot = global.namebot || '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍'
-    const bannerFinal = 'https://files.catbox.moe/igdrbi.jpg'
+    const bannerFinal = 'https://files.catbox.moe/4k94dp.jpg'
 
     const canales = [global.idcanal, global.idcanal2].filter(Boolean)
     const newsletterJidRandom = canales.length
