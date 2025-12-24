@@ -1,29 +1,46 @@
-let handler = async (m, { conn, usedPrefix, command }) => {
+let handler = async (m, { conn, args }) => {
+  if (!args[0]) {
+    return conn.reply(m.chat, '✳️ Usa:\n.wa 521XXXXXXXXXX', m)
+  }
 
-    let txt = 'Pack 🔥';  
-    let img = 'https://delirius-apiofc.vercel.app/nsfw/girls';  
+  // limpiar número
+  let number = args[0].replace(/\D/g, '')
+  if (number.length < 8) {
+    return conn.reply(m.chat, '❌ Número inválido', m)
+  }
 
-    let buttons = [  
-        {  
-            buttonId: `.pack`,  
-            buttonText: { displayText: "Ver más" },  
-            type: 1  
-        }  
-    ];  
+  let jid = number + '@s.whatsapp.net'
 
-    await conn.sendMessage(  
-        m.chat,  
-        {  
-            image: { url: img },  
-            caption: txt,  
-            buttons: buttons,  
-            viewOnce: false
-        },  
-        { quoted: m }  
-    );
+  try {
+    let res = await conn.onWhatsApp(jid)
 
-};
+    if (!res || res.length === 0 || !res[0]?.exists) {
+      return conn.reply(
+        m.chat,
+        `❌ *Número NO registrado en WhatsApp*\n\n📛 Posible baneo permanente o número inexistente`,
+        m
+      )
+    }
 
-handler.command = ['pack'];
+    return conn.reply(
+      m.chat,
+      `✅ *Número activo en WhatsApp*\n\n👤 JID: ${jid}`,
+      m
+    )
 
-export default handler;
+  } catch (e) {
+    console.error(e)
+    return conn.reply(
+      m.chat,
+      '⚠️ Error al verificar el número',
+      m
+    )
+  }
+}
+
+handler.help = ['wa <numero>']
+handler.tags = ['tools']
+handler.command = /^wa$/i
+handler.owner = true // opcional
+
+export default handler
