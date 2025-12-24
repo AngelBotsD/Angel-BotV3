@@ -40,17 +40,15 @@ m.exp = 0
 if (typeof m.text !== "string") m.text = ""
 
 
-// ——— NORMALIZA EL JID ———
 const normalize = jid => jid?.replace(/:[0-9]+/g, "").toLowerCase()
-const botJid = normalize(conn?.user?.id || conn?.user?.jid)
 
-// ——— OBTENER MENCIONES REALMENTE ———
+const botJid = normalize(this?.user?.id || this?.user?.jid)
+
 m.mentionedJid =
   m.message?.extendedTextMessage?.contextInfo?.mentionedJid ||
   m.mentionedJid ||
   []
 
-// ——— ¿MENCIONARON AL BOT? ———
 const isBotMentioned = m.mentionedJid
   .map(normalize)
   .includes(botJid)
@@ -66,11 +64,11 @@ if (isBotMentioned) {
 
   console.log("ME MENCIONARON", { botJid, mentioned: m.mentionedJid, textAfter })
 
-  if (!textAfter) {
-    await conn.sendMessage(m.chat, { text: "¿Qué pasó? 👀" }, { quoted: m })
-  } else {
-    await conn.sendMessage(m.chat, { text: textAfter }, { quoted: m })
-  }
+  await this.sendMessage(
+    m.chat,
+    { text: textAfter || "¿Qué pasó? 👀" },
+    { quoted: m }
+  )
 
   return
 }
