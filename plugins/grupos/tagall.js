@@ -1,12 +1,12 @@
 const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
   let chat = global.db.data.chats[m.chat]
-  let emoji = chat.emojiTag || '┊»'
+  let emoji = chat.emojiTag || '┃'
 
   const pesan = args.join` `
   const groupMetadata = await conn.groupMetadata(m.chat)
   const groupName = groupMetadata.subject
 
-  const countryFlags = {
+    const countryFlags = {
 
     '1':'🇺🇸','7':'🇷🇺',
 
@@ -93,8 +93,7 @@ const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
     return 'other'
   }
 
-  let teks = `*!  MENCION GENERAL  !*
-   *PARA *${participants.length}* MIEMBROS* 🔊\n\n`
+  let teks = `*!  MENCION GENERAL  !*\n   *PARA ${participants.length} MIEMBROS* 🔊\n\n`
 
   let grouped = {}
 
