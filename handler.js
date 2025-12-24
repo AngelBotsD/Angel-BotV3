@@ -238,12 +238,6 @@ if (isAccept) { global.db.data.users[m.sender].commands = (global.db.data.users[
 if (chat) {
 const botId = this.user.jid
 const primaryBotId = chat.primaryBot
-if (m.text && user.banned && !isROwner) {
-const mensaje = `ꕥ Estas baneado/a, no puedes usar comandos en este bot!\n\n> ● *Razón ›* ${user.bannedReason}\n\n> ● Si este Bot es cuenta oficial y tienes evidencia que respalde que este mensaje es un error, puedes exponer tu caso con un moderador.`.trim()
-if (!primaryBotId || primaryBotId === botId) {
-m.reply(mensaje)
-return
-}}}
 const adminMode = chat.modoadmin || false
 const wa = plugin.botAdmin || plugin.admin || plugin.group || plugin || noPrefix || pluginPrefix || m.text.slice(0, 1) === pluginPrefix || plugin.command
 if (adminMode && !isOwner && m.isGroup && !isAdmin && wa) return
