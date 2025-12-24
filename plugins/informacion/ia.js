@@ -1,9 +1,12 @@
 let handler = async (m, { conn, args }) => {
   if (!args[0]) {
-    return conn.reply(m.chat, '✳️ Usa:\n.wa 521XXXXXXXXXX', m)
+    return conn.reply(
+      m.chat,
+      '✳️ Uso correcto:\n*.wa 521XXXXXXXXXX*',
+      m
+    )
   }
 
-  // limpiar número
   let number = args[0].replace(/\D/g, '')
   if (number.length < 8) {
     return conn.reply(m.chat, '❌ Número inválido', m)
@@ -12,19 +15,33 @@ let handler = async (m, { conn, args }) => {
   let jid = number + '@s.whatsapp.net'
 
   try {
-    let res = await conn.onWhatsApp(jid)
+    let result = await conn.onWhatsApp(jid)
 
-    if (!res || res.length === 0 || !res[0]?.exists) {
+    if (!result || !result[0] || !result[0].exists) {
       return conn.reply(
         m.chat,
-        `❌ *Número NO registrado en WhatsApp*\n\n📛 Posible baneo permanente o número inexistente`,
+`📛 *Estado del número*
+
+❌ *NO registrado en WhatsApp*
+
+ℹ️ Este estado ocurre cuando un número:
+• Entra en revisión temporal
+• Entra en revisión permanente
+• Es baneado
+• Nunca fue activado
+
+⚠️ Para WhatsApp Web / Baileys
+todos estos estados se muestran igual.`,
         m
       )
     }
 
     return conn.reply(
       m.chat,
-      `✅ *Número activo en WhatsApp*\n\n👤 JID: ${jid}`,
+`✅ *Número activo en WhatsApp*
+
+👤 JID:
+${jid}`,
       m
     )
 
