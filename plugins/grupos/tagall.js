@@ -94,7 +94,7 @@ const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
   }
 
   let teks = `*!  MENCION GENERAL  !*
-   *PARA *${participants.length}* MIEMBROS* 🔊`
+   *PARA *${participants.length}* MIEMBROS* 🔊\n\n`
 
   let grouped = {}
 
