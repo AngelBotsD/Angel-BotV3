@@ -1,27 +1,17 @@
-import fetch from 'node-fetch'
-import axios from 'axios'
+import fetch from 'node-fetch';
 
-let handler = async (m, { conn, usedPrefix, command }) => {
+let handler = async(m, { conn, text, usedPrefix, command }) => {
 
-  await m.react('🔥')
+m.react('🕑');
 
-  const img = 'https://delirius-apiofc.vercel.app/nsfw/girls'
+let txt = 'Pack🔥🔥🔥\n> Pon De Nuevo .pack para mirar el siguiente ✨';
 
-  await conn.sendMessage(m.chat, {
-    image: { url: img },
-    caption: '',
-    buttons: [
-      {
-        buttonId: `${usedPrefix + command}`,
-        buttonText: { displayText: '🔁 Siguiente' },
-        type: 1
-      }
-    ],
-    headerType: 4
-  }, { quoted: m })
+let img = 'https://delirius-apiofc.vercel.app/nsfw/girls';
 
-  await m.react('🔥')
+m.react('✅');
+conn.sendMessage(m.chat, { image: { url: img }, caption: txt }, { quoted: fkontak });
 }
 
-handler.command = ['pack']
-export default handler
+handler.command = ['pack'];
+
+export default handler;
