@@ -1,162 +1,175 @@
 import fs from 'fs'
-import fetch from 'node-fetch'
+import path from 'path'
 import FormData from 'form-data'
-import { fileTypeFromBuffer } from 'file-type'
-import crypto from "crypto"
 import axios from 'axios'
-import cheerio from 'cheerio'
+import ffmpeg from 'fluent-ffmpeg'
+import crypto from 'crypto'
+import { fileTypeFromBuffer } from 'file-type'
 
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 B'
-  const sizes = ['B','KB','MB','GB','TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / (1024 ** i)).toFixed(2)} ${sizes[i]}`
+function unwrapMessage(m) {
+  let n = m
+  while (
+    n?.viewOnceMessage?.message ||
+    n?.viewOnceMessageV2?.message ||
+    n?.viewOnceMessageV2Extension?.message ||
+    n?.ephemeralMessage?.message
+  ) {
+    n =
+      n.viewOnceMessage?.message ||
+      n.viewOnceMessageV2?.message ||
+      n.viewOnceMessageV2Extension?.message ||
+      n.ephemeralMessage?.message
+  }
+  return n
 }
 
-let handler = async (m, { conn, args, usedPrefix, command }) => {
+function ensureWA(wa, conn) {
+  if (wa?.downloadContentFromMessage) return wa
+  if (conn?.wa?.downloadContentFromMessage) return conn.wa
+  if (global.wa?.downloadContentFromMessage) return global.wa
+  return null
+}
+
+function extFromMime(mime, fallback = 'bin') {
+  if (!mime) return fallback
+  const m = mime.toLowerCase()
+  if (m.includes('image/')) return 'jpg'
+  if (m.includes('video/')) return 'mp4'
+  if (m.includes('audio/')) return 'mp3'
+  if (m.includes('pdf')) return 'pdf'
+  return fallback
+}
+
+async function uploadToCatbox(filePath) {
+  const buffer = await fs.promises.readFile(filePath)
+  const { ext, mime } = await fileTypeFromBuffer(buffer) || {}
+  const random = crypto.randomBytes(5).toString('hex')
+  const filename = `${random}.${ext || 'bin'}`
+
+  const form = new FormData()
+  form.append('reqtype', 'fileupload')
+  form.append('fileToUpload', buffer, {
+    filename,
+    contentType: mime || 'application/octet-stream'
+  })
+
+  const res = await axios.post(
+    'https://catbox.moe/user/api.php',
+    form,
+    {
+      headers: form.getHeaders(),
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    }
+  )
+
+  if (!res.data) throw new Error('Catbox no devolvió URL')
+  return res.data.trim()
+}
+
+let handler = async (msg, { conn, command, wa }) => {
+  const chatId = msg.key.remoteJid
+  const pref = global.prefixes?.[0] || '.'
+
+  const ctx = msg.message?.extendedTextMessage?.contextInfo
+  const rawQuoted = ctx?.quotedMessage
+  const quoted = rawQuoted ? unwrapMessage(rawQuoted) : null
+
+  if (!quoted) {
+    return conn.sendMessage(
+      chatId,
+      { text: `✳️ Usa:\n${pref}${command}\nResponde a una imagen, video, sticker o audio` },
+      { quoted: msg }
+    )
+  }
+
+  await conn.sendMessage(chatId, { react: { text: '☁️', key: msg.key } })
+
+  let rawPath
+  let finalPath
+
   try {
-    const aliases = {
-      ct: 'catbox',
-      pi: 'postimages',
-      lt: 'litterbox',
-      tf: 'tmpfiles',
-      cg: 'cloudguru'
-    }
-const aliasesText = Object.entries(aliases)
-  .map(([key, value]) => `${key} → ${value}`)
-  .join('\n');
-    const q = m.quoted || m
-    const mime = q.mediaType || ''
-    if (!/image|video|audio|sticker|document/.test(mime)) {
-      return conn.reply(m.chat, `🕒\n Responde a una imagen / vídeo / audio / documento\n\nEjemplo:\n${usedPrefix + command} catbox\n\n${aliasesText}`, m,)
-    }
+    let type
+    let media
 
-    const mediaPath = await q.download(true)
-    const sizeBytes = fs.statSync(mediaPath).size
-    const humanSize = formatBytes(sizeBytes)
-
-    if (sizeBytes === 0) {
-      await conn.reply(m.chat, ' El archivo es demasiado ligero', m, rcanal)
-      try { await fs.promises.unlink(mediaPath) } catch {}
-      return
-    }
-    if (sizeBytes > 1024 * 1024 * 1024) {
-      await conn.reply(m.chat, ' El archivo supera 1GB', m,)
-      try { await fs.promises.unlink(mediaPath) } catch {}
-      return
+    if (quoted.imageMessage) {
+      type = 'image'
+      media = quoted.imageMessage
+    } else if (quoted.videoMessage) {
+      type = 'video'
+      media = quoted.videoMessage
+    } else if (quoted.stickerMessage) {
+      type = 'sticker'
+      media = quoted.stickerMessage
+    } else if (quoted.audioMessage) {
+      type = 'audio'
+      media = quoted.audioMessage
+    } else {
+      throw new Error('Tipo no permitido')
     }
 
-    const services = {
-      catbox:     { name: 'Catbox',     url: 'https://catbox.moe/user/api.php', field: 'fileToUpload', extra: { reqtype: 'fileupload' }, expires: 'Permanente' },
-      postimages: { name: 'PostImages', url: 'https://postimages.org/json/rr',  field: 'file', extra: { optsize: '0', expire: '0', numfiles: '1' }, expires: 'Permanente' },
-      litterbox:  { name: 'Litterbox',  url: 'https://api.alvianuxio.eu.org/uploader/litterbox', field: 'file', extra: { time: '24h' }, expires: '24h' },
-      tmpfiles:   { name: 'TmpFiles',   url: 'https://api.alvianuxio.eu.org/uploader/tmpfiles', field: 'file', extra: {}, expires: 'Desconocido' },
-      cloudguru:  { name: 'CloudGuru',  url: 'https://cloudkuimages.guru/upload.php', field: 'file', extra: {}, expires: 'Permanente' }
-    }
+    const WA = ensureWA(wa, conn)
+    if (!WA) throw new Error('Baileys no disponible')
 
+    const tmpDir = path.join(path.dirname(new URL(import.meta.url).pathname), 'tmp')
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
 
-   /* const aliases = {
-      ct: 'catbox',
-      pi: 'postimages',
-      lt: 'litterbox',
-      tf: 'tmpfiles',
-      cg: 'cloudguru'
-    }*/
+    const ext = type === 'sticker' ? 'webp' : extFromMime(media.mimetype)
+    rawPath = path.join(tmpDir, `${Date.now()}.${ext}`)
 
-    const choice = (args[0] || '').toLowerCase()
-    const serviceKey = services[choice] ? choice : (aliases[choice] ? aliases[choice] : null)
+    const stream = await WA.downloadContentFromMessage(
+      media,
+      type === 'sticker' ? 'sticker' : type
+    )
 
-    if (!serviceKey) {
-      let helpText = `❓ Servicios disponibles:\n\n`
-      Object.keys(services).forEach(k => {
-        helpText += `• ${k} (${services[k].name})\n`
+    const ws = fs.createWriteStream(rawPath)
+    for await (const chunk of stream) ws.write(chunk)
+    ws.end()
+    await new Promise(r => ws.on('finish', r))
+
+    const size = fs.statSync(rawPath).size
+    if (size > 200 * 1024 * 1024) throw new Error('Archivo supera 200MB')
+
+    finalPath = rawPath
+
+    if (type === 'audio' && ext !== 'mp3') {
+      finalPath = path.join(tmpDir, `${Date.now()}_audio.mp3`)
+      await new Promise((res, rej) => {
+        ffmpeg(rawPath)
+          .audioCodec('libmp3lame')
+          .toFormat('mp3')
+          .on('end', res)
+          .on('error', rej)
+          .save(finalPath)
       })
-      helpText += `\nEjemplo:\n${usedPrefix + command} catbox\n${usedPrefix + command} pi
-
-${aliases}`
-      await conn.reply(m.chat, helpText, m)
-      try { await fs.promises.unlink(mediaPath) } catch {}
-      return
+      fs.unlinkSync(rawPath)
     }
 
-    let svc = services[serviceKey]
-    let link = await uploadService(svc, mediaPath)
+    const url = await uploadToCatbox(finalPath)
 
-    try { await fs.promises.unlink(mediaPath) } catch {}
+    await conn.sendMessage(
+      chatId,
+      { text: `✅ Archivo subido a Catbox\n\n${url}` },
+      { quoted: msg }
+    )
 
-    let txt = `乂 *${svc.name.toUpperCase()}*\n\n`
-    txt += `• Enlace: ${link}\n`
-    txt += `• Tamaño: ${humanSize}\n`
-    txt += `• Expiración: ${svc.expires}\n`
-
-    await conn.reply(m.chat, txt.trim(), m)
+    await conn.sendMessage(chatId, { react: { text: '✅', key: msg.key } })
 
   } catch (e) {
-    await conn.reply(m.chat, '❗ ' + e.message, m)
+    await conn.sendMessage(
+      chatId,
+      { text: `❌ Error\n${e.message}` },
+      { quoted: msg }
+    )
+    await conn.sendMessage(chatId, { react: { text: '❌', key: msg.key } })
+  } finally {
+    try { if (rawPath) fs.unlinkSync(rawPath) } catch {}
+    try { if (finalPath && finalPath !== rawPath) fs.unlinkSync(finalPath) } catch {}
   }
 }
 
-handler.help = ['tourl <servicio>']
-handler.tags = ['tools']
-handler.command = /^(catbox|ct|url)$/i
-handler.owner = false
+handler.command = ['tourl']
+handler.help = ['tourl']
+handler.tags = ['herramientas']
+
 export default handler
-
-async function uploadService(svc, path) {
-  try {
-    const buffer = await fs.promises.readFile(path)
-    const { ext, mime } = await fileTypeFromBuffer(buffer) || {}
-    const fileName = `upload.${ext || 'bin'}`
-    const form = new FormData()
-
-    for (const [k, v] of Object.entries(svc.extra)) {
-      form.append(k, v)
-    }
-
-
-    if (svc.url.includes('postimages.org')) {
-      const data = new FormData()
-      data.append('optsize', '0')
-      data.append('expire', '0')
-      data.append('numfiles', '1')
-      data.append('upload_session', Math.random())
-      data.append('file', buffer, `${Date.now()}.jpg`)
-      const res = await axios.post('https://postimages.org/json/rr', data)
-      const html = await axios.get(res.data.url)
-      const $ = cheerio.load(html.data)
-      const image = $('#code_direct').attr('value')
-      if (!image) throw new Error('No se pudo obtener la URL directa')
-      return image
-    }
-
-
-    if (svc.url.includes('catbox.moe')) {
-      const formData = new FormData()
-      formData.append('reqtype', 'fileupload')
-      const randomBytes = crypto.randomBytes(5).toString("hex")
-      const fileExt = ext || 'bin'
-      formData.append('fileToUpload', buffer, {
-        filename: `${randomBytes}.${fileExt}`,
-        contentType: mime || 'application/octet-stream'
-      })
-      const res = await axios.post(svc.url, formData, {
-        headers: formData.getHeaders(),
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity
-      })
-      return res.data
-    }
-
-
-    form.append(svc.field, buffer, { filename: fileName, contentType: mime || 'application/octet-stream' })
-    const res = await fetch(svc.url, { method: 'POST', headers: form.getHeaders(), body: form })
-    const json = await res.json()
-    let url = json.data?.url || json.url || json.src || (Array.isArray(json) ? json[0]?.url || json[0]?.src : null)
-    if (!url) throw new Error('No URL en respuesta: ' + JSON.stringify(json))
-    return url
-
-  } catch (err) {
-    console.error(`Error al subir a ${svc.name}:`, err)
-    throw err
-  }
-}
