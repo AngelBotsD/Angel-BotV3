@@ -1,90 +1,92 @@
-const DIGITS = (s = "") => String(s || "").replace(/\D/g, "");
+const handler = async (m, { isOwner, isAdmin, conn, args, participants }) => {
+  let chat = global.db.data.chats[m.chat],
+      emoji = chat.emojiTag || '┃';
 
-const handler = async (msg, { conn }) => {
-  try {
-    const chatId = msg.key.remoteJid;
-    const isGroup = chatId.endsWith("@g.us");
-    const isFromMe = !!msg.key.fromMe;
-
-    await conn.sendMessage(chatId, { react: { text: "🗣️", key: msg.key } }).catch(() => {});
-
-    if (!isGroup) {
-      return conn.sendMessage(chatId, { 
-        text: "⚠️ *Este comando solo puede usarse en grupos.*" 
-      }, { quoted: msg });
-    }
-
-    const senderId = msg.key.participant || msg.key.remoteJid;
-    const senderRealJid = typeof msg.realJid === "string"
-      ? msg.realJid
-      : (senderId?.endsWith?.("@s.whatsapp.net") ? senderId : null);
-
-    const senderDigits = DIGITS(senderRealJid || senderId);
-
-    const isOwner = Array.isArray(global.owner) &&
-      global.owner.some(([id]) => id === senderDigits);
-
-    let meta;
-    try {
-      meta = await conn.groupMetadata(chatId);
-    } catch {
-      return conn.sendMessage(chatId, { text: "❌ No pude leer la metadata del grupo." }, { quoted: msg });
-    }
-
-    const participantes = Array.isArray(meta?.participants) ? meta.participants : [];
-
-    const authorCandidates = new Set([
-      senderId,
-      senderRealJid,
-      `${senderDigits}@s.whatsapp.net`,
-      `${senderDigits}@lid`
-    ].filter(Boolean));
-
-    const isAdmin = participantes.some(p => {
-      const ids = [
-        p?.id,
-        typeof p?.jid === "string" ? p.jid : ""
-      ].filter(Boolean);
-      const match = ids.some(id => authorCandidates.has(id) || DIGITS(id) === senderDigits);
-      const adminOK = p?.admin === "admin" || p?.admin === "superadmin";
-      return match && adminOK;
-    });
-
-    if (!isAdmin && !isOwner && !isFromMe) {
-      return conn.sendMessage(chatId, {
-        text: "🚫 *Este comando solo puede usarlo un administrador o el dueño del bot.*"
-      }, { quoted: msg });
-    }
-
-    const mentionIdsRaw = participantes.map(p => p?.id || p?.jid).filter(Boolean);
-
-    const seen = new Set();
-    const mentionIds = [];
-    for (const jid of mentionIdsRaw) {
-      const d = DIGITS(jid);
-      if (!seen.has(d)) {
-        seen.add(d);
-        mentionIds.push(jid);
-      }
-    }
-
-    const total = mentionIds.length;
-
-    let texto = `*!  MENCION GENERAL  !*\n`;
-    texto += `   *PARA ${total} MIEMBROS* 🚩\n\n`;
-    texto += mentionIds.map(id => `┊» 🚩 @${id.split("@")[0]}`).join("\n");
-
-    await conn.sendMessage(chatId, { text: texto, mentions: mentionIds }, { quoted: msg });
-
-  } catch {
-    await conn.sendMessage(msg.key.remoteJid, { 
-      text: "❌ Ocurrió un error al ejecutar el comando tagall." 
-    }, { quoted: msg });
+  if (!(isAdmin || isOwner)) {
+    global.dfail('admin', m, conn);
+    throw false;
   }
+
+  const pesan = args.join` `,
+        groupMetadata = await conn.groupMetadata(m.chat),
+        groupName = groupMetadata.subject;
+
+  const countryFlags = {
+    '1': '🇺🇸','7': '🇷🇺','20': '🇪🇬','27': '🇿🇦','30': '🇬🇷','31': '🇳🇱','32': '🇧🇪','33': '🇫🇷',
+    '34': '🇪🇸','36': '🇭🇺','39': '🇮🇹','40': '🇷🇴','41': '🇨🇭','43': '🇦🇹','44': '🇬🇧','45': '🇩🇰',
+    '46': '🇸🇪','47': '🇳🇴','48': '🇵🇱','49': '🇩🇪','51': '🇵🇪','52': '🇲🇽','53': '🇨🇺','54': '🇦🇷',
+    '55': '🇧🇷','56': '🇨🇱','57': '🇨🇴','58': '🇻🇪','60': '🇲🇾','61': '🇦🇺','62': '🇮🇩','63': '🇵🇭',
+    '64': '🇳🇿','65': '🇸🇬','66': '🇹🇭','81': '🇯🇵','82': '🇰🇷','84': '🇻🇳','86': '🇨🇳','90': '🇹🇷',
+    '91': '🇮🇳','92': '🇵🇰','93': '🇦🇫','94': '🇱🇰','95': '🇲🇲','98': '🇮🇷','211': '🇸🇸','212': '🇲🇦',
+    '213': '🇩🇿','216': '🇹🇳','218': '🇱🇾','220': '🇬🇲','221': '🇸🇳','222': '🇲🇷','223': '🇲🇱','224': '🇬🇳',
+    '225': '🇨🇮','226': '🇧🇫','227': '🇳🇪','228': '🇹🇬','229': '🇧🇯','230': '🇲🇺','231': '🇱🇷','232': '🇸🇱',
+    '233': '🇬🇭','234': '🇳🇬','235': '🇹🇩','236': '🇨🇫','237': '🇨🇲','238': '🇨🇻','239': '🇸🇹','240': '🇬🇶',
+    '241': '🇬🇦','242': '🇨🇬','243': '🇨🇩','244': '🇦🇴','245': '🇬🇼','246': '🇮🇴','248': '🇸🇨','249': '🇸🇩',
+    '250': '🇷🇼','251': '🇪🇹','252': '🇸🇴','253': '🇩🇯','254': '🇰🇪','255': '🇹🇿','256': '🇺🇬','257': '🇧🇮',
+    '258': '🇲🇿','260': '🇿🇲','261': '🇲🇬','262': '🇷🇪','263': '🇿🇼','264': '🇳🇦','265': '🇲🇼','266': '🇱🇸',
+    '267': '🇧🇼','268': '🇸🇿','269': '🇰🇲','290': '🇸🇭','291': '🇪🇷','297': '🇦🇼','298': '🇫🇴','299': '🇬🇱',
+    '350': '🇬🇮','351': '🇵🇹','352': '🇱🇺','353': '🇮🇪','354': '🇮🇸','355': '🇦🇱','356': '🇲🇹','357': '🇨🇾',
+    '358': '🇫🇮','359': '🇧🇬','370': '🇱🇹','371': '🇱🇻','372': '🇪🇪','373': '🇲🇩','374': '🇦🇲','375': '🇧🇾',
+    '376': '🇦🇩','377': '🇲🇨','378': '🇸🇲','380': '🇺🇦','381': '🇷🇸','382': '🇲🇪','385': '🇭🇷','386': '🇸🇮',
+    '387': '🇧🇦','389': '🇲🇰','420': '🇨🇿','421': '🇸🇰','423': '🇱🇮','500': '🇫🇰','501': '🇧🇿','502': '🇬🇹',
+    '503': '🇸🇻','504': '🇭🇳','505': '🇳🇮','506': '🇨🇷','507': '🇵🇦','508': '🇵🇲','509': '🇭🇹','590': '🇧🇱',
+    '591': '🇧🇴','592': '🇬🇾','593': '🇪🇨','594': '🇬🇫','595': '🇵🇾','596': '🇲🇶','597': '🇸🇷','598': '🇺🇾',
+    '599': '🇧🇶','670': '🇹🇱','672': '🇳🇫','673': '🇧🇳','674': '🇳🇷','675': '🇵🇬','676': '🇹🇴','677': '🇸🇧',
+    '678': '🇻🇺','679': '🇫🇯','680': '🇵🇼','681': '🇼🇫','682': '🇨🇰','683': '🇳🇺','685': '🇼🇸','686': '🇰🇮',
+    '687': '🇳🇨','688': '🇹🇻','689': '🇵🇫','690': '🇹🇰','691': '🇫🇲','692': '🇲🇭','850': '🇰🇵','852': '🇭🇰',
+    '853': '🇲🇴','855': '🇰🇭','856': '🇱🇦','870': '🇮🇴','880': '🇧🇩','886': '🇹🇼','960': '🇲🇻','961': '🇱🇧',
+    '962': '🇯🇴','963': '🇸🇾','964': '🇮🇶','965': '🇰🇼','966': '🇸🇦','967': '🇾🇪','968': '🇴🇲','970': '🇵🇸',
+    '971': '🇦🇪','972': '🇮🇱','973': '🇧🇭','974': '🇶🇦','975': '🇧🇹','976': '🇲🇳','977': '🇳🇵','992': '🇹🇯',
+    '993': '🇹🇲','994': '🇦🇿','995': '🇬🇪','996': '🇰🇬','998': '🇺🇿'
+  };
+
+  const getCountryPrefix = (jid) => {
+    const phone = jid.split('@')[0].replace(/^0+/, '');
+    const prefixes = Object.keys(countryFlags).sort((a, b) => b.length - a.length);
+    for (let p of prefixes) {
+      if (phone.startsWith(p)) return p;
+    }
+    return 'other';
+  };
+
+  let teks = `*╭━* 𝘼𝘾𝙏𝙄𝙑𝙀𝙉𝙎𝙀𝙉 乂\n\n*${groupName}*\n👤 𝙄𝙉𝙏𝙀𝙂𝙍𝘼𝙉𝙏𝙀𝙎: *${participants.length}*\n${pesan}\n`;
+
+  let grouped = {};
+
+  for (const mem of participants) {
+    let jid = mem.jid || mem.id;
+    let prefix = getCountryPrefix(jid);
+    if (!grouped[prefix]) grouped[prefix] = [];
+    grouped[prefix].push(jid);
+  }
+
+  // 🇪🇨 Ecuador primero (sin encabezado)
+  if (grouped['593']) {
+    for (const jid of grouped['593']) {
+      teks += `${emoji} 🇪🇨 @${jid.split('@')[0]}\n`;
+    }
+    delete grouped['593'];
+  }
+
+  // 🌍 Resto de países (sin encabezado)
+  for (const prefix of Object.keys(grouped)) {
+    for (const jid of grouped[prefix]) {
+      teks += `${emoji} ${countryFlags[prefix] || '🏳️'} @${jid.split('@')[0]}\n`;
+    }
+  }
+
+  teks += `\n*╰━* ANGEL 𝘽𝙊𝙏 𝙂𝙇𝙊𝘽𝘼𝙇\n▌│█║▌║▌║║▌║▌║▌║█`;
+
+  await conn.sendMessage(m.chat, {
+    text: teks,
+    mentions: participants.map(p => p.jid || p.id)
+  });
 };
 
-handler.help = ["𝖳𝗈𝖽𝗈𝗌"];
-handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
-handler.customPrefix = /^\.?(todos|invocar|invocacion|invocación)$/i;
-handler.command = new RegExp();
+handler.help = ['todos'];
+handler.tags = ['group'];
+handler.command = /^(tagall|invocar|marcar|todos|invocación)$/i;
+handler.admin = true;
+handler.group = true;
+
 export default handler;
