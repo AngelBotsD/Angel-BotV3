@@ -50,6 +50,14 @@ const mentioned =
 const isBotMentioned = mentioned
   .map(normalize)
   .includes(botJid)
+console.log({
+  bot: botJid,
+  mentioned,
+  normalized: mentioned.map(normalize),
+  isBotMentioned
+})
+
+
 
 if (isBotMentioned) {
 
