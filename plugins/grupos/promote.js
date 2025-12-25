@@ -173,7 +173,7 @@ let handler = async (msg, { conn }) => {
 
 handler.group = true
 handler.admin = true
+handler.botAdmin = true;
 handler.customPrefix = /^\.?promote/i
 handler.command = new RegExp()
-
 export default handler
