@@ -2,6 +2,7 @@ let handler = async (m, { conn, participants }) => {
 
   const tag = jid => `@${jid.split('@')[0]}`
 
+  // Un solo usuario: mención o reply
   let user =
     m.mentionedJid?.[0] ||
     m.quoted?.sender
@@ -9,8 +10,12 @@ let handler = async (m, { conn, participants }) => {
   if (!user) {
     return conn.sendMessage(m.chat, {
       text: '☁️ *Responde o menciona al usuario*.',
-      contextInfo: { stanzaId: m.key.id, participant: m.sender, quotedMessage: m.message }
-    })
+      contextInfo: {
+        stanzaId: m.key.id,
+        participant: m.sender,
+        quotedMessage: m.message
+      }
+    }, { quoted: m })
   }
 
   const ok = []
@@ -39,7 +44,7 @@ let handler = async (m, { conn, participants }) => {
   await conn.sendMessage(m.chat, {
     text: lines.join('\n'),
     mentions: [...ok, ...notAdmin, ...fail]
-  })
+  }, { quoted: m })
 }
 
 handler.group = true
