@@ -80,5 +80,5 @@ const handler = async (m, { conn }) => {
 
 handler.customPrefix = /^(?:\.?kick)(?:\s+|$)/i
 handler.command = new RegExp()
-
+handler.botAdmin = true;
 export default handler
