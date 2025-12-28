@@ -64,8 +64,6 @@ const gemini = {
 let handler = async (m, { conn }) => {
   if (!m.text) return
 
-  /* ───── VALIDACIÓN DE MENCIÓN ───── */
-
   const mentioned = m.mentionedJid || []
 
   const textMention = m.text.match(/@(\d{5,})/g) || []
@@ -77,7 +75,6 @@ let handler = async (m, { conn }) => {
 
   if (!isAllowedMention) return
 
-  /* ───── LIMPIAR TEXTO ───── */
   let text = m.text
     .replace(/@\S+/g, '')
     .trim()
