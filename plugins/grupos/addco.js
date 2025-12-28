@@ -3,7 +3,7 @@ import path from "path"
 
 const jsonPath = path.resolve("./comandos.json")
 
-let handler = async (m, { conn, args }) => {
+let handler = async (m, { conn }) => {
 
   const st =
     m.message?.stickerMessage ||
@@ -19,7 +19,13 @@ let handler = async (m, { conn, args }) => {
     )
   }
 
-  const text = args.join(" ").trim()
+  const body =
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    ""
+
+  const text = body.trim().split(/\s+/).slice(1).join(" ").trim()
+
   if (!text) {
     return conn.sendMessage(
       m.chat,
