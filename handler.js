@@ -40,47 +40,59 @@ m.exp = 0
 if (typeof m.text !== "string") m.text = ""
 
 try {
-  const st = m.message?.stickerMessage || m.message?.ephemeralMessage?.message?.stickerMessage || null;
-  if (st) {
-    // Crear comandos.json si no existe
-    const jsonPath = './comandos.json';
-    if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}');
+  const st =
+    m.message?.stickerMessage ||
+    m.message?.ephemeralMessage?.message?.stickerMessage ||
+    m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
+    m.message?.ephemeralMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage
 
-    const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}');
+  // Solo en grupos
+  if (st && m.isGroup) {
 
-    const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash;
-    const candidates = [];
-    if (rawSha) {
-      if (Buffer.isBuffer(rawSha)) {
-        candidates.push(rawSha.toString("base64"));
-      } else if (ArrayBuffer.isView(rawSha)) {
-        candidates.push(Buffer.from(rawSha).toString("base64"));
-      } else if (typeof rawSha === "string") {
-        candidates.push(rawSha);
-      }
+    const jsonPath = "./comandos.json"
+    if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, "{}")
+
+    const map = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}")
+
+    // Mapa SOLO del grupo actual
+    const groupMap = map[m.chat]
+    if (!groupMap) return
+
+    const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
+    if (!rawSha) return
+
+    const candidates = []
+    if (Buffer.isBuffer(rawSha)) {
+      candidates.push(rawSha.toString("base64"))
+    } else if (ArrayBuffer.isView(rawSha)) {
+      candidates.push(Buffer.from(rawSha).toString("base64"))
+    } else if (typeof rawSha === "string") {
+      candidates.push(rawSha)
     }
 
-    let mapped = null;
+    let mapped = null
     for (const k of candidates) {
-      if (map[k] && map[k].trim()) {
-        mapped = map[k].trim();
-        break;
+      if (groupMap[k] && groupMap[k].trim()) {
+        mapped = groupMap[k].trim()
+        break
       }
     }
 
     if (mapped) {
-      const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || ".";
-      const injected = mapped.startsWith(pref) ? mapped : pref + mapped;
+      // Inyectar comando
+      const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || global.prefix || "."
+      const injected = mapped.startsWith(pref) ? mapped : pref + mapped
 
-      m.text = injected.toLowerCase();
+      m.text = injected.toLowerCase()
+      m.isCommand = true
 
-      console.log("✅ Sticker detectado, comando inyectado:", m.text);
+      console.log("✅ Sticker→cmd (solo grupo):", m.chat, m.text)
     }
   }
 } catch (e) {
-  console.error("❌ Error Sticker→cmd:", e);
+  console.error("❌ Error Sticker→cmd:", e)
 }
-const user = global.db.data.users[m.sender] ||= {
+
 name: m.name,
 exp: 0,
 level: 0,
