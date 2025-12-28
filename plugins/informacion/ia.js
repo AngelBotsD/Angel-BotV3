@@ -1,9 +1,11 @@
-let handler = async (m, { conn }) => {
-  await conn.reply(m.chat, "hola si", m)
-}
+let handler = async (m, { conn }) => {}
 
 handler.all = async function (m) {
-  if (!m.mentionedJid || !m.mentionedJid.includes(this.user.jid)) return
+  const mentioned =
+    m.message?.extendedTextMessage?.contextInfo?.mentionedJid || []
+
+  if (!mentioned.includes(this.user.jid)) return
+
   await m.reply("hola si")
 }
 
