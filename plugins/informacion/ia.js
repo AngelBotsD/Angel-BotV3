@@ -18,7 +18,7 @@ const gemini = {
     return cookie.split(";")[0]
   },
 
-  ask: async (prompt, previousId = null) => {
+  ask: async (prompt) => {
     let cookie = await gemini.getNewCookie()
 
     const body = new URLSearchParams({
@@ -58,7 +58,18 @@ const gemini = {
 let handler = async (m, { conn }) => {
   if (!m.text) return
 
-  let text = m.text.replace(/^@\S*\s*/i, "").trim()
+  // ⬇️ Obtener JID del bot
+  const botJid = conn.user?.id || conn.user?.jid
+
+  // ⬇️ Obtener los mencionados del mensaje
+  const mentioned = m?.mentionedJid || 
+    m.message?.extendedTextMessage?.contextInfo?.mentionedJid || []
+
+  // ⬇️ SI NO mencionan al bot → salir
+  if (!mentioned.includes(botJid)) return
+
+  // Quitar el @ del bot del mensaje
+  let text = m.text.replace(/@\S+\s*/i, "").trim()
 
   if (!text) {
     return m.reply("hola si")
@@ -74,7 +85,7 @@ let handler = async (m, { conn }) => {
   }
 }
 
-handler.customPrefix = /^@/i
+// ❌ ya NO usamos /^@/
 handler.command = new RegExp
 handler.tags = ['ai']
 
