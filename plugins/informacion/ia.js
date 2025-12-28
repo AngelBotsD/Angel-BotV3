@@ -56,9 +56,12 @@ const gemini = {
   }
 }
 
+
 let handler = async (m, { conn }) => {
 
-  // EXTRAER TEXTO SEGÚN SEA EL TIPO
+  // ----------------------------
+  // 1️⃣ TEXTO REAL
+  // ----------------------------
   let text =
     m.text ||
     m.message?.conversation ||
@@ -67,38 +70,56 @@ let handler = async (m, { conn }) => {
 
   if (!text) return
 
-  // BOT JID
-  const botJid =
-    conn.user?.id?.split(':')[0] + '@s.whatsapp.net' ||
-    conn.user?.jid
 
+  // ----------------------------
+  // 2️⃣ JID REAL DEL BOT
+  // ----------------------------
+  const botJid = conn?.user?.id || conn?.user?.jid
+
+
+  // ----------------------------
+  // 3️⃣ OBTENER TODAS LAS MENCIONES
+  // ----------------------------
   const ctx =
+    m?.msg?.contextInfo ||
     m?.message?.extendedTextMessage?.contextInfo ||
     m?.message?.imageMessage?.contextInfo ||
     m?.message?.videoMessage?.contextInfo ||
     {}
 
-  const mentioned = ctx.mentionedJid || []
+  const mentioned = ctx?.mentionedJid || []
 
-  // SI NO LO MENCIONAN → SALIR
+
+  // ----------------------------
+  // 4️⃣ VALIDAR
+  // ----------------------------
   if (!mentioned.includes(botJid)) return
 
-  // LIMPIAR
+
+  // ----------------------------
+  // 5️⃣ LIMPIAR TEXTO
+  // ----------------------------
   text = text.replace(/@\S+/g, "").trim()
 
-  if (!text) return m.reply("Hola, ¿qué necesitas? 🙂")
+  if (!text) return m.reply("Hola 👋")
 
+
+  // ----------------------------
+  // 6️⃣ IA
+  // ----------------------------
   try {
+
     await conn.sendPresenceUpdate("composing", m.chat)
 
-    const res = await gemini.ask(text)
+    const reply = await gemini.ask(text)
 
-    await m.reply(res)
+    await m.reply(reply)
 
   } catch (e) {
     console.error(e)
     await m.reply("❌ Error con la IA")
   }
+
 }
 
 handler.customPrefix = /^@/i
