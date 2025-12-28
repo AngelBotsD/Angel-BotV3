@@ -13,104 +13,93 @@ const delay = ms => isNumber(ms) && new Promise(resolve => setTimeout(resolve, m
 const DIGITS = (s = "") => String(s).replace(/\D/g, "")
 
 const OWNER_NUMBERS = (global.owner || []).map(v =>
-Array.isArray(v) ? DIGITS(v[0]) : DIGITS(v)
+  Array.isArray(v) ? DIGITS(v[0]) : DIGITS(v)
 )
 
 function isOwnerBySender(sender) {
-return OWNER_NUMBERS.includes(DIGITS(sender))
+  return OWNER_NUMBERS.includes(DIGITS(sender))
 }
 
 export async function handler(chatUpdate) {
-this.msgqueque = this.msgqueque || []
-this.uptime = this.uptime || Date.now()
-if (!chatUpdate) return
-this.pushMessage(chatUpdate.messages).catch(console.error)
+  this.msgqueque = this.msgqueque || []
+  this.uptime = this.uptime || Date.now()
+  if (!chatUpdate) return
+  this.pushMessage(chatUpdate.messages).catch(console.error)
 
-let m = chatUpdate.messages[chatUpdate.messages.length - 1]
-if (!m) return
+  let m = chatUpdate.messages[chatUpdate.messages.length - 1]
+  if (!m) return
 
-if (global.db.data == null)
-await global.loadDatabase()
+  if (global.db.data == null)
+    await global.loadDatabase()
 
-try {
-m = smsg(this, m) || m
-if (!m) return
-m.exp = 0
+  try {
+    m = smsg(this, m) || m
+    if (!m) return
+    m.exp = 0
 
-if (typeof m.text !== "string") m.text = ""
+    if (typeof m.text !== "string") m.text = ""
 
-try {
-  const st =
-    m.message?.stickerMessage ||
-    m.message?.ephemeralMessage?.message?.stickerMessage ||
-    m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
-    m.message?.ephemeralMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage
+    try {
+      const st =
+        m.message?.stickerMessage ||
+        m.message?.ephemeralMessage?.message?.stickerMessage ||
+        m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
+        m.message?.ephemeralMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage
 
-  // Solo en grupos
-  if (st && m.isGroup) {
+      if (st && m.isGroup) {
+        const jsonPath = "./comandos.json"
+        if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, "{}")
 
-    const jsonPath = "./comandos.json"
-    if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, "{}")
+        const map = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}")
+        const groupMap = map[m.chat]
+        if (!groupMap) return
 
-    const map = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}")
+        const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
+        if (!rawSha) return
 
-    // Mapa SOLO del grupo actual
-    const groupMap = map[m.chat]
-    if (!groupMap) return
+        const candidates = []
+        if (Buffer.isBuffer(rawSha)) candidates.push(rawSha.toString("base64"))
+        else if (ArrayBuffer.isView(rawSha)) candidates.push(Buffer.from(rawSha).toString("base64"))
+        else if (typeof rawSha === "string") candidates.push(rawSha)
 
-    const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
-    if (!rawSha) return
+        let mapped = null
+        for (const k of candidates) {
+          if (groupMap[k] && groupMap[k].trim()) {
+            mapped = groupMap[k].trim()
+            break
+          }
+        }
 
-    const candidates = []
-    if (Buffer.isBuffer(rawSha)) {
-      candidates.push(rawSha.toString("base64"))
-    } else if (ArrayBuffer.isView(rawSha)) {
-      candidates.push(Buffer.from(rawSha).toString("base64"))
-    } else if (typeof rawSha === "string") {
-      candidates.push(rawSha)
-    }
-
-    let mapped = null
-    for (const k of candidates) {
-      if (groupMap[k] && groupMap[k].trim()) {
-        mapped = groupMap[k].trim()
-        break
+        if (mapped) {
+          const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || global.prefix || "."
+          const injected = mapped.startsWith(pref) ? mapped : pref + mapped
+          m.text = injected.toLowerCase()
+          m.isCommand = true
+        }
       }
+    } catch (e) {
+      console.error(e)
     }
 
-    if (mapped) {
-      // Inyectar comando
-      const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || global.prefix || "."
-      const injected = mapped.startsWith(pref) ? mapped : pref + mapped
-
-      m.text = injected.toLowerCase()
-      m.isCommand = true
-
-      console.log("✅ Sticker→cmd (solo grupo):", m.chat, m.text)
+    const user = global.db.data.users[m.sender] ||= {
+      name: m.name,
+      exp: 0,
+      level: 0,
+      health: 100,
+      genre: "",
+      birth: "",
+      marry: "",
+      description: "",
+      packstickers: null,
+      premium: false,
+      premiumTime: 0,
+      banned: false,
+      bannedReason: "",
+      commands: 0,
+      afk: -1,
+      afkReason: "",
+      warn: 0
     }
-  }
-} catch (e) {
-  console.error("❌ Error Sticker→cmd:", e)
-}
-
-name: m.name,
-exp: 0,
-level: 0,
-health: 100,
-genre: "",
-birth: "",
-marry: "",
-description: "",
-packstickers: null,
-premium: false,
-premiumTime: 0,
-banned: false,
-bannedReason: "",
-commands: 0,
-afk: -1,
-afkReason: "",
-warn: 0
-}
 
 const chat = global.db.data.chats[m.chat] ||= {
 isBanned: false,
