@@ -15,31 +15,26 @@ function save() {
   fs.writeFileSync(FILE, JSON.stringify(db, null, 2))
 }
 
-/* =========================
-   SISTEMA PRINCIPAL
-========================= */
 export async function initFantasma(conn) {
   conn.ev.on("messages.upsert", async ({ messages }) => {
     const m = messages[0]
     if (!m?.message) return
+    if (!m.key.remoteJid?.endsWith("@g.us")) return
     if (m.key.fromMe) return
 
-    const chat = m.key.remoteJid
-    if (!chat?.endsWith("@g.us")) return
-
+    const group = m.key.remoteJid
     const user = m.key.participant
     if (!user) return
 
-    if (!db[chat]) db[chat] = {}
+    if (!db[group]) db[group] = {}
 
-    const metadata = await conn.groupMetadata(chat)
-    const participant = metadata.participants.find(p => p.id === user)
+    const metadata = await conn.groupMetadata(group)
+    const isAdmin = metadata.participants.find(p => p.id === user)?.admin
+    const botJid = conn.user.id.split(":")[0] + "@s.whatsapp.net"
 
-    if (!participant) return
-    if (participant.admin) return
-    if (user === conn.user.id.split(":")[0] + "@s.whatsapp.net") return
+    if (isAdmin || user === botJid) return
 
-    db[chat][user] = {
+    db[group][user] = {
       last: Date.now(),
       ghost: false
     }
@@ -53,76 +48,57 @@ export async function initFantasma(conn) {
 function checkGhosts() {
   const now = Date.now()
 
-  for (const chat in db) {
-    for (const user in db[chat]) {
-      const u = db[chat][user]
+  for (const group in db) {
+    for (const user in db[group]) {
+      const u = db[group][user]
       if (!u.ghost && now - u.last >= TIMEOUT) {
         u.ghost = true
       }
     }
   }
+
   save()
 }
 
-/* =========================
-   OBTENER FANTASMAS
-========================= */
-export function getFantasmas(chat) {
-  if (!db[chat]) return []
-
-  return Object.entries(db[chat])
+export function getFantasmas(group) {
+  if (!db[group]) return []
+  return Object.entries(db[group])
     .filter(([_, v]) => v.ghost)
     .map(([jid]) => jid)
 }
 
-/* =========================
-   FANKICK
-========================= */
-export async function fankick(conn, chat) {
-  const ghosts = getFantasmas(chat)
+export async function fankick(conn, group) {
+  const ghosts = getFantasmas(group)
   if (!ghosts.length) return 0
-
-  await conn.groupParticipantsUpdate(chat, ghosts, "remove")
-
-  for (const jid of ghosts) {
-    delete db[chat][jid]
-  }
-
-  save()
+  await conn.groupParticipantsUpdate(group, ghosts, "remove")
   return ghosts.length
 }
 
-/* =========================
-   COMANDO .fantasmas
-========================= */
-const handler = async (m, { conn }) => {
-  const list = getFantasmas(m.chat)
-  if (!list.length) return m.reply("No hay fantasmas 👻")
+const handler = async (m, { conn, isAdmin, isOwner, command }) => {
+  if (!m.chat.endsWith("@g.us")) return
 
-  let txt = "👻 *Usuarios Fantasmas*\n\n"
-  for (const jid of list) {
-    txt += `• @${jid.split("@")[0]}\n`
+  if (command === "fantasmas") {
+    const list = getFantasmas(m.chat)
+    if (!list.length) return m.reply("No hay fantasmas 👻")
+
+    let txt = "👻 *Fantasmas del grupo*\n\n"
+    for (const jid of list) {
+      txt += `• @${jid.split("@")[0]}\n`
+    }
+
+    return m.reply(txt, null, { mentions: list })
   }
 
-  await m.reply(txt, null, { mentions: list })
+  if (command === "fankick") {
+    if (!isAdmin && !isOwner) return
+    const total = await fankick(conn, m.chat)
+    if (!total) return m.reply("No hay fantasmas 👻")
+    return m.reply(`👻 ${total} fantasmas eliminados`)
+  }
 }
 
-handler.command = ["fantasmas"]
+handler.command = ["fantasmas", "fankick"]
 handler.group = true
+handler.admin = true
+
 export default handler
-
-/* =========================
-   COMANDO .fankick
-========================= */
-export const fankickHandler = async (m, { conn, isAdmin, isOwner }) => {
-  if (!isAdmin && !isOwner) return
-
-  const total = await fankick(conn, m.chat)
-  if (!total) return m.reply("No hay fantasmas 👻")
-
-  m.reply(`👻 ${total} fantasmas eliminados`)
-}
-
-fankickHandler.command = ["fankick"]
-fankickHandler.group = true
-fankickHandler.admin = true
