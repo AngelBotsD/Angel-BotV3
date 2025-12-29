@@ -1,132 +1,127 @@
+import makeWASocket, {
+  useMultiFileAuthState,
+  makeCacheableSignalKeyStore
+} from "@whiskeysockets/baileys"
+
 import fs from "fs"
 
-const FILE = "./fantasmas.json"
-const TIMEOUT = 3 * 24 * 60 * 60 * 1000
+const TIEMPO_FANTASMA = 1000 * 60 * 60 * 24 * 3
 
-let db = {}
-
-if (fs.existsSync(FILE)) {
-  try {
-    db = JSON.parse(fs.readFileSync(FILE))
-  } catch {
-    db = {}
-  }
-} else {
-  fs.writeFileSync(FILE, JSON.stringify({}, null, 2))
+let data = {
+  ultimaActividad: {},
+  fantasmas: []
 }
 
-function save() {
-  fs.writeFileSync(FILE, JSON.stringify(db, null, 2))
+if (fs.existsSync("./fantasmasData.json")) {
+  data = JSON.parse(fs.readFileSync("./fantasmasData.json", "utf8"))
 }
 
-export async function initFantasma(conn) {
-  conn.ev.on("messages.upsert", async ({ messages }) => {
-    const m = messages[0]
-    if (!m?.message) return
-    if (!m.key.remoteJid?.endsWith("@g.us")) return
-    if (m.key.fromMe) return
+function guardar() {
+  fs.writeFileSync("./fantasmasData.json", JSON.stringify(data, null, 2))
+}
 
-    const groupJid = m.key.remoteJid
-    const sender = m.key.participant
-    if (!sender) return
+async function iniciar() {
 
-    const metadata = await conn.groupMetadata(groupJid)
-    const participant = metadata.participants.find(p => p.id === sender)
-    if (!participant) return
+  const { state, saveCreds } = await useMultiFileAuthState("./auth")
 
-    if (participant.admin) return
-    if (sender === conn.user.id.split(":")[0] + "@s.whatsapp.net") return
-
-    if (!db[groupJid]) db[groupJid] = {}
-
-    db[groupJid][sender] = {
-      last: Date.now(),
-      ghost: false
-    }
-
-    save()
+  const sock = makeWASocket({
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, fs)
+    },
+    printQRInTerminal: true
   })
 
-  setInterval(() => checkGhosts(conn), 60 * 60 * 1000)
-}
+  sock.ev.on("creds.update", saveCreds)
 
-async function checkGhosts(conn) {
-  const now = Date.now()
-
-  for (const groupJid in db) {
-    let metadata
-    try {
-      metadata = await conn.groupMetadata(groupJid)
-    } catch {
-      continue
+  sock.ev.on("connection.update", ({ connection }) => {
+    if (connection === "open") {
+      console.log("✔ Conectado a WhatsApp")
     }
+  })
 
-    const admins = metadata.participants
-      .filter(p => p.admin)
-      .map(p => p.id)
+  sock.ev.on("chats.upsert", async ({ chats }) => {
 
-    for (const jid in db[groupJid]) {
-      if (admins.includes(jid)) continue
-      if (jid === conn.user.id.split(":")[0] + "@s.whatsapp.net") continue
+    for (let chat of chats) {
 
-      if (now - db[groupJid][jid].last >= TIMEOUT) {
-        db[groupJid][jid].ghost = true
+      if (!chat.id.endsWith("@g.us")) continue
+
+      console.log("📥 Detectado grupo:", chat.name)
+
+      const meta = await sock.groupMetadata(chat.id)
+
+      for (let p of meta.participants) {
+        const jid = p.id
+
+        if (p.isAdmin || jid === sock.user.id) continue
+
+        if (!data.ultimaActividad[jid]) {
+          data.ultimaActividad[jid] = 0
+        }
+
+        if (!data.fantasmas.includes(jid)) {
+          data.fantasmas.push(jid)
+        }
+      }
+
+      guardar()
+    }
+  })
+
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+
+    let m = messages[0]
+    if (!m?.message) return
+    if (m.key.fromMe) return
+
+    const jid = m.key.participant || m.key.remoteJid
+    if (!jid) return
+
+    data.ultimaActividad[jid] = Date.now()
+
+    data.fantasmas = data.fantasmas.filter(x => x !== jid)
+
+    guardar()
+  })
+
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+
+    let m = messages[0]
+    if (!m?.message) return
+
+    const texto = m.message.conversation || ""
+    if (!texto.startsWith(".fantasmas")) return
+
+    let lista =
+      data.fantasmas.length
+        ? data.fantasmas.map(u => "• @" + u.split("@")[0]).join("\n")
+        : "Nadie es fantasma 😎"
+
+    await sock.sendMessage(m.key.remoteJid, {
+      text: `👻 *LISTA DE FANTASMAS*\n\n${lista}`,
+      mentions: data.fantasmas
+    })
+  })
+
+  setInterval(() => {
+
+    const ahora = Date.now()
+
+    for (let jid in data.ultimaActividad) {
+
+      let ultima = data.ultimaActividad[jid]
+
+      if ((ahora - ultima) >= TIEMPO_FANTASMA) {
+
+        if (!data.fantasmas.includes(jid))
+          data.fantasmas.push(jid)
       }
     }
-  }
 
-  save()
+    guardar()
+
+  }, 1000 * 60 * 30)
+
 }
 
-export function getFantasmas(groupJid) {
-  if (!db[groupJid]) return []
-
-  return Object.entries(db[groupJid])
-    .filter(([_, v]) => v.ghost)
-    .map(([jid]) => jid)
-}
-
-export async function fankick(conn, groupJid) {
-  const ghosts = getFantasmas(groupJid)
-  if (!ghosts.length) return 0
-
-  await conn.groupParticipantsUpdate(groupJid, ghosts, "remove")
-
-  for (const jid of ghosts) {
-    delete db[groupJid][jid]
-  }
-
-  save()
-  return ghosts.length
-}
-
-/* ================= COMANDOS ================= */
-
-const handler = async (m, { conn, isAdmin, isOwner, command }) => {
-  if (!m.isGroup) return
-
-  if (command === "fantasmas") {
-    const list = getFantasmas(m.chat)
-    if (!list.length) return m.reply("No hay fantasmas 👻")
-
-    let txt = "👻 Usuarios Fantasmas\n\n"
-    for (const jid of list) {
-      txt += `• @${jid.split("@")[0]}\n`
-    }
-
-    return m.reply(txt, null, { mentions: list })
-  }
-
-  if (command === "fankick") {
-    if (!isAdmin && !isOwner) return
-    const total = await fankick(conn, m.chat)
-    if (!total) return m.reply("No hay fantasmas 👻")
-    return m.reply(`👻 ${total} fantasmas eliminados`)
-  }
-}
-
-handler.command = ["fantasmas", "fankick"]
-handler.group = true
-handler.admin = false
-
-export default handler
+iniciar()
