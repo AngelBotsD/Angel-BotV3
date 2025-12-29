@@ -125,3 +125,7 @@ async function iniciar() {
 }
 
 iniciar()
+
+let handler = {}
+handler.command = ["fantasmas"]
+export default handler
