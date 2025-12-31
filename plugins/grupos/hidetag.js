@@ -80,7 +80,7 @@ users.push(jid);
 }
 
 const q = m.quoted ? unwrapMessage(m.quoted) : unwrapMessage(m);
-const mtype = q.mtype || Object.keys(q.message || {})[0] || '';
+const mtype = Object.keys(q || {})[0] || '';
 
 const isPoll = [
 'pollCreationMessage',
