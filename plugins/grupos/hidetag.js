@@ -1,8 +1,6 @@
 import { generateWAMessageFromContent, downloadContentFromMessage } from '@whiskeysockets/baileys'
 import fetch from 'node-fetch'
 
-const DIGITS = (s = "") => String(s || "").replace(/\D/g, "")
-
 let thumb = null
 fetch('https://files.catbox.moe/tx6prq.jpg')
   .then(r => r.arrayBuffer())
