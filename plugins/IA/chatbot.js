@@ -6,10 +6,9 @@ const ALLOWED_MENTIONS = [
   '5215911153853'
 ]
 
-// ===== NUEVO =====
+// CONTEXTO
 const conversations = new Map()
 const TIMEOUT = 5 * 60 * 1000
-// =================
 
 const gemini = {
   getNewCookie: async () => {
@@ -69,6 +68,10 @@ const gemini = {
 let handler = async (m, { conn }) => {
   if (!m.text) return
 
+  // ====== NUEVO: detectar reply ======
+  const isReply = m.quoted && m.quoted.fromMe
+  // ===================================
+
   const mentioned = m.mentionedJid || []
   const textMention = m.text.match(/@(\d{5,})/g) || []
   const textMentionClean = textMention.map(v => v.replace('@', ''))
@@ -77,34 +80,30 @@ let handler = async (m, { conn }) => {
     mentioned.some(jid => ALLOWED_MENTIONS.includes(jid)) ||
     textMentionClean.some(num => ALLOWED_MENTIONS.includes(num))
 
-  if (!isAllowedMention) return
+  // SOLO responder si:
+  //   menciona permitido
+  //   o reply al bot
+  if (!isAllowedMention && !isReply) return
 
   let text = m.text.replace(/@\S+/g, '').trim()
-
-  if (!text) return m.reply('hola si')
+  if (!text) text = 'Hola'
 
   // ===== CONTEXTO POR CHAT =====
   let chat = conversations.get(m.chat)
 
   if (!chat) {
-    chat = {
-      history: [],
-      timeout: null
-    }
+    chat = { history: [], timeout: null }
     conversations.set(m.chat, chat)
   }
 
-  // Reiniciar temporizador de 5 min
   if (chat.timeout) clearTimeout(chat.timeout)
 
   chat.timeout = setTimeout(() => {
     conversations.delete(m.chat)
   }, TIMEOUT)
 
-  // Guardar mensaje del usuario
   chat.history.push(`User: ${text}`)
 
-  // Solo enviamos los últimos 10 para no saturar
   const prompt = chat.history.slice(-10).join('\n')
   // =============================
 
@@ -113,7 +112,6 @@ let handler = async (m, { conn }) => {
 
     const res = await gemini.ask(prompt)
 
-    // Guardar respuesta del bot
     chat.history.push(`Bot: ${res}`)
 
     await m.reply(res)
