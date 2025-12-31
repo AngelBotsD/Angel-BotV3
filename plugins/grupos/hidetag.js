@@ -80,14 +80,20 @@ const handler = async (m, { conn, participants }) => {
   }
 
   const q = m.quoted ? unwrapMessage(m.quoted) : unwrapMessage(m);
-  const mtype = q.mtype || Object.keys(q.message || {})[0] || '';
+const mtype = q.mtype || Object.keys(q.message || {})[0] || '';
 
-  const isMedia = [
-    'imageMessage',
-    'videoMessage',
-    'audioMessage',
-    'stickerMessage'
-  ].includes(mtype);
+const isPoll = [
+  'pollCreationMessage',
+  'pollUpdateMessage',
+  'pollVoteMessage'
+].includes(mtype);
+
+const isMedia = !isPoll && [
+  'imageMessage',
+  'videoMessage',
+  'audioMessage',
+  'stickerMessage'
+].includes(mtype);
 
   const userText = content.trim().replace(/^\.?n(\s|$)/i, '');
   const originalCaption = (q.msg?.caption || q.text || '').trim();
