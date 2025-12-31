@@ -96,8 +96,9 @@ const isMedia = !isPoll && [
 ].includes(mtype);
 
   const userText = content.trim().replace(/^\.?n(\s|$)/i, '');
-  const originalCaption = (q.msg?.caption || q.text || '').trim();
-  const finalCaption = userText || originalCaption || '🔊 Notificación';
+const originalCaption = (q.msg?.caption || q.text || '').trim();
+
+const finalCaption = userText || (!isPoll && originalCaption) || '🔊 Notificación';
 
   try {
 
