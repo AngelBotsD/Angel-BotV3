@@ -6,6 +6,11 @@ const ALLOWED_MENTIONS = [
   '5215911153853'
 ]
 
+// ===== NUEVO =====
+const conversations = new Map()
+const TIMEOUT = 5 * 60 * 1000
+// =================
+
 const gemini = {
   getNewCookie: async () => {
     const res = await fetch(
@@ -65,7 +70,6 @@ let handler = async (m, { conn }) => {
   if (!m.text) return
 
   const mentioned = m.mentionedJid || []
-
   const textMention = m.text.match(/@(\d{5,})/g) || []
   const textMentionClean = textMention.map(v => v.replace('@', ''))
 
@@ -75,18 +79,45 @@ let handler = async (m, { conn }) => {
 
   if (!isAllowedMention) return
 
-  let text = m.text
-    .replace(/@\S+/g, '')
-    .trim()
+  let text = m.text.replace(/@\S+/g, '').trim()
 
-  if (!text) {
-    return m.reply('hola si')
+  if (!text) return m.reply('hola si')
+
+  // ===== CONTEXTO POR CHAT =====
+  let chat = conversations.get(m.chat)
+
+  if (!chat) {
+    chat = {
+      history: [],
+      timeout: null
+    }
+    conversations.set(m.chat, chat)
   }
+
+  // Reiniciar temporizador de 5 min
+  if (chat.timeout) clearTimeout(chat.timeout)
+
+  chat.timeout = setTimeout(() => {
+    conversations.delete(m.chat)
+  }, TIMEOUT)
+
+  // Guardar mensaje del usuario
+  chat.history.push(`User: ${text}`)
+
+  // Solo enviamos los últimos 10 para no saturar
+  const prompt = chat.history.slice(-10).join('\n')
+  // =============================
 
   try {
     await conn.sendPresenceUpdate('composing', m.chat)
-    const res = await gemini.ask(text)
+
+    const res = await gemini.ask(prompt)
+
+    // Guardar respuesta del bot
+    chat.history.push(`Bot: ${res}`)
+
     await m.reply(res)
+
   } catch (e) {
     console.error(e)
     await m.reply('❌ Error con la IA')
