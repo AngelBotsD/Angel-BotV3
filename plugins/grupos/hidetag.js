@@ -49,14 +49,11 @@ async function downloadMedia(msgContent, type) {
 }
 
 const handler = async (m, { conn, participants }) => {
+
   if (!m.isGroup || m.key.fromMe) return;
 
   const fkontak = {
-    key: {
-  remoteJid: m.chat,
-  fromMe: false,
-  id: 'Angel'
-},
+    key: { remoteJid: m.chat, fromMe: false, id: 'Angel' },
     message: {
       locationMessage: {
         name: "𝖧𝗈𝗅𝖺, 𝖲𝗈𝗒 𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍",
@@ -84,20 +81,38 @@ const handler = async (m, { conn, participants }) => {
   const q = m.quoted ? unwrapMessage(m.quoted) : unwrapMessage(m);
   const mtype = q.mtype || Object.keys(q.message || {})[0] || '';
 
-  const isMedia = [
+  // 🟡 NUEVO — detectar encuesta
+  const isPoll = [
+    'pollCreationMessage',
+    'pollUpdateMessage',
+    'pollVoteMessage'
+  ].includes(mtype);
+
+  // 🟢 media válida SOLO si NO es encuesta
+  const isMedia = !isPoll && [
     'imageMessage',
     'videoMessage',
     'audioMessage',
     'stickerMessage'
   ].includes(mtype);
 
+  // texto que escribió el admin
   const userText = content.trim().replace(/^\.?n(\s|$)/i, '');
-  const originalCaption = (q.msg?.caption || q.text || '').trim();
+
+  // caption original SOLO si NO es encuesta
+  const originalCaption = (!isPoll && (q.msg?.caption || q.text || '').trim()) || '';
+
+  // prioridad:
+  // 1️⃣ userText
+  // 2️⃣ caption
+  // 3️⃣ fallback
   const finalCaption = userText || originalCaption || '🔊 Notificación';
 
   try {
 
+    // 📎 SI ES MEDIA
     if (isMedia) {
+
       let buffer = null;
 
       if (q[mtype]) {
@@ -105,7 +120,7 @@ const handler = async (m, { conn, participants }) => {
         buffer = await downloadMedia(q[mtype], detected);
       }
 
-      if (!buffer) buffer = await q.download();
+      if (!buffer && q.download) buffer = await q.download();
 
       const msg = { mentions: users };
 
@@ -138,6 +153,16 @@ const handler = async (m, { conn, participants }) => {
       return await conn.sendMessage(m.chat, msg, { quoted: fkontak });
     }
 
+    // 🟣 SI ES ENCUESTA → SOLO TEXTO
+    if (isPoll) {
+      return await conn.sendMessage(
+        m.chat,
+        { text: finalCaption, mentions: users },
+        { quoted: fkontak }
+      );
+    }
+
+    // 📝 SI ES TEXTO COMÚN
     if (m.quoted && !isMedia) {
 
       const newMsg = conn.cMod(
@@ -162,6 +187,7 @@ const handler = async (m, { conn, participants }) => {
       );
     }
 
+    // mensaje normal
     return await conn.sendMessage(
       m.chat,
       { text: finalCaption, mentions: users },
@@ -183,5 +209,6 @@ handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
 handler.customPrefix = /^\.?n(\s|$)/i;
 handler.command = new RegExp();
 handler.group = true;
-handler.admin = true
+handler.admin = true;
+
 export default handler;
