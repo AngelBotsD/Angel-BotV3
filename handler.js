@@ -245,7 +245,7 @@ botGroup = participants.find(p =>
           : typeof pluginPrefix === "string"
           ? [[new RegExp(strRegex(pluginPrefix)).exec(m.text), new RegExp(strRegex(pluginPrefix))]]
           : [[[], new RegExp]]
-      ).find(p => p[0])
+      ).find(p => p[0] !== null)
 
       if (typeof plugin.before === "function") {
         if (await plugin.before.call(this, m, {
