@@ -272,10 +272,7 @@ command = (command || "").toLowerCase()
 
       if (typeof plugin !== "function") continue
 
-      if ((usedPrefix = (match[0] || "")[0])) {
-        const noPrefix = m.text.replace(usedPrefix, "")
-        let [command, ...args] = noPrefix.trim().split(" ").filter(v => v)
-        command = (command || "").toLowerCase()
+      if (!command) continue
         if (isRateLimited(m.sender, command)) continue
 
         const fail = plugin.fail || global.dfail
