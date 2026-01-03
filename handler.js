@@ -188,15 +188,25 @@ export async function handler(chatUpdate) {
         groupMetadata = await this.groupMetadata(m.chat)
         participants = groupMetadata.participants || []
 
-        userGroup = participants.find(p => norm(p.id) === norm(m.sender)) || {}
-        botGroup = participants.find(p => norm(p.id) === norm(this.user.jid)) || {}
+        userGroup = participants.find(p =>
+  norm(p.id || p.jid) === norm(m.sender)
+) || {}
 
-        isRAdmin =
-          userGroup.admin === "superadmin" ||
-          DIGITS(m.sender) === DIGITS(groupMetadata.owner)
+botGroup = participants.find(p =>
+  norm(p.id || p.jid) === norm(this.user.jid)
+) || {}
 
-        isAdmin = isRAdmin || userGroup.admin === "admin"
-        isBotAdmin = botGroup.admin === "admin" || botGroup.admin === "superadmin"
+isRAdmin =
+  userGroup.admin === "superadmin" ||
+  DIGITS(m.sender) === DIGITS(groupMetadata.owner || "")
+
+isAdmin =
+  userGroup.admin === "admin" ||
+  userGroup.admin === "superadmin"
+
+isBotAdmin =
+  botGroup.admin === "admin" ||
+  botGroup.admin === "superadmin"
 
         groupMetaCache.set(cacheKey, {
           ts: Date.now(),
