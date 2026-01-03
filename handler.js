@@ -210,7 +210,7 @@ continue
 }
 }
 
-const strRegex = (str) => str.replace(/[|\{}()[]^$+*?.]/g, "\$&")
+const strRegex = (str) => str.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&")
 const pluginPrefix = plugin.customPrefix || this.prefix || global.prefix
 
 const match = (
