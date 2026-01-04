@@ -204,11 +204,8 @@ export async function handler(chatUpdate) {
           normalizeJidSafe(p.id || p.jid) === botJid
         )
 
-        isRAdmin =
-          userParticipant?.admin === "superadmin" ||
-          DIGITS(m.sender) === DIGITS(groupMetadata.owner)
-
-        isAdmin = isRAdmin || userParticipant?.admin === "admin"
+        isRAdmin = userParticipant?.admin === "superadmin"
+isAdmin = userParticipant?.admin === "admin" || isRAdmin
         isBotAdmin =
           botParticipant?.admin === "admin" ||
           botParticipant?.admin === "superadmin"
