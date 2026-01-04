@@ -178,15 +178,18 @@ export async function handler(chatUpdate) {
         } catch {}
       }
 
-      const pluginPrefix = plugin.customPrefix || this.prefix || global.prefix
-      const match =
-        typeof pluginPrefix === "string"
-          ? [[new RegExp(pluginPrefix).exec(m.text), new RegExp(pluginPrefix)]]
-          : [[[], new RegExp]]
+      const prefixes = Array.isArray(global.prefixes)
+  ? global.prefixes
+  : [global.prefix || "."]
 
-      if (!match) continue
+const prefix = prefixes.find(p => m.text.startsWith(p))
+if (!prefix) continue
 
-      if ((usedPrefix = (match[0] || "")[0])) {
+usedPrefix = prefix
+
+const noPrefix = m.text.slice(prefix.length)
+let [command, ...args] = noPrefix.trim().split(/\s+/)
+command = (command || "").toLowerCase()
         const noPrefix = m.text.replace(usedPrefix, "")
         let [command, ...args] = noPrefix.trim().split(" ")
         command = (command || "").toLowerCase()
