@@ -99,26 +99,30 @@ try {
 
   if (!rawSha) return
 
-  const sha =
-    Buffer.isBuffer(rawSha)
-      ? rawSha.toString("base64")
-      : ArrayBuffer.isView(rawSha)
-        ? Buffer.from(rawSha).toString("base64")
-        : typeof rawSha === "string"
-          ? rawSha
-          : null
+  const sha = Buffer.isBuffer(rawSha)
+    ? rawSha.toString("base64")
+    : ArrayBuffer.isView(rawSha)
+      ? Buffer.from(rawSha).toString("base64")
+      : typeof rawSha === "string"
+        ? rawSha
+        : null
 
-  if (!sha) return
-  if (!groupMap[sha]) return
+  if (!sha || !groupMap[sha]) return
 
-  const pref =
-    (Array.isArray(global.prefixes) && global.prefixes[0]) ||
-    global.prefix ||
-    "."
+  let safePrefix = "."
 
-  const injected = groupMap[sha].startsWith(pref)
-    ? groupMap[sha]
-    : pref + groupMap[sha]
+  if (Array.isArray(global.prefixes)) {
+    const p = global.prefixes.find(v => typeof v === "string")
+    if (p) safePrefix = p
+  } else if (typeof global.prefix === "string") {
+    safePrefix = global.prefix
+  }
+
+  const cmd = String(groupMap[sha]).trim()
+
+  const injected = cmd.startsWith(safePrefix)
+    ? cmd
+    : safePrefix + cmd
 
   m.text = injected.toLowerCase()
 
