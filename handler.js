@@ -185,23 +185,38 @@ export async function handler(chatUpdate) {
       } catch {}
     }
 
-    const prefixes = Array.isArray(global.prefixes)
-      ? global.prefixes
-      : [global.prefix || "."]
+    let usedPrefix = ""
 
-    const prefix = prefixes.find(p =>
-  typeof p === "string"
-    ? m.text.startsWith(p)
-    : p instanceof RegExp
-      ? p.test(m.text)
-      : false
-)
-    if (!prefix) continue
+if (plugin.customPrefix) {
+  if (plugin.customPrefix instanceof RegExp) {
+    const match = m.text.match(plugin.customPrefix)
+    if (!match) continue
+    usedPrefix = match[0]
+  } else if (typeof plugin.customPrefix === "string") {
+    if (!m.text.startsWith(plugin.customPrefix)) continue
+    usedPrefix = plugin.customPrefix
+  }
+} else {
+  const prefixes = Array.isArray(global.prefixes)
+    ? global.prefixes
+    : [global.prefix || "."]
 
-    const noPrefix =
-  prefix instanceof RegExp
-    ? m.text.replace(prefix, "")
-    : m.text.slice(prefix.length)
+  const found = prefixes.find(p =>
+    typeof p === "string"
+      ? m.text.startsWith(p)
+      : p instanceof RegExp
+        ? p.test(m.text)
+        : false
+  )
+  if (!found) continue
+
+  usedPrefix =
+    found instanceof RegExp
+      ? m.text.match(found)?.[0] || ""
+      : found
+}
+
+const noPrefix = m.text.slice(usedPrefix.length)
     let [command, ...args] = noPrefix.trim().split(/\s+/)
     command = (command || "").toLowerCase()
 
