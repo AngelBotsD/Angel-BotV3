@@ -14,7 +14,6 @@ global.prems = []
 
 global.emoji = '📎'
 global.emoji2 = '🏞️'
-global.prefix = '.'
 global.namebot = '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍'
 global.botname = '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍'
 global.banner = 'https://files.catbox.moe/4k94dp.jpg'
