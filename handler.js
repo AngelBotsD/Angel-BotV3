@@ -189,7 +189,13 @@ export async function handler(chatUpdate) {
       ? global.prefixes
       : [global.prefix || "."]
 
-    const prefix = prefixes.find(p => m.text.startsWith(p))
+    const prefix = prefixes.find(p =>
+  typeof p === "string"
+    ? m.text.startsWith(p)
+    : p instanceof RegExp
+      ? p.test(m.text)
+      : false
+)
     if (!prefix) continue
 
     const noPrefix = m.text.slice(prefix.length)
