@@ -89,7 +89,7 @@ Selecciona el formato 👇
         type: 1
       },
       {
-        buttonId: `${usedPrefix}${command} video|${video.url}`,
+        buttonId: `.play video|${video.url}`,
         buttonText: { displayText: "🎬 Video" },
         type: 1
       }
