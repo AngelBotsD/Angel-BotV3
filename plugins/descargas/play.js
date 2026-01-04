@@ -84,7 +84,7 @@ Selecciona el formato 👇
 
     const buttons = [
       {
-        buttonId: `${usedPrefix}${command} audio|${video.url}`,
+        buttonId: `.play audio|${video.url}`,
         buttonText: { displayText: "🎵 Audio" },
         type: 1
       },
