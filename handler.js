@@ -190,9 +190,6 @@ usedPrefix = prefix
 const noPrefix = m.text.slice(prefix.length)
 let [command, ...args] = noPrefix.trim().split(/\s+/)
 command = (command || "").toLowerCase()
-        const noPrefix = m.text.replace(usedPrefix, "")
-        let [command, ...args] = noPrefix.trim().split(" ")
-        command = (command || "").toLowerCase()
 
         if (!plugin.command) continue
 
