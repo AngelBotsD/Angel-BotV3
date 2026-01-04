@@ -240,6 +240,7 @@ export async function handler(chatUpdate) {
   })
 
   break
+}
       }
     }
   } catch (err) {
