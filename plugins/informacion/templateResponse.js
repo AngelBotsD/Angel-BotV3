@@ -52,7 +52,7 @@ export async function all(m, chatUpdate) {
     if (!plugin.command) {
       continue;
     }
-    const str2Regex = (str) => str.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
+    const str2Regex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const _prefix = plugin.customPrefix ? plugin.customPrefix : this.prefix ? this.prefix : global.prefix;
     const match = (_prefix instanceof RegExp ? // RegExp Mode?
             [[_prefix.exec(id), _prefix]] :
