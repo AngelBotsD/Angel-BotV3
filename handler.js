@@ -75,62 +75,6 @@ export async function handler(chatUpdate) {
   m = smsg(this, m) || m
   if (!m) return
 
-try {
-  if (!m.isGroup) return
-
-  const st =
-    m.message?.stickerMessage ||
-    m.message?.ephemeralMessage?.message?.stickerMessage ||
-    null
-
-  if (!st) return
-
-  const jsonPath = "./comandos.json"
-  if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, "{}")
-
-  const map = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}")
-  const groupMap = map[m.chat]
-  if (!groupMap) return
-
-  const rawSha =
-    st.fileSha256 ||
-    st.fileSha256Hash ||
-    st.filehash
-
-  if (!rawSha) return
-
-  const sha = Buffer.isBuffer(rawSha)
-    ? rawSha.toString("base64")
-    : ArrayBuffer.isView(rawSha)
-      ? Buffer.from(rawSha).toString("base64")
-      : typeof rawSha === "string"
-        ? rawSha
-        : null
-
-  if (!sha || !groupMap[sha]) return
-
-  let safePrefix = "."
-
-  if (Array.isArray(global.prefixes)) {
-    const p = global.prefixes.find(v => typeof v === "string")
-    if (p) safePrefix = p
-  } else if (typeof global.prefix === "string") {
-    safePrefix = global.prefix
-  }
-
-  const cmd = String(groupMap[sha]).trim()
-
-  const injected = cmd.startsWith(safePrefix)
-    ? cmd
-    : safePrefix + cmd
-
-  m.text = injected.toLowerCase()
-
-  console.log("✅ Sticker → comando:", m.chat, m.text)
-} catch (e) {
-  console.error("❌ Error Sticker→cmd:", e)
-}
-
   m.exp = 0
   if (typeof m.text !== "string") m.text = ""
 
