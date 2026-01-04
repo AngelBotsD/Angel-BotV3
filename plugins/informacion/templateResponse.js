@@ -1,8 +1,7 @@
 const {
   proto,
   generateWAMessage,
-  areJidsSameUser,
-  decryptPollVote
+  areJidsSameUser
 } = (await import('@whiskeysockets/baileys')).default
 
 export async function all(m, chatUpdate) {
@@ -27,12 +26,13 @@ export async function all(m, chatUpdate) {
 
   let isIdMessage = false
   let usedPrefix = ""
+  let finalText = text
 
   for (const name in global.plugins) {
     const plugin = global.plugins[name]
     if (!plugin || plugin.disabled) continue
-    if (!plugin.command) continue
     if (typeof plugin !== "function") continue
+    if (!plugin.command) continue
 
     if (plugin.customPrefix) {
       if (plugin.customPrefix instanceof RegExp) {
@@ -65,7 +65,7 @@ export async function all(m, chatUpdate) {
     }
 
     const noPrefix = id.slice(usedPrefix.length)
-    let [command, ...args] = noPrefix.trim().split(/\s+/)
+    let [command] = noPrefix.trim().split(/\s+/)
     command = (command || "").toLowerCase()
 
     const isAccept =
@@ -80,13 +80,14 @@ export async function all(m, chatUpdate) {
     if (!isAccept) continue
 
     isIdMessage = true
+    finalText = `${usedPrefix}${noPrefix}`
     break
   }
 
   const messages = await generateWAMessage(
     m.chat,
     {
-      text: isIdMessage ? id : text,
+      text: isIdMessage ? finalText : text,
       mentions: m.mentionedJid
     },
     {
