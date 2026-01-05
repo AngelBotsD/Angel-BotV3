@@ -19,6 +19,42 @@ function isOwnerBySender(sender) {
   return OWNER_NUMBERS.includes(DIGITS(sender))
 }
 
+global.beforeAll = async function (m, { conn }) {
+  try {
+    const nombreBot = global.namebot || "𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍"
+    const bannerFinal = "https://files.catbox.moe/izivd5.jpg"
+
+    const canales = [global.idcanal, global.idcanal2].filter(Boolean)
+    const newsletterJidRandom = canales.length
+      ? canales[Math.floor(Math.random() * canales.length)]
+      : null
+
+    global.rcanal = {
+      contextInfo: {
+        isForwarded: true,
+        forwardingScore: 1,
+        ...(newsletterJidRandom && {
+          forwardedNewsletterMessageInfo: {
+            newsletterJid: newsletterJidRandom,
+            serverMessageId: 100,
+            newsletterName: global.namecanal
+          }
+        }),
+        externalAdReply: {
+          title: nombreBot,
+          body: global.author,
+          thumbnailUrl: bannerFinal,
+          sourceUrl: null,
+          mediaType: 1,
+          renderLargerThumbnail: false
+        }
+      }
+    }
+  } catch (e) {
+    console.log("Error al generar rcanal:", e)
+  }
+}
+
 global.dfail = (type, m, conn) => {
   const msg = {
     rowner: "*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋*",
@@ -188,6 +224,10 @@ export async function handler(chatUpdate) {
       isPrems
     }
 
+    if (typeof global.beforeAll === "function") {
+      await global.beforeAll.call(this, m, extra)
+    }
+
     for (const name in global.plugins) {
       const plugin = global.plugins[name]
       if (!plugin || plugin.disabled) continue
@@ -197,10 +237,6 @@ export async function handler(chatUpdate) {
 
       if (typeof plugin.all === "function") {
         await plugin.all.call(this, m, extra)
-      }
-
-      if (typeof plugin.before === "function") {
-        await plugin.before.call(this, m, extra)
       }
 
       let usedPrefix = ""
