@@ -74,7 +74,7 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
 }
 
 handler.command = ["ytmp4", "yta4"]
-handler.help = ["ytmp4 <url>"]
-handler.tags = ["descargas"]
+handler.help = ["𝖸𝗍𝗆𝗉4 <𝖴𝗋𝗅>"]
+handler.tags = ["𝖣𝖤𝖲𝖢𝖠𝖱𝖦𝖠𝖲"]
 
 export default handler
