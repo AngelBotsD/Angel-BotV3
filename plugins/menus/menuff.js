@@ -42,5 +42,7 @@ const handler = async (m, { conn }) => {
 }
 
 handler.customPrefix = /^\.?(menu3|menufreefire|menuff)$/i;
+handler.help = ["𝖬𝖾𝗇𝗎𝖿𝖿"];
+handler.tags = ["𝖬𝖤𝖭𝖴𝖲"];
 handler.command = new RegExp
 export default handler
