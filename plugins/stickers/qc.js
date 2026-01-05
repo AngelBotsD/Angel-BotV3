@@ -135,12 +135,15 @@ const handler = async (m, { conn, args = [] }) => {
     )
   }
 
-  let quien =
-    m.mentionedJid?.length
-      ? m.mentionedJid[0]
-      : m.quoted?.sender
-        ? m.quoted.sender
-        : m.sender
+  let quien
+
+if (m.mentionedJid?.length) {
+  quien = m.mentionedJid[0]
+} else if (m.quoted && !m.quoted.isForwarded) {
+  quien = m.quoted.sender
+} else {
+  quien = m.sender
+}
 
   if (m.mentionedJid?.length) {
     for (const jid of m.mentionedJid) {
