@@ -5,7 +5,7 @@ const handler = async (msg, { conn, args = [], usedPrefix = ".", command = "play
   const chatId = msg.key.remoteJid
   const text = args.join(" ").trim()
   const input = String(text || "").trim()
-  const apikey = "Angxlllll"
+  const apikey = ""
 
   if (input.startsWith("audio|") || input.startsWith("video|")) {
     const [type, url] = input.split("|")
