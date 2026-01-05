@@ -523,17 +523,19 @@ filesFolderPreKeys.forEach(files => {
 unlinkSync(`./${sessions}/${files}`)
 })
 
-if (err) throw err
+const files = readdirSync(dir)
+
 files.forEach(file => {
-if (file !== 'creds.json') {
-const filePath = path.join(dir, file);
-unlinkSync(filePath, err => {
-if (err) {
-console.log(chalk.bold.red(`\n⚠︎ El archivo ${file} no se logró borrar.\n` + err))
-} else {
-console.log(chalk.bold.green(`\n⌦ El archivo ${file} se ha borrado correctamente.`))
-} }) }
-function redefineConsoleMethod(methodName, filterStrings) {
+  if (file !== 'creds.json') {
+    const filePath = path.join(dir, file)
+    try {
+      unlinkSync(filePath)
+      console.log(chalk.bold.green(`\n⌦ El archivo ${file} se ha borrado correctamente.`))
+    } catch (err) {
+      console.log(chalk.bold.red(`\n⚠︎ El archivo ${file} no se logró borrar.\n${err}`))
+    }
+  }
+})
 const originalConsoleMethod = console[methodName]
 console[methodName] = function() {
 const message = arguments[0]
