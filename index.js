@@ -495,11 +495,23 @@ const s = global.support = {ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, fi
 Object.freeze(global.support);
 }
 function clearTmp() {
-const tmpDir = join(__dirname, 'tmp')
-const filenames = readdirSync(tmpDir)
-filenames.forEach(file => {
-const filePath = join(tmpDir, file)
-unlinkSync(filePath)})
+  try {
+    const tmpDir = join(__dirname, 'tmp')
+
+    if (!existsSync(tmpDir)) return
+
+    const filenames = readdirSync(tmpDir)
+
+    for (const file of filenames) {
+      const filePath = join(tmpDir, file)
+      try {
+        unlinkSync(filePath)
+      } catch {}
+    }
+
+  } catch (e) {
+    console.log('Error limpiando tmp:', e)
+  }
 }
 
 let prekey = []
