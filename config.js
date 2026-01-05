@@ -3,34 +3,43 @@ import chalk from 'chalk'
 import { fileURLToPath } from 'url'
 
 global.owner = [
-'5714222810', 
-'5212213479743',
-'5215542690330', 
-'447894206349'
-] 
- 
-global.emoji = '📎'
-global.emoji2 = '🏞️'
-global.namebot = '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍'
-global.botname = '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍'
-global.banner = 'https://files.catbox.moe/4k94dp.jpg'
-global.packname = '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍'
-global.author = '𝖣𝖾𝗌𝖺𝗋𝗅𝗅𝖺𝖽𝗈 𝗉𝗈𝗋 𝖠𝗇𝗀𝖾𝗅'
-global.sessions = '𝖠𝗇𝗀𝖾𝗅𝖡𝗈𝗍'
+  '5714222810',
+  '5212213479743',
+  '5215542690330',
+  '447894206349'
+]
+
+global.bot = {
+  name: '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍',
+  alias: '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍',
+  packname: '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍',
+  author: '𝖣𝖾𝗌𝖺𝗋𝗅𝗅𝖺𝖽𝗈 𝗉𝗈𝗋 𝖠𝗇𝗀𝖾𝗅',
+  session: '𝖠𝗇𝗀𝖾𝗅𝖡𝗈𝗍',
+  banner: 'https://files.catbox.moe/4k94dp.jpg'
+}
+
+global.namebot = global.bot.name
+global.botname = global.bot.alias
+global.packname = global.bot.packname
+global.author = global.bot.author
+global.sessions = global.bot.session
+global.banner = global.bot.banner
+
 
 global.APIs = {
-sky: 'https://api-sky.ultraplus.click',
-may: 'https://api.soymaycol.icu'
+  sky: 'https://api-sky.ultraplus.click',
+  may: 'https://api.soymaycol.icu'
 }
 
 global.APIKeys = {
-sky: 'Angxlllll',
-may: 'may-e89378ce'
+  sky: process.env.SKY_API_KEY || 'Angxlllll',
+  may: process.env.MAY_API_KEY || 'may-e89378ce'
 }
 
 const file = fileURLToPath(import.meta.url)
+
 watchFile(file, () => {
-unwatchFile(file)
-console.log(chalk.redBright("Se actualizó el 'config.js'"))
-import(`file://${file}?update=${Date.now()}`)
+  unwatchFile(file)
+  console.log(chalk.redBright("config.js actualizado"))
+  import(`${file}?update=${Date.now()}`)
 })
