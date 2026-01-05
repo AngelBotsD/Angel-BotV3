@@ -25,24 +25,24 @@ import { Boom } from '@hapi/boom'
 import { fileURLToPath } from 'url'
 import { createRequire } from 'module'
 
-import {
+import baileys from '@whiskeysockets/baileys'
+
+import { Low, JSONFile } from 'lowdb'
+import store from './lib/store.js'
+
+const {
   makeWASocket,
-  protoType,
-  serialize,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   jidNormalizedUser,
   Browsers,
-  DisconnectReason
-} from '@whiskeysockets/baileys'
-
-import { Low, JSONFile } from 'lowdb'
-import store from './lib/store.js'
+  DisconnectReason,
+  proto
+} = baileys
 
 const { chain } = lodash
 
-/* ========= BANNER ========= */
 console.log(chalk.magentaBright('\nIniciando Angel Bot...'))
 cfonts.say('Angel Bot', {
   font: 'block',
@@ -50,25 +50,18 @@ cfonts.say('Angel Bot', {
   gradient: ['grey', 'white']
 })
 
-protoType()
-serialize()
-
-/* ========= TMP ========= */
 if (!existsSync('./tmp')) mkdirSync('./tmp')
 
-/* ========= GLOBAL HELPERS ========= */
 global.__filename = (pathURL = import.meta.url) => fileURLToPath(pathURL)
 global.__dirname = (pathURL = import.meta.url) =>
   path.dirname(global.__filename(pathURL))
 global.__require = (dir = import.meta.url) => createRequire(dir)
 
-/* ========= OPCIONES ========= */
 global.opts = new Object(
   yargs(process.argv.slice(2)).exitProcess(false).parse()
 )
 global.prefix = /^[#!./]/
 
-/* ========= DATABASE ========= */
 global.db = new Low(new JSONFile('database.json'))
 
 global.loadDatabase = async () => {
@@ -85,14 +78,12 @@ global.loadDatabase = async () => {
 }
 await global.loadDatabase()
 
-/* ========= AUTH ========= */
 const sessions = 'sessions'
 const { state, saveCreds } = await useMultiFileAuthState(sessions)
 const { version } = await fetchLatestBaileysVersion()
 
 const msgRetryCounterCache = new NodeCache()
 
-/* ========= CONNECTION ========= */
 global.conn = makeWASocket({
   logger: pino({ level: 'silent' }),
   printQRInTerminal: true,
@@ -109,14 +100,12 @@ global.conn = makeWASocket({
   generateHighQualityLinkPreview: true,
   markOnlineOnConnect: false
 })
-/* ========= HANDLER ========= */
+
 let handler = await import('./handler.js')
 
 global.reloadHandler = async () => {
   try {
-    const newHandler = await import(
-      `./handler.js?update=${Date.now()}`
-    )
+    const newHandler = await import(`./handler.js?update=${Date.now()}`)
     handler = newHandler
     conn.ev.off('messages.upsert', conn.handler)
     conn.handler = handler.handler.bind(conn)
@@ -131,36 +120,25 @@ conn.handler = handler.handler.bind(conn)
 conn.ev.on('messages.upsert', conn.handler)
 conn.ev.on('creds.update', saveCreds)
 
-/* ========= CONNECTION UPDATE ========= */
 conn.ev.on('connection.update', async (update) => {
   const { connection, lastDisconnect } = update
 
   if (connection === 'open') {
     const name = conn.user?.name || 'Desconocido'
-    console.log(
-      chalk.greenBright(`✅ Conectado como ${name}`)
-    )
+    console.log(chalk.greenBright(`✅ Conectado como ${name}`))
   }
 
   if (connection === 'close') {
-    const reason = new Boom(
-      lastDisconnect?.error
-    )?.output?.statusCode
-
+    const reason = new Boom(lastDisconnect?.error)?.output?.statusCode
     if (reason !== DisconnectReason.loggedOut) {
-      console.log(
-        chalk.yellow('♻ Reconectando...')
-      )
+      console.log(chalk.yellow('♻ Reconectando...'))
       await global.reloadHandler()
     } else {
-      console.log(
-        chalk.red('❌ Sesión cerrada')
-      )
+      console.log(chalk.red('❌ Sesión cerrada'))
     }
   }
 })
 
-/* ========= PLUGINS ========= */
 const pluginRoot = join(global.__dirname(), 'plugins')
 global.plugins = {}
 
@@ -169,17 +147,10 @@ async function loadPlugins() {
     if (!file.endsWith('.js')) continue
     try {
       const full = join(pluginRoot, file)
-      const module = await import(
-        `${full}?update=${Date.now()}`
-      )
-      global.plugins[file] =
-        module.default || module
+      const module = await import(`${full}?update=${Date.now()}`)
+      global.plugins[file] = module.default || module
     } catch (e) {
-      console.error(
-        'Error cargando plugin:',
-        file,
-        e
-      )
+      console.error('Error cargando plugin:', file, e)
     }
   }
 }
@@ -190,7 +161,6 @@ watch(pluginRoot, async (_, file) => {
   if (!file || !file.endsWith('.js')) return
   try {
     const full = join(pluginRoot, file)
-
     const err = syntaxerror(
       readFileSync(full),
       file,
@@ -203,35 +173,21 @@ watch(pluginRoot, async (_, file) => {
       console.error(err)
       return
     }
-
-    const module = await import(
-      `${full}?update=${Date.now()}`
-    )
-    global.plugins[file] =
-      module.default || module
-
-    console.log(
-      chalk.cyan(`🔄 Plugin recargado: ${file}`)
-    )
+    const module = await import(`${full}?update=${Date.now()}`)
+    global.plugins[file] = module.default || module
+    console.log(chalk.cyan(`🔄 Plugin recargado: ${file}`))
   } catch (e) {
     console.error(e)
   }
 })
 
-/* ========= LIMPIEZA TMP ========= */
 setInterval(() => {
   try {
     const files = readdirSync('./tmp')
     for (const file of files) {
       unlinkSync(join('./tmp', file))
     }
-    console.log(
-      chalk.gray('🧹 TMP limpiado')
-    )
   } catch {}
 }, 1000 * 60 * 5)
 
-/* ========= READY ========= */
-console.log(
-  chalk.cyanBright('🚀 Angel Bot listo y estable')
-)
+console.log(chalk.cyanBright('🚀 Angel Bot listo y estable'))
