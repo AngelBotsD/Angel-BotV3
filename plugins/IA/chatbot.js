@@ -95,6 +95,6 @@ let handler = async (m, { conn }) => {
 
 handler.customPrefix = /^@/i
 handler.command = new RegExp
-handler.tags = ['ai']
-
+handler.help = ["@𝖡𝗈𝗍"]
+handler.tags = ["𝖬𝖤𝖳𝖠 𝖨𝖠"]
 export default handler
