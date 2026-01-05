@@ -4,19 +4,28 @@ import { Sticker } from "wa-sticker-formatter"
 const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
 const API_KEY = global.APIKeys.may || ""
 
-const handler = async (m, { conn, text }) => {
+const handler = async (
+  m,
+  { conn, args = [], usedPrefix = ".", command = "brat" }
+) => {
+
   const quotedText =
     m.quoted?.text ||
     m.quoted?.caption ||
     m.quoted?.conversation ||
     ""
 
-  const input = text?.trim() || quotedText.trim()
+  const text = args.join(" ").trim()
+  const input = String(text || quotedText || "").trim()
 
   if (!input) {
     return conn.sendMessage(
       m.chat,
-      { text: "✳️ Usa:\n.brat <texto>\nO responde a un mensaje con .brat" },
+      {
+        text: `✳️ Usa:
+${usedPrefix}${command} <texto>
+O responde a un mensaje con ${usedPrefix}${command}`
+      },
       { quoted: m }
     )
   }
@@ -71,4 +80,5 @@ const handler = async (m, { conn, text }) => {
 handler.command = ["brat"]
 handler.help = ["𝖡𝗋𝖺𝗍 <𝖳𝖾𝗑𝗍𝗈>"]
 handler.tags = ["𝖲𝖳𝖨𝖢𝖪𝖤𝖱𝖲"]
+
 export default handler
