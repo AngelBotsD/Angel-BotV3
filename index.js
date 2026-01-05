@@ -127,6 +127,27 @@ console.log(chalk.bold.redBright(`No se permiten numeros que no sean 1 o 2, tamp
 }} while (opcion !== '1' && opcion !== '2' || fs.existsSync(`./${sessions}/creds.json`))
 } 
 
+function redefineConsoleMethod(methodName, filterStrings = []) {
+  const original = console[methodName]
+
+  console[methodName] = (...args) => {
+    try {
+      const text = args
+        .map(a => typeof a === 'string' ? a : JSON.stringify(a))
+        .join(' ')
+
+      for (const base64 of filterStrings) {
+        const decoded = Buffer.from(base64, 'base64').toString()
+        if (text.includes(decoded)) return
+      }
+
+      original.apply(console, args)
+    } catch {
+      original.apply(console, args)
+    }
+  }
+}
+
 const filterStrings = [
 "Q2xvc2luZyBzdGFsZSBvcGVu", // "Closing stable open"
 "Q2xvc2luZyBvcGVuIHNlc3Npb24=", // "Closing open session"
