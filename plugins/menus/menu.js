@@ -75,8 +75,9 @@ ${cmds.map(cmd => `⭒ ִֶָ७ ꯭🚩˙⋆｡ - ${cmd}`).join('\n')}
   )
 }
 
-handler.command = ['menu', 'menú', 'help', 'ayuda']
-
+handler.command = ['menu', 'menú', 'help', 'menuall']
+handler.help = ["𝖬𝖾𝗇𝗎𝖺𝗅𝗅"];
+handler.tags = ["𝖬𝖤𝖭𝖴𝖲"];
 export default handler
 
 function clockString(ms) {
