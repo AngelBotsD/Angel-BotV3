@@ -502,7 +502,6 @@ const filePath = join(tmpDir, file)
 unlinkSync(filePath)})
 }
 
-function purgeSession() {
 let prekey = []
 let directorio = readdirSync(`./${sessions}`)
 let filesFolderPreKeys = directorio.filter(file => {
@@ -514,8 +513,6 @@ unlinkSync(`./${sessions}/${files}`)
 })
 } 
 
-directories.forEach(dir => {
-readdirSync(dir, (err, files) => {
 if (err) throw err
 files.forEach(file => {
 if (file !== 'creds.json') {
