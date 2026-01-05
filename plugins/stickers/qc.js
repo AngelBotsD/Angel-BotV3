@@ -1,217 +1,52 @@
-import fs from 'fs'
-import path from 'path'
-import crypto from 'crypto'
-import fluent_ffmpeg from 'fluent-ffmpeg'
-import fetch from 'node-fetch'
-import { fileTypeFromBuffer } from 'file-type'
-import webp from 'node-webpmux'
+import { sticker } from '../lib/sticker.js'
 import axios from 'axios'
 
-const tmp = path.join(process.cwd(), 'tmp')
-if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
+let handler = async (m, {conn, args, usedPrefix, command}) => {
+let text
+if (args.length >= 1) {
+text = args.slice(0).join(' ')
+} else if (m.quoted && m.quoted.text) {
+text = m.quoted.text
+} else throw '╰⊱❗️⊱ *𝙇𝙊 𝙐𝙎𝙊́ 𝙈𝘼𝙇 | 𝙐𝙎𝙀𝘿 𝙄𝙏 𝙒𝙍𝙊𝙉𝙂* ⊱❗️⊱╮\n\n𝘼𝙂𝙍𝙀𝙂𝙐𝙀́ 𝙐𝙉 𝙏𝙀𝙓𝙏𝙊 𝙋𝘼𝙍𝘼 𝘾𝙍𝙀𝘼𝙍 𝙀𝙇 𝙎𝙏𝙄𝘾𝙆𝙀𝙍\n\n𝘼𝘿𝘿 𝘼 𝙏𝙀𝙓𝙏 𝙏𝙊 𝘾𝙍𝙀𝘼𝙏𝙀 𝙏𝙃𝙀 𝙎𝙏𝙄𝘾𝙆𝙀𝙍 '
+if (!text) return m.reply('𝙔 𝙀𝙇 𝙏𝙀𝙓𝙏𝙊?')
+if (text.length > 30) return m.reply('𝙈𝘼𝙓𝙄𝙈𝙊 30 𝙋𝘼𝙇𝘼𝘽𝙍𝘼𝙎!')
+let pp = await conn.profilePictureUrl(m.sender, 'image').catch((_) => 'https://telegra.ph/file/a2ae6cbfa40f6eeea0cf1.jpg')
 
-async function getUserName(m, conn, jid) {
-  try {
-    let name = await conn.getName(jid)
-    if (name) return name
-  } catch {}
-  if (m.quoted?.vcard) {
-    try {
-      const match = /FN:(.*)/.exec(m.quoted.vcard)
-      if (match) return match[1].trim()
-    } catch {}
-  }
-  if (m.pushName) return m.pushName
-  return jid.split('@')[0]
+const obj = {
+type: 'quote',
+format: 'png',
+backgroundColor: '#000000',
+width: 512,
+height: 768,
+scale: 2,
+messages: [
+{
+entities: [],
+avatar: true,
+from: {
+id: 1,
+name: m.name,
+photo: {
+url: pp
+}
+},
+text: text,
+replyMessage: {}
+}
+]
+}
+const json = await axios.post('https://bot.lyo.su/quote/generate', obj, {
+headers: {
+'Content-Type': 'application/json'
+}
+})
+const buffer = Buffer.from(json.data.result.image, 'base64')
+let stiker = await sticker(buffer, false, global.packname, global.author)
+if (stiker) return conn.sendFile(m.chat, stiker, 'Quotly.webp', '', m)
 }
 
-async function getUserPP(conn, jid) {
-  const fallback = 'https://telegra.ph/file/320b066dc81928b782c7b.png'
-  try {
-    return await conn.profilePictureUrl(jid, 'image')
-  } catch {}
-  try {
-    return await conn.profilePictureUrl(jid)
-  } catch {}
-  return fallback
-}
-
-async function addExif(webpSticker, packname = '', author = '', categories = [''], extra = {}) {
-  const img = new webp.Image()
-  const stickerPackId = crypto.randomBytes(32).toString('hex')
-  const json = {
-    'sticker-pack-id': stickerPackId,
-    'sticker-pack-name': packname,
-    'sticker-pack-publisher': author,
-    emojis: categories,
-    ...extra
-  }
-  const exifAttr = Buffer.from([
-    0x49, 0x49, 0x2A, 0x00,
-    0x08, 0x00, 0x00, 0x00,
-    0x01, 0x00,
-    0x41, 0x57,
-    0x07, 0x00,
-    0x00, 0x00,
-    0x00, 0x00,
-    0x16, 0x00, 0x00, 0x00
-  ])
-  const jsonBuffer = Buffer.from(JSON.stringify(json), 'utf8')
-  const exif = Buffer.concat([exifAttr, jsonBuffer])
-  exif.writeUIntLE(jsonBuffer.length, 14, 4)
-  await img.load(webpSticker)
-  img.exif = exif
-  return await img.save(null)
-}
-
-async function sticker(img, url, packname = '', author = '') {
-  if (url) {
-    let res = await fetch(url)
-    if (res.status !== 200) throw await res.text()
-    img = await res.buffer()
-  }
-
-  const type = await fileTypeFromBuffer(img) || { mime: 'application/octet-stream', ext: 'bin' }
-  if (type.ext === 'bin') throw new Error('Tipo de archivo inválido')
-
-  const tmpFile = path.join(tmp, `${Date.now()}.${type.ext}`)
-  const outFile = `${tmpFile}.webp`
-
-  await fs.promises.writeFile(tmpFile, img)
-
-  await new Promise((resolve, reject) => {
-    const ff = /video/i.test(type.mime)
-      ? fluent_ffmpeg(tmpFile).inputFormat(type.ext)
-      : fluent_ffmpeg(tmpFile).input(tmpFile)
-
-    ff.addOutputOptions([
-      '-vcodec', 'libwebp',
-      '-vf',
-      "scale='min(512,iw)':min'(512,ih)':force_original_aspect_ratio=decrease,fps=15,pad=512:512:-1:-1:color=white@0.0,split[a][b];[a]palettegen=reserve_transparent=on:transparency_color=ffffff[p];[b][p]paletteuse"
-    ])
-      .toFormat('webp')
-      .save(outFile)
-      .on('error', reject)
-      .on('end', resolve)
-  })
-
-  const buffer = await fs.promises.readFile(outFile)
-  fs.promises.unlink(tmpFile).catch(() => {})
-  fs.promises.unlink(outFile).catch(() => {})
-
-  return await addExif(buffer, packname, author)
-}
-
-const handler = async (m, { conn, args = [] }) => {
-  let text = args.join(' ').trim()
-
-  const quotedText =
-    m.quoted?.text ||
-    m.quoted?.caption ||
-    m.quoted?.conversation ||
-    ''
-
-  let texto = text || quotedText
-
-  if (!texto) {
-    return conn.sendMessage(
-      m.chat,
-      {
-        text: '𝖠𝗀𝗋𝖾𝗀𝖺 𝖳𝖾𝗑𝗍𝗈 𝖮 𝖱𝖾𝗌𝗉𝗈𝗇𝖽𝖾 𝖠 𝖴𝗇 𝖬𝖾𝗇𝗌𝖺𝗃𝖾 𝖯𝖺𝗋𝖺 𝖢𝗋𝖾𝖺𝗋 𝖫𝖺 𝖢𝗂𝗍𝖺',
-        ...global.rcanal
-      },
-      { quoted: m }
-    )
-  }
-
-  if (texto.length > 100) {
-    return conn.sendMessage(
-      m.chat,
-      {
-        text: '⚠️ El texto no puede superar los 100 caracteres',
-        ...global.rcanal
-      },
-      { quoted: m }
-    )
-  }
-
-  let quien
-
-if (m.mentionedJid?.length) {
-  quien = m.mentionedJid[0]
-} else if (m.quoted && !m.quoted.isForwarded) {
-  quien = m.quoted.sender
-} else {
-  quien = m.sender
-}
-
-  if (m.mentionedJid?.length) {
-    for (const jid of m.mentionedJid) {
-      const tag = `@${jid.split('@')[0]}`
-      texto = texto.replaceAll(tag, '').trim()
-    }
-  }
-
-  let nombre = await getUserName(m, conn, quien)
-  let fotoPerfil = await getUserPP(conn, quien)
-
-  await m.react('🕒')
-
-  try {
-    const datos = {
-      type: 'quote',
-      format: 'png',
-      backgroundColor: '#000000',
-      width: 512,
-      height: 768,
-      scale: 2,
-      messages: [
-        {
-          entities: [],
-          avatar: true,
-          from: {
-            id: 1,
-            name: nombre,
-            photo: { url: fotoPerfil }
-          },
-          text: texto,
-          replyMessage: {}
-        }
-      ]
-    }
-
-    const res = await axios.post('https://qc.botcahx.eu.org/generate', datos, {
-      headers: { 'Content-Type': 'application/json' }
-    })
-
-    const imgBuffer = Buffer.from(res.data.result.image, 'base64')
-    const stiker = await sticker(imgBuffer, false, '', '')
-
-    await conn.sendMessage(
-      m.chat,
-      {
-        sticker: stiker,
-        ...global.rcanal
-      },
-      { quoted: m }
-    )
-
-    await m.react('✅')
-  } catch {
-    await m.react('❌')
-    return conn.sendMessage(
-      m.chat,
-      {
-        text: '𝖮𝖼𝗎𝗋𝗋𝗂𝗈 𝖴𝗇 𝖤𝗋𝗋𝗈𝗋 𝖠𝗅 𝖦𝖾𝗇𝖾𝗋𝖺𝗋 𝖫𝖺 𝖢𝗂𝗍𝖺',
-        ...global.rcanal
-      },
-      { quoted: m }
-    )
-  }
-}
-
-handler.help = ['𝖰𝖼 <𝖳𝖾𝗑𝗍𝗈>']
-handler.tags = ['𝖲𝖳𝖨𝖢𝖪𝖤𝖱𝖲']
-handler.command = /^(qc|quotely)$/i
+handler.help = ['qc']
+handler.tags = ['sticker']
+handler.command = /^(qc)$/i
 
 export default handler
