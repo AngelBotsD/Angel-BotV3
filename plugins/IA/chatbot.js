@@ -2,7 +2,7 @@ import fetch from 'node-fetch'
 
 const ALLOWED_MENTIONS = [
   '5215911153853@s.whatsapp.net',
-  '226044783132714@lid',
+  '25856038715509@lid',
   '5215911153853'
 ]
 
