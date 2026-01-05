@@ -71,6 +71,8 @@ export async function handler(m, { conn }) {
 }
 
 handler.command = ["delco"]
+handler.help = ["𝖣𝖾𝗅𝖼𝗈"];
+handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
 handler.group = true
 handler.admin = true
 
