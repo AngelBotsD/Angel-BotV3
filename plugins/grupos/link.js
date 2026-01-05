@@ -59,8 +59,10 @@ async function handler(m, { conn }) {
   }, { quoted: m })
 }
 
-handler.command = ['link']
-handler.group = true
+handler.help = ["𝖫𝗂𝗇𝗄"];
+handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
+handler.customPrefix = /^\.?(link)$/i;
+handler.command = new RegExp();
+handler.group = true;
 handler.botAdmin = true
-
-export default handler
+export default handler;
