@@ -59,6 +59,8 @@ export async function handler(m, { conn }) {
 }
 
 handler.command = ['addco']
+handler.help = ["𝖠𝖽𝖽𝖼𝗈 <𝖢𝗈𝗆𝖺𝗇𝖽𝗈>"];
+handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
 handler.admin = true
 handler.group = true
 
