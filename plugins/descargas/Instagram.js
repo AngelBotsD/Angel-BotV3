@@ -78,7 +78,7 @@ const handler = async (msg, { conn, args, command }) => {
 };
 
 
-handler.help = ["𝖨𝗇𝗌𝗍𝖺𝗀𝗋𝖺𝗆 <𝗎𝗋𝗅>"]
+handler.help = ["𝖨𝗇𝗌𝗍𝖺𝗀𝗋𝖺𝗆 <𝖴𝗋𝗅>"]
 handler.tags = ["𝖣𝖤𝖲𝖢𝖠𝖱𝖦𝖠𝖲"]
 handler.command = ["instagram", "ig"];
 export default handler;
