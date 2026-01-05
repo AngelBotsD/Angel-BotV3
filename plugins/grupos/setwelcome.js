@@ -16,7 +16,7 @@ const handler = async (m, { conn, text }) => {
 }
 
 handler.command = /^setwelcome$/i
-handler.help = ["setwelcome <texto>"]
-handler.tags = ["group"]
+handler.help = ["𝖲𝖾𝗍𝗐𝖾𝗅𝖼𝗈𝗆𝖾 <𝖳𝖾𝗑𝗍𝗈>"]
+handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"]
 
 export default handler
