@@ -9,9 +9,6 @@ global.owner = [
 '447894206349'
 ] 
  
-global.mods = []
-global.prems = []
-
 global.emoji = '📎'
 global.emoji2 = '🏞️'
 global.namebot = '𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍'
