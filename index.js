@@ -17,7 +17,7 @@ import path, { join, dirname } from 'path'
 import { Boom } from '@hapi/boom'
 import { makeWASocket, protoType, serialize } from './lib/simple.js'
 import { Low, JSONFile } from 'lowdb'
-import { mongoDB, mongoDBV2 } from './lib/mongoDB.js'
+import { mongoDB } from './lib/mongoDB.js'
 import store from './lib/store.js'
 const { proto } = (await import('@whiskeysockets/baileys')).default
 import pkg from 'google-libphonenumber'
