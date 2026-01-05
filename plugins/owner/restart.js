@@ -19,5 +19,7 @@ const handler = async (msg, { conn }) => {
 };
 
 handler.command = ["rest", "restart"];
+handler.help = ['𝖱𝖾𝗌𝗍𝖺𝗋𝗍']
+handler.tags = ['𝖮𝖶𝖭𝖤𝖱']
 handler.owner = true
 export default handler;
