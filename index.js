@@ -27,9 +27,7 @@ const phoneUtil = PhoneNumberUtil.getInstance()
 const { DisconnectReason, useMultiFileAuthState, MessageRetryMap, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, jidNormalizedUser, Browsers } = await import('@whiskeysockets/baileys')
 import readline, { createInterface } from 'readline'
 import NodeCache from 'node-cache'
-const { CONNECTING } = ws
 const { chain } = lodash
-const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
 import {
   downloadContentFromMessage,
