@@ -511,7 +511,6 @@ prekey = [...prekey, ...filesFolderPreKeys]
 filesFolderPreKeys.forEach(files => {
 unlinkSync(`./${sessions}/${files}`)
 })
-} 
 
 if (err) throw err
 files.forEach(file => {
