@@ -33,7 +33,7 @@ global.dfail = (type, m, conn) => {
   }[type]
 
   if (msg)
-    return conn.reply(m.chat, msg, m, rcanal)
+    conn.reply(m.chat, msg, m, global.rcanal || {})
       .then(() => m.react("✖️"))
 }
 
