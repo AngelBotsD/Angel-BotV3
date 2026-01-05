@@ -148,7 +148,7 @@ mobile: MethodMobile,
 browser: opcion == '1' ? Browsers.macOS("Desktop") : methodCodeQR ? Browsers.macOS("Desktop") : Browsers.macOS("Chrome"), 
 auth: {
 creds: state.creds,
-keys: makeCacheableSignalKeyStore(state.keys, Pino({ level: "fatal" }).child({ level: "fatal" })),
+keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
 },
 markOnlineOnConnect: false, 
 generateHighQualityLinkPreview: true, 
