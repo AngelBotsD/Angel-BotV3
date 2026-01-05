@@ -47,6 +47,8 @@ let handler = async (m, { conn, participants }) => {
 }
 
 handler.customPrefix = /^\.?(promote|daradmin|addadmin)/i
+handler.help = ["𝖯𝗋𝗈𝗆𝗈𝗍𝖾"];
+handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
 handler.command = new RegExp()
 handler.group = true
 handler.admin = true
