@@ -68,10 +68,6 @@ const handler = async (msg, { conn, wa }) => {
 };
 
 handler.command = ["toimg", "stickerimg", "img"];
-handler.tags = ["tools"];
-handler.help = [
-  "toimg <responder a sticker> - Convierte sticker a imagen",
-  "stickerimg <responder a sticker> - Convierte sticker a imagen",
-];
-
+handler.help = ['𝖳𝗈𝗂𝗆𝗀']
+handler.tags = ['𝖳𝖮𝖮𝖫𝖲']
 export default handler;
