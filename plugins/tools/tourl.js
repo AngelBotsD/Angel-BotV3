@@ -168,8 +168,8 @@ let handler = async (msg, { conn, command, wa }) => {
   }
 }
 
-handler.command = ['tourl']
-handler.help = ['tourl']
-handler.tags = ['herramientas']
+handler.command = ['tourl', 'ct', 'tl', 'catbox']
+handler.help = ['𝖢𝖺𝗍𝖻𝗈𝗑']
+handler.tags = ['𝖳𝖮𝖮𝖫𝖲']
 
 export default handler
