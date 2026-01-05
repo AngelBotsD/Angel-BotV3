@@ -532,7 +532,6 @@ files.forEach(file => {
   }
 })
 originalConsoleMethod.apply(console, arguments)
-}}
 setInterval(async () => {
 if (stopped === 'close' || !conn || !conn.user) return
 setInterval(async () => {
