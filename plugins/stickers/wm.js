@@ -31,7 +31,10 @@ async function addExif(stickerBuffer, packname = '') {
   return await img.save(null)
 }
 
-let handler = async (m, { conn, text }) => {
+let handler = async (
+  m,
+  { conn, args = [], usedPrefix = '.', command = 'wm' }
+) => {
   try {
     await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } })
 
@@ -48,11 +51,16 @@ let handler = async (m, { conn, text }) => {
         { quoted: m }
       )
 
-    let clean = (text || '').trim()
-    let packname = ''
+    const quotedText =
+      m.quoted?.text ||
+      m.quoted?.caption ||
+      m.quoted?.conversation ||
+      ''
 
-    if (clean) packname = clean
-    else packname = m.pushName || 'Usuario'
+    const text = args.join(' ').trim()
+    const input = String(text || quotedText || '').trim()
+
+    let packname = input || m.pushName || 'Usuario'
 
     let media = await q.download()
     if (!media)
@@ -91,8 +99,8 @@ let handler = async (m, { conn, text }) => {
   }
 }
 
-handler.help = ["𝖶𝗆 <𝖳𝖾𝗑𝗍𝗈>"]
-handler.tags = ["𝖲𝖳𝖨𝖢𝖪𝖤𝖱𝖲"]
+handler.help = ['𝖶𝗆 <𝖳𝖾𝗑𝗍𝗈>']
+handler.tags = ['𝖲𝖳𝖨𝖢𝖪𝖤𝖱𝖲']
 handler.command = ['wm', 'robar', 'robarsticker']
 
 export default handler
