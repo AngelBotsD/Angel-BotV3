@@ -83,9 +83,16 @@ let handler = async (m, { conn }) => {
     return m.reply('hola si')
   }
 
+  const prompt = `
+Eres Angel Bot, un asistente divertido y burlón. Responde a este mensaje de manera ingeniosa.
+- Si el mensaje contiene insultos hacia ti, responde de forma graciosa y burlona, pero sin ofender gravemente.
+- Si el mensaje es normal, responde de forma amistosa y entretenida.
+Mensaje del usuario: "${text}"
+`;
+
   try {
     await conn.sendPresenceUpdate('composing', m.chat)
-    const res = await gemini.ask(text)
+    const res = await gemini.ask(prompt)
     await m.reply(res)
   } catch (e) {
     console.error(e)
