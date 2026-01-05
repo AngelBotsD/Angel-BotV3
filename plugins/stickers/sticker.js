@@ -102,7 +102,7 @@ const handler = async (msg, { conn, wa }) => {
   }
 };
 
-handler.help = ["𝖲"]
+handler.help = ["𝖲𝗍𝗂𝖼𝗄𝖾𝗋"]
 handler.tags = ["𝖲𝖳𝖨𝖢𝖪𝖤𝖱𝖲"]
 handler.customPrefix = /^(\.s|s)$/i
 handler.command = new RegExp
