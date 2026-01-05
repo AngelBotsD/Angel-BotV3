@@ -69,4 +69,6 @@ const handler = async (m, { conn, text }) => {
 }
 
 handler.command = ["brat"]
+handler.help = ["𝖡𝗋𝖺𝗍 <𝖳𝖾𝗑𝗍𝗈>"]
+handler.tags = ["𝖲𝖳𝖨𝖢𝖪𝖤𝖱𝖲"]
 export default handler
