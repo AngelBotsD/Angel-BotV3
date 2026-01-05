@@ -146,7 +146,7 @@ Selecciona el formato 👇
 }
 
 handler.command = ["play", "ytplay"]
-handler.help = ["play <texto>"]
-handler.tags = ["descargas"]
+handler.help = ["𝖯𝗅𝖺𝗒 <𝖳𝖾𝗑𝗍𝗈>"]
+handler.tags = ["𝖣𝖤𝖲𝖢𝖠𝖱𝖦𝖠𝖲"]
 
 export default handler
