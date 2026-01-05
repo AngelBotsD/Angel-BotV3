@@ -74,8 +74,8 @@ let handler = async (m, { conn, args }) => {
     colText
   }
 }
-handler.help = ['8vs8']
-handler.tags = ['freefire']
+handler.help = ['8𝗏𝗌8']
+handler.tags = ['𝖥𝖱𝖤𝖤 𝖥𝖨𝖱𝖤']
 handler.command = /^\.?(8vs8|vs8)$/i
 handler.group = true
 export default handler
