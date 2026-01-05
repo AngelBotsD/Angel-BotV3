@@ -463,73 +463,57 @@ global.reload = async (_ev, file) => {
 Object.freeze(global.reload)
 watch(pluginRoot, global.reload)
 await global.reloadHandler()
+
 async function _quickTest() {
-const test = await Promise.all([
-spawn('ffmpeg'),
-spawn('ffprobe'),
-spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-filter_complex', 'color', '-frames:v', '1', '-f', 'webp', '-']),
-spawn('convert'),
-spawn('magick'),
-spawn('gm'),
-spawn('find', ['--version']),
-].map((p) => {
-return Promise.race([
-new Promise((resolve) => {
-p.on('close', (code) => {
-resolve(code !== 127);
-});
-}),
-new Promise((resolve) => {
-p.on('error', (_) => resolve(false))
-})])
-}))
-const [ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find] = test;
-const s = global.support = {ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find};
-Object.freeze(global.support);
+  const test = await Promise.all([
+    spawn('ffmpeg'),
+    spawn('ffprobe'),
+    spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-filter_complex', 'color', '-frames:v', '1', '-f', 'webp', '-']),
+    spawn('convert'),
+    spawn('magick'),
+    spawn('gm'),
+    spawn('find', ['--version']),
+  ].map((p) => {
+    return Promise.race([
+      new Promise((resolve) => {
+        p.on('close', (code) => resolve(code !== 127))
+      }),
+      new Promise((resolve) => {
+        p.on('error', _ => resolve(false))
+      })
+    ])
+  }))
+
+  const [ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find] = test
+  const s = global.support = { ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find }
+  Object.freeze(global.support)
 }
+
 let prekey = []
 let directorio = readdirSync(`./${sessions}`)
-let filesFolderPreKeys = directorio.filter(file => {
-return file.startsWith('pre-key-')
-})
+let filesFolderPreKeys = directorio.filter(file => file.startsWith('pre-key-'))
 prekey = [...prekey, ...filesFolderPreKeys]
+
 filesFolderPreKeys.forEach(files => {
-unlinkSync(`./${sessions}/${files}`)
+  unlinkSync(`./${sessions}/${files}`)
 })
 
-const files = readdirSync(dir)
-
-files.forEach(file => {
-  if (file !== 'creds.json') {
-    const filePath = path.join(dir, file)
-    try {
-      unlinkSync(filePath)
-      console.log(chalk.bold.green(`\n⌦ El archivo ${file} se ha borrado correctamente.`))
-    } catch (err) {
-      console.log(chalk.bold.red(`\n⚠︎ El archivo ${file} no se logró borrar.\n${err}`))
-    }
-  }
-})
-originalConsoleMethod.apply(console, arguments)
-setInterval(async () => {
-if (stopped === 'close' || !conn || !conn.user) return
-setInterval(async () => {
-if (stopped === 'close' || !conn || !conn.user) return
-console.log(chalk.bold.cyanBright(`\n⌦ Archivos de la carpeta ${global.sessions} no necesario han sido eliminados del servidor.`))}, 1000 * 60 * 10)
-setInterval(async () => {
-if (stopped === 'close' || !conn || !conn.user) return
-console.log(chalk.bold.cyanBright(`\n⌦ Archivos no necesario han sido eliminados del servidor.`))}, 1000 * 60 * 10)
 _quickTest().catch(console.error)
+
 async function isValidPhoneNumber(number) {
-try {
-number = number.replace(/\s+/g, '')
-if (number.startsWith('+521')) {
-number = number.replace('+521', '+52');
-} else if (number.startsWith('+52') && number[4] === '1') {
-number = number.replace('+52 1', '+52');
+  try {
+    number = number.replace(/\s+/g, '')
+
+    if (number.startsWith('+521')) {
+      number = number.replace('+521', '+52')
+    } else if (number.startsWith('+52') && number[4] === '1') {
+      number = number.replace('+52 1', '+52')
+    }
+
+    const parsedNumber = phoneUtil.parseAndKeepRawInput(number)
+    return phoneUtil.isValidNumber(parsedNumber)
+
+  } catch (error) {
+    return false
+  }
 }
-const parsedNumber = phoneUtil.parseAndKeepRawInput(number)
-return phoneUtil.isValidNumber(parsedNumber)
-} catch (error) {
-return false
-}}
