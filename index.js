@@ -526,7 +526,7 @@ console.log(chalk.bold.red(`\n⚠︎ El archivo ${file} no se logró borrar.\n` 
 } else {
 console.log(chalk.bold.green(`\n⌦ El archivo ${file} se ha borrado correctamente.`))
 } }) }
-}) }) }) }
+}) }) })
 function redefineConsoleMethod(methodName, filterStrings) {
 const originalConsoleMethod = console[methodName]
 console[methodName] = function() {
