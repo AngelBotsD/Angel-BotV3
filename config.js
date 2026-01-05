@@ -23,12 +23,12 @@ global.sessions = '𝖠𝗇𝗀𝖾𝗅𝖡𝗈𝗍'
 
 global.APIs = {
 sky: 'https://api-sky.ultraplus.click',
-may: 'https://api.soymaycol.icu'
+may: 'https://api-adonix.ultraplus.click'
 }
 
 global.APIKeys = {
 sky: 'Angxlllll',
-may: 'may-e89378ce'
+may: 'Angxlllll'
 }
 
 const file = fileURLToPath(import.meta.url)
