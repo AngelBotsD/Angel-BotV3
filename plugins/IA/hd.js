@@ -141,8 +141,8 @@ const handler = async (msg, { conn, command, wa, usedPrefix }) => {
   }
 }
 
-handler.help = ["hd"]
-handler.tags = ["tools"]
+handler.help = ["𝖧𝖽"]
+handler.tags = ["𝖬𝖤𝖳𝖠 𝖨𝖠"]
 handler.command = ["hd"]
 
 export default handler
