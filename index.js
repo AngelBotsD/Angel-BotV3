@@ -196,11 +196,6 @@ console.log(chalk.bold.white(chalk.bgMagenta(`[♦]  Código de Vinculacion:`)),
 conn.isInit = false
 conn.well = false
 conn.logger.info(`[♠] Hecho exitosamente...\n`)
-if (!opts['test']) {
-  if (global.db) setInterval(async () => {
-    if (global.db.data) await global.db.write()
-  }, 30 * 1000)
-}
 
 async function resolveLidToRealJid(lidJid, groupJid, maxRetries = 3, retryDelay = 1000) {
 if (!lidJid?.endsWith("@lid") || !groupJid?.endsWith("@g.us")) return lidJid?.includes("@") ? lidJid : `${lidJid}@s.whatsapp.net`
