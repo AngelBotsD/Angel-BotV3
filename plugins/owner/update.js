@@ -42,4 +42,7 @@ const handler = async (msg, { conn }) => {
 };
 
 handler.command = ["carga", "update"];
+handler.help = ['𝖴𝗉𝖽𝖺𝗍𝖾']
+handler.tags = ['𝖮𝖶𝖭𝖤𝖱']
+handler.owner = true
 export default handler;
