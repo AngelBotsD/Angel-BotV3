@@ -107,7 +107,7 @@ let handler = async (m, { conn, usedPrefix, command }) => {
   }
 }
 
-handler.help = ['𝖶𝗁𝖺𝗍𝗆𝗎𝗌𝗂𝖼 <𝖺𝗎𝖽𝗂𝗈/𝗏𝗂𝖽𝖾𝗈>']
+handler.help = ['𝖶𝗁𝖺𝗍𝗆𝗎𝗌𝗂𝖼']
 handler.tags = ['𝖳𝖮𝖮𝖫𝖲']
 handler.command = ['shazam', 'whatmusic']
 
