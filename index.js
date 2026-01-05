@@ -487,26 +487,6 @@ const [ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find] = test;
 const s = global.support = {ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find};
 Object.freeze(global.support);
 }
-function clearTmp() {
-  try {
-    const tmpDir = join(__dirname, 'tmp')
-
-    if (!existsSync(tmpDir)) return
-
-    const filenames = readdirSync(tmpDir)
-
-    for (const file of filenames) {
-      const filePath = join(tmpDir, file)
-      try {
-        unlinkSync(filePath)
-      } catch {}
-    }
-
-  } catch (e) {
-    console.log('Error limpiando tmp:', e)
-  }
-}
-
 let prekey = []
 let directorio = readdirSync(`./${sessions}`)
 let filesFolderPreKeys = directorio.filter(file => {
