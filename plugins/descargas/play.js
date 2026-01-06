@@ -1,8 +1,8 @@
 import axios from "axios"
 import yts from "yt-search"
 
-const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
-const API_KEY = global.APIKeys.may || ""
+const API_BASE = (global.APIs?.may || "").replace(/\/+$/, "")
+const API_KEY = global.APIKeys?.may || ""
 
 const handler = async (
   msg,
@@ -11,25 +11,23 @@ const handler = async (
   const chatId = msg.key.remoteJid
   const input = args.join(" ").trim()
 
-  // ===== RESPUESTA DE BOTONES =====
+  // ===============================
+  // 🔘 RESPUESTA DE BOTONES
+  // ===============================
   if (input.startsWith("audio|") || input.startsWith("video|")) {
     const [type, url] = input.split("|")
 
     await conn.sendMessage(chatId, {
-      react: {
-        text: type === "audio" ? "🎵" : "🎬",
-        key: msg.key
-      }
+      react: { text: type === "audio" ? "🎵" : "🎬", key: msg.key }
     })
 
     try {
       const dlType = type === "audio" ? "Mp3" : "Mp4"
-
       const { data } = await axios.get(
         `${API_BASE}/ytdl?url=${encodeURIComponent(url)}&type=${dlType}&apikey=${API_KEY}`
       )
 
-      if (!data?.status || !data.result?.url)
+      if (!data?.status || !data?.result?.url)
         throw new Error("No se pudo obtener el archivo")
 
       if (type === "audio") {
@@ -67,7 +65,9 @@ const handler = async (
     return
   }
 
-  // ===== SIN TEXTO =====
+  // ===============================
+  // ❌ SIN TEXTO
+  // ===============================
   if (!input) {
     return conn.sendMessage(
       chatId,
@@ -93,32 +93,37 @@ ${usedPrefix}${command} Lemon Tree`
 
     const video = search.videos[0]
 
-    const caption = `⭒ ִֶָ७ ꯭🎵˙⋆｡ - 𝚃𝚒́𝚝𝚞𝚕𝚘: ${video.title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - 𝙰𝚛𝚝𝚒𝚜𝚝𝚊: ${video.author?.name || "Desconocido"}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - 𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗: ${video.timestamp || "Desconocida"}
+    const caption = `
+⭒ ִֶָ۷ ꯭🎵˙⋆｡ - *Título:* ${video.title}
+⭒ ִֶָ۷ ꯭🎤˙⋆｡ - *Artista:* ${video.author?.name || "Desconocido"}
+⭒ ִֶָ۷ ꯭🕑˙⋆｡ - *Duración:* ${video.timestamp || "?"}
 
 Selecciona el formato 👇
 
 ⇆‌ ㅤ◁ㅤ❚❚ㅤ▷ㅤ↻
 
-> \`\`\`© Powered by Angel.xyz\`\`\`
-`
+> © Powered by Angel.xyz
+`.trim()
 
-    // 👇 BOTONES NUEVOS (nativeFlow)
+    // ===============================
+    // 🔘 BOTONES NATIVOS
+    // ===============================
     const buttons = [
-      { id: `.play audio|${video.url}`, text: "🎵 Audio" },
-      { id: `.play video|${video.url}`, text: "🎬 Video" }
+      { id: `${usedPrefix}${command} audio|${video.url}`, text: "🎵 Audio" },
+      { id: `${usedPrefix}${command} video|${video.url}`, text: "🎬 Video" }
     ]
 
+    // ===============================
+    // 🖼️ ENVÍO FINAL
+    // ===============================
     await conn.sendButtonImage(
-  conn,
-  chatId,
-  video.thumbnail,   // URL real
-  caption,
-  "© Powered by Angel.xyz",
-  buttons,
-  msg
-)
+      chatId,
+      video.thumbnail,
+      caption,
+      "© Powered by Angel.xyz",
+      buttons,
+      msg
+    )
 
     await conn.sendMessage(chatId, {
       react: { text: "✅", key: msg.key }
