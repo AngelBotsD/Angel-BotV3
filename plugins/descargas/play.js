@@ -1,21 +1,16 @@
 import axios from "axios"
 import yts from "yt-search"
 
-const API_BASE = (global.APIs?.may || "").replace(/\/+$/, "")
-const API_KEY = global.APIKeys?.may || ""
+const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
+const API_KEY = global.APIKeys.may || ""
 
-const handler = async (
-  msg,
-  { conn, args = [], usedPrefix = ".", command = "play" }
-) => {
-  const chatId = msg.key.remoteJid
-  const input = args.join(" ").trim()
+const handler = async (msg, { conn, args, usedPrefix, command }) => {
+  const chatId = msg.chat
+  const text = args.join(" ")
 
-  // ===============================
-  // 🔘 RESPUESTA DE BOTONES
-  // ===============================
-  if (input.startsWith("audio|") || input.startsWith("video|")) {
-    const [type, url] = input.split("|")
+  // ===== CLICK EN BOTÓN =====
+  if (text.startsWith("audio|") || text.startsWith("video|")) {
+    const [type, url] = text.split("|")
 
     await conn.sendMessage(chatId, {
       react: { text: type === "audio" ? "🎵" : "🎬", key: msg.key }
@@ -27,121 +22,70 @@ const handler = async (
         `${API_BASE}/ytdl?url=${encodeURIComponent(url)}&type=${dlType}&apikey=${API_KEY}`
       )
 
-      if (!data?.status || !data?.result?.url)
-        throw new Error("No se pudo obtener el archivo")
+      if (!data?.result?.url) throw "No media"
 
       if (type === "audio") {
-        await conn.sendMessage(
-          chatId,
-          {
-            audio: { url: data.result.url },
-            mimetype: "audio/mpeg",
-            ptt: false
-          },
-          { quoted: msg }
-        )
+        await conn.sendMessage(chatId, {
+          audio: { url: data.result.url },
+          mimetype: "audio/mpeg"
+        }, { quoted: msg })
       } else {
-        await conn.sendMessage(
-          chatId,
-          {
-            video: { url: data.result.url },
-            mimetype: "video/mp4"
-          },
-          { quoted: msg }
-        )
+        await conn.sendMessage(chatId, {
+          video: { url: data.result.url },
+          mimetype: "video/mp4"
+        }, { quoted: msg })
       }
 
-      await conn.sendMessage(chatId, {
-        react: { text: "✅", key: msg.key }
-      })
     } catch (e) {
-      console.error(e)
-      await conn.sendMessage(
-        chatId,
-        { text: "❌ Error al descargar" },
-        { quoted: msg }
-      )
+      return conn.sendMessage(chatId, { text: "❌ Error al descargar" }, { quoted: msg })
     }
+
     return
   }
 
-  // ===============================
-  // ❌ SIN TEXTO
-  // ===============================
-  if (!input) {
-    return conn.sendMessage(
-      chatId,
-      {
-        text: `✳️ Usa:
-${usedPrefix}${command} <nombre de canción>
-
-Ej:
-${usedPrefix}${command} Lemon Tree`
-      },
-      { quoted: msg }
-    )
+  // ===== SIN TEXTO =====
+  if (!text) {
+    return conn.sendMessage(chatId, {
+      text: `✳️ Usa:\n${usedPrefix + command} <canción>`
+    }, { quoted: msg })
   }
 
   await conn.sendMessage(chatId, {
     react: { text: "🕒", key: msg.key }
   })
 
-  try {
-    const search = await yts(input)
-    if (!search?.videos?.length)
-      throw new Error("Sin resultados")
-
-    const video = search.videos[0]
-
-    const caption = `
-⭒ ִֶָ۷ ꯭🎵˙⋆｡ - *Título:* ${video.title}
-⭒ ִֶָ۷ ꯭🎤˙⋆｡ - *Artista:* ${video.author?.name || "Desconocido"}
-⭒ ִֶָ۷ ꯭🕑˙⋆｡ - *Duración:* ${video.timestamp || "?"}
-
-Selecciona el formato 👇
-
-⇆‌ ㅤ◁ㅤ❚❚ㅤ▷ㅤ↻
-
-> © Powered by Angel.xyz
-`.trim()
-
-    // ===============================
-    // 🔘 BOTONES NATIVOS
-    // ===============================
-    const buttons = [
-      { id: `${usedPrefix}${command} audio|${video.url}`, text: "🎵 Audio" },
-      { id: `${usedPrefix}${command} video|${video.url}`, text: "🎬 Video" }
-    ]
-
-    // ===============================
-    // 🖼️ ENVÍO FINAL
-    // ===============================
-    await conn.sendButtonImage(
-      chatId,
-      video.thumbnail,
-      caption,
-      "© Powered by Angel.xyz",
-      buttons,
-      msg
-    )
-
-    await conn.sendMessage(chatId, {
-      react: { text: "✅", key: msg.key }
-    })
-  } catch (err) {
-    console.error("play error:", err)
-    await conn.sendMessage(
-      chatId,
-      {
-        text: `❌ Error: ${err?.message || "Fallo interno"}`
-      },
-      { quoted: msg }
-    )
+  const search = await yts(text)
+  if (!search.videos.length) {
+    return conn.sendMessage(chatId, { text: "❌ Sin resultados" }, { quoted: msg })
   }
+
+  const video = search.videos[0]
+
+  // ===== BOTONES LEGACY =====
+  const buttons = [
+    {
+      buttonId: `${usedPrefix + command} audio|${video.url}`,
+      buttonText: { displayText: "🎵 Audio" },
+      type: 1
+    },
+    {
+      buttonId: `${usedPrefix + command} video|${video.url}`,
+      buttonText: { displayText: "🎬 Video" },
+      type: 1
+    }
+  ]
+
+  await conn.sendMessage(chatId, {
+    image: { url: video.thumbnail },
+    caption: `🎶 *${video.title}*\n\nSelecciona el formato 👇`,
+    footer: "© Angel.xyz",
+    buttons,
+    headerType: 4
+  }, { quoted: msg })
 }
 
 handler.command = ["play", "ytplay"]
-handler.help = ["Play <texto>"]
 handler.tags = ["descargas"]
+handler.help = ["play <texto>"]
 
 export default handler
