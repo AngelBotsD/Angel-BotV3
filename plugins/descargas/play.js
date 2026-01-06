@@ -110,15 +110,15 @@ Selecciona el formato 👇
       { id: `.play video|${video.url}`, text: "🎬 Video" }
     ]
 
-    // 👇 ENVÍO CORRECTO
     await conn.sendButtonImage(
-      chatId,
-      video.thumbnail,
-      caption,
-      "© Powered by Angel.xyz",
-      buttons,
-      msg
-    )
+  conn,                 // ✅
+  chatId,               // jid
+  video.thumbnail,      // image
+  caption,              // caption
+  "© Powered by Angel.xyz", // footer
+  buttons,              // buttons
+  msg                   // quoted
+)
 
     await conn.sendMessage(chatId, {
       react: { text: "✅", key: msg.key }
