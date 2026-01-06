@@ -63,7 +63,7 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
 
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝗲𝖽 𝖻𝗒 𝖠𝗇𝗀𝖾𝗅.𝗑𝗒𝗓\`\`\``
+> ```© 𝖯𝗈𝗐𝖾𝗋𝗲𝖽 𝖻𝗒 ${global.author}````
 
     await conn.sendMessage(chatId, { video: { url: videoUrl }, mimetype: "video/mp4", caption }, { quoted: msg })
     await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
