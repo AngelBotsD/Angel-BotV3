@@ -17,7 +17,6 @@ let handler = async (m, { conn, args }) => {
 
   let userId = m.mentionedJid?.[0] || m.sender
   let user = global.db.data.users[userId]
-  let name = conn.getName(userId)
 
   let _uptime = process.uptime() * 1000
   let uptime = clockString(_uptime)
@@ -35,7 +34,7 @@ let handler = async (m, { conn, args }) => {
 \`\`\`${week}, ${date}
 ${hourNow} 𝖬𝖾𝗑𝗂𝖼𝗈 𝖢𝗂𝗍𝗒\`\`\`
 
-👋🏻 Hola @${userId.split('@')[0]} 𝖬𝖾 𝖫𝗅𝖺𝗆𝗈 𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍, 𝖤𝗌𝗉𝖾𝗋𝗈 𝖰𝗎𝖾 𝖲𝖾𝖺 𝖣𝖾 𝖬𝗎𝖼𝗁𝖺 𝖴𝗍𝗂𝗅𝗂𝖽𝖺𝖽 🏞️
+👋🏻 Hola @${userId.split('@')[0]} 𝖬𝖾 𝖫𝗅𝖺𝗆𝗈 ${global.namebot}, 𝖤𝗌𝗉𝖾𝗋𝗈 𝖰𝗎𝖾 𝖲𝖾𝖺 𝖣𝖾 𝖬𝗎𝖼𝗁𝖺 𝖴𝗍𝗂𝗅𝗂𝖽𝖺𝖽 🏞️
 
 𝖳𝗂𝖾𝗆𝗉𝗈 𝖠𝖼𝗍𝗂𝗏𝗈: ${uptime} 🏞️
 `.trim()
@@ -52,21 +51,8 @@ ${cmds.map(cmd => `⭒ ִֶָ७ ꯭🚩˙⋆｡ - ${cmd}`).join('\n')}
   await conn.sendMessage(
     m.chat,
     {
-      image: { url: "https://files.catbox.moe/u1lwcu.jpg" },
+      image: { url: global.banner },
       caption: menuText,
-      buttons: [
-        {
-          buttonId: '.owner',
-          buttonText: { displayText: '👑 Owner' },
-          type: 1
-        },
-        {
-          buttonId: '.ping',
-          buttonText: { displayText: '📡 Ping' },
-          type: 1
-        }
-      ],
-      headerType: 4,
       contextInfo: {
         mentionedJid: [userId]
       }
@@ -76,8 +62,9 @@ ${cmds.map(cmd => `⭒ ִֶָ७ ꯭🚩˙⋆｡ - ${cmd}`).join('\n')}
 }
 
 handler.command = ['menu', 'menú', 'help', 'menuall']
-handler.help = ["𝖬𝖾𝗇𝗎𝖺𝗅𝗅"];
-handler.tags = ["𝖬𝖤𝖭𝖴𝖲"];
+handler.help = ["𝖬𝖾𝗇𝗎𝖺𝗅𝗅"]
+handler.tags = ["𝖬𝖤𝖭𝖴𝖲"]
+
 export default handler
 
 function clockString(ms) {
