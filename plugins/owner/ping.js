@@ -16,5 +16,6 @@ let handler = async (m, { conn }) => {
 };
 
 handler.command = ["ping", "p"];
-
+handler.help = ["𝖬𝗒𝗅𝗂𝖽"]
+handler.tags = ["𝖮𝖶𝖭𝖤𝖱"]
 export default handler;
