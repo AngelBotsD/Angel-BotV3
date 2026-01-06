@@ -111,13 +111,13 @@ Selecciona el formato 👇
     ]
 
     await conn.sendButtonImage(
-  conn,                 // ✅
-  chatId,               // jid
-  video.thumbnail,      // image
-  caption,              // caption
-  "© Powered by Angel.xyz", // footer
-  buttons,              // buttons
-  msg                   // quoted
+  conn,
+  chatId,
+  video.thumbnail,   // URL real
+  caption,
+  "© Powered by Angel.xyz",
+  buttons,
+  msg
 )
 
     await conn.sendMessage(chatId, {
