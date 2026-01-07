@@ -4,10 +4,15 @@ import yts from "yt-search"
 const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
 const API_KEY  = global.APIKeys.may || ""
 
-const handler = async (m, { conn, text, usedPrefix, command }) => {
+const handler = async (
+  m,
+  { conn, args = [], usedPrefix = ".", command = "play" }
+) => {
+
+  const text = args.join(" ").trim()
 
   if (!text)
-    return m.reply(`Uso: ${usedPrefix + command} <canción>`)
+    return m.reply(`Uso: ${usedPrefix}${command} <canción>`)
 
   await m.react("⏳").catch(() => {})
 
@@ -42,9 +47,9 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 
     await m.react("✅").catch(() => {})
 
-  } catch (e) {
+  } catch {
     await m.react("✖️").catch(() => {})
-    m.reply(`Error`)
+    m.reply("Error al obtener el audio")
   }
 }
 
