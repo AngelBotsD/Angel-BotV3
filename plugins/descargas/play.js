@@ -48,7 +48,7 @@ let handler = async (
       `👤 *Autor:* ${data.author}\n` +
       `⏱ *Duración:* ${data.duration}\n` +
       `🔗 *Link:* ${data.link}\n\n` +
-      `> _Author_: *Ryze🐐*`
+      `> _Author_: *Angel🐐*`
 
     await conn.sendMessage(
       m.chat,
