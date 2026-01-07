@@ -1,24 +1,42 @@
 import fetch from "node-fetch"
 
-let handler = async (m, { conn, text, command }) => {
-  if (!text) {
-    return m.reply(
-      "🍁 *SoundCloud Play*\n\n" +
-      "🌾 Usa:\n" +
-      "• `.play alan walker`\n" +
-      "• `.play https://soundcloud.com/...`"
-    )
-  }
-
+let handler = async (
+  m,
+  { conn, args = [], usedPrefix, command }
+) => {
   try {
-    await m.react("🍄")
+    await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } })
 
-    // Scraper SoundCloud
-    const url = `https://scrapers.hostrta.win/scraper/33?query=${encodeURIComponent(text)}`
+    // 🔥 Detección de texto (igual que .wm)
+    const quotedText =
+      m.quoted?.text ||
+      m.quoted?.caption ||
+      m.quoted?.conversation ||
+      ""
+
+    const text = args.join(" ").trim()
+    const query = String(text || quotedText || "").trim()
+
+    if (!query) {
+      return conn.sendMessage(
+        m.chat,
+        {
+          text:
+            "🍁 *SoundCloud*\n\n" +
+            "🌾 Usa:\n" +
+            `• ${usedPrefix + command} alan walker\n` +
+            `• Responde a un texto con ${usedPrefix + command}`
+        },
+        { quoted: m }
+      )
+    }
+
+    // Scraper SoundCloud (33)
+    const url = `https://scrapers.hostrta.win/scraper/33?query=${encodeURIComponent(query)}`
     const res = await fetch(url)
     const json = await res.json()
 
-    if (!json || !json.status || !json.result) {
+    if (!json?.status || !json?.result) {
       return m.reply("❌ No se encontraron resultados.")
     }
 
@@ -32,7 +50,6 @@ let handler = async (m, { conn, text, command }) => {
       `🔗 *Link:* ${data.link}\n\n` +
       `> _Author_: *Ryze🐐*`
 
-    // Enviar imagen + audio
     await conn.sendMessage(
       m.chat,
       {
@@ -51,15 +68,15 @@ let handler = async (m, { conn, text, command }) => {
       { quoted: m }
     )
 
-    await m.react("🌾")
+    await conn.sendMessage(m.chat, { react: { text: "🎵", key: m.key } })
 
   } catch (e) {
     console.error(e)
-    m.reply("❌ Error al reproducir SoundCloud.")
+    m.reply("❌ Error al reproducir desde SoundCloud.")
   }
 }
 
-handler.help = ["play"]
+handler.help = ["play <texto>"]
 handler.tags = ["music"]
 handler.command = ["play", "sc"]
 
