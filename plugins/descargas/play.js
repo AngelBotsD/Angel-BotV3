@@ -19,10 +19,9 @@ async function searchTracks(query) {
       app_version: '1695286762',
       app_locale: 'en'
     }
-
     const response = await axios.get(url, { headers: HEADERS, params })
     return response.data.collection
-  } catch (error) {
+  } catch {
     return []
   }
 }
@@ -35,14 +34,12 @@ async function resolveStreamUrl(transcodingUrl, trackAuthorization) {
     }
     const response = await axios.get(transcodingUrl, { headers: HEADERS, params })
     return response.data.url
-  } catch (error) {
+  } catch {
     return null
   }
 }
 
-let handler = async (m, { conn, args, text, usedPrefix, command }) => {
-
-  // 🔥 detección de texto tipo .wm
+let handler = async (m, { conn, args, usedPrefix, command }) => {
   const quotedText =
     m.quoted?.text ||
     m.quoted?.caption ||
@@ -67,9 +64,10 @@ let handler = async (m, { conn, args, text, usedPrefix, command }) => {
       let transcoding = null
       if (track.media && track.media.transcodings) {
         transcoding = track.media.transcodings.find(
-          (t) =>
+          t =>
             t.format.protocol === 'progressive' &&
-            (t.format.mime_type === 'audio/mpeg' || t.format.mime_type === 'audio/mp3')
+            (t.format.mime_type === 'audio/mpeg' ||
+              t.format.mime_type === 'audio/mp3')
         )
       }
 
@@ -78,6 +76,7 @@ let handler = async (m, { conn, args, text, usedPrefix, command }) => {
           transcoding.url,
           track.track_authorization
         )
+
         if (streamUrl) {
           results.push({
             title: track.title,
@@ -90,15 +89,15 @@ let handler = async (m, { conn, args, text, usedPrefix, command }) => {
         }
       }
 
-      if (results.length > 0) break
+      if (results.length >= 3) break
     }
 
-    if (results.length === 0) {
+    if (results.length < 3) {
       await m.react('✖️').catch(() => {})
-      return m.reply('No encontré resultados reproducibles para esa búsqueda.')
+      return m.reply('No encontré al menos 3 resultados reproducibles.')
     }
 
-    const track = results[0]
+    const track = results[2]
 
     const contextInfo = {
       externalAdReply: {
@@ -123,7 +122,6 @@ let handler = async (m, { conn, args, text, usedPrefix, command }) => {
 
     await m.react('✅').catch(() => {})
   } catch (e) {
-    console.error(e)
     await m.react('✖️').catch(() => {})
     m.reply(`Error: ${e.message || e}`)
   }
