@@ -1,83 +1,123 @@
-import fetch from "node-fetch"
+import axios from 'axios'
 
-let handler = async (
-  m,
-  { conn, args = [], usedPrefix, command }
-) => {
+const CLIENT_ID = 'bOhNcaq9F32sB3eS8zWLywAyh4OdDXbC'
+const BASE_API_URL = 'https://api-v2.soundcloud.com'
+const HEADERS = {
+  Origin: 'https://soundcloud.com',
+  Referer: 'https://soundcloud.com/',
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+}
+
+async function searchTracks(query) {
   try {
-    await conn.sendMessage(m.chat, { react: { text: "🕒", key: m.key } })
-
-    // 🔥 Detección de texto (igual que .wm)
-    const quotedText =
-      m.quoted?.text ||
-      m.quoted?.caption ||
-      m.quoted?.conversation ||
-      ""
-
-    const text = args.join(" ").trim()
-    const query = String(text || quotedText || "").trim()
-
-    if (!query) {
-      return conn.sendMessage(
-        m.chat,
-        {
-          text:
-            "🍁 *SoundCloud*\n\n" +
-            "🌾 Usa:\n" +
-            `• ${usedPrefix + command} alan walker\n` +
-            `• Responde a un texto con ${usedPrefix + command}`
-        },
-        { quoted: m }
-      )
+    const url = `${BASE_API_URL}/search/tracks`
+    const params = {
+      q: query,
+      client_id: CLIENT_ID,
+      limit: 10,
+      app_version: '1695286762',
+      app_locale: 'en'
     }
 
-    // Scraper SoundCloud (33)
-    const url = `https://scrapers.hostrta.win/scraper/33?query=${encodeURIComponent(query)}`
-    const res = await fetch(url)
-    const json = await res.json()
-
-    if (!json?.status || !json?.result) {
-      return m.reply("❌ No se encontraron resultados.")
-    }
-
-    const data = json.result
-
-    let caption =
-      `🍁 *SoundCloud*\n\n` +
-      `🎵 *Título:* ${data.title}\n` +
-      `👤 *Autor:* ${data.author}\n` +
-      `⏱ *Duración:* ${data.duration}\n` +
-      `🔗 *Link:* ${data.link}\n\n` +
-      `> _Author_: *Angel🐐*`
-
-    await conn.sendMessage(
-      m.chat,
-      {
-        image: { url: data.thumbnail },
-        caption
-      },
-      { quoted: m }
-    )
-
-    await conn.sendMessage(
-      m.chat,
-      {
-        audio: { url: data.audio },
-        mimetype: "audio/mpeg"
-      },
-      { quoted: m }
-    )
-
-    await conn.sendMessage(m.chat, { react: { text: "🎵", key: m.key } })
-
-  } catch (e) {
-    console.error(e)
-    m.reply("❌ Error al reproducir desde SoundCloud.")
+    const response = await axios.get(url, { headers: HEADERS, params })
+    return response.data.collection
+  } catch (error) {
+    return []
   }
 }
 
-handler.help = ["play <texto>"]
-handler.tags = ["music"]
-handler.command = ["play", "sc"]
+async function resolveStreamUrl(transcodingUrl, trackAuthorization) {
+  try {
+    const params = {
+      client_id: CLIENT_ID,
+      track_authorization: trackAuthorization
+    }
+    const response = await axios.get(transcodingUrl, { headers: HEADERS, params })
+    return response.data.url
+  } catch (error) {
+    return null
+  }
+}
+
+let handler = async (m, { conn, args, text, usedPrefix, command }) => {
+  const query = (text?.trim() || args?.join(' ') || '').trim()
+  if (!query) return m.reply(`Uso: ${usedPrefix + command} <búsqueda soundcloud>`)
+
+  await m.react('⏳').catch(() => {})
+
+  try {
+    const tracks = await searchTracks(query)
+    const results = []
+
+    for (const track of tracks) {
+      if (track.kind !== 'track') continue
+
+      let transcoding = null
+      if (track.media && track.media.transcodings) {
+        transcoding = track.media.transcodings.find(
+          (t) =>
+            t.format.protocol === 'progressive' &&
+            (t.format.mime_type === 'audio/mpeg' || t.format.mime_type === 'audio/mp3')
+        )
+
+      }
+
+      if (transcoding) {
+        const streamUrl = await resolveStreamUrl(transcoding.url, track.track_authorization)
+        if (streamUrl) {
+          results.push({
+            title: track.title,
+            artwork: track.artwork_url ? track.artwork_url.replace('-large', '-t500x500') : '',
+            url: streamUrl,
+            permalink: track.permalink_url
+          })
+        }
+      }
+      
+      if (results.length > 0) break 
+    }
+
+    if (results.length === 0) {
+      await m.react('✖️').catch(() => {})
+      return m.reply('No encontré resultados reproducibles para esa búsqueda.')
+    }
+
+    const track = results[0]
+
+    const caption = `☁️ *SoundCloud*\n🎼 *${track.title}*`
+
+    const contextInfo = {
+      externalAdReply: {
+        title: track.title,
+        body: 'SoundCloud Downloader',
+        thumbnailUrl: track.artwork || undefined,
+        sourceUrl: track.permalink,
+        mediaType: 1,
+        renderLargerThumbnail: true
+      }
+    }
+
+    await conn.sendMessage(
+      m.chat,
+      {
+        audio: { url: track.url },
+        mimetype: 'audio/mpeg',
+        contextInfo
+      },
+      { quoted: m }
+    )
+
+    await m.react('✅').catch(() => {})
+  } catch (e) {
+    console.error(e)
+    await m.react('✖️').catch(() => {})
+    m.reply(`Error: ${e.message || e}`)
+  }
+}
+
+handler.help = ['soundcloud <query>']
+handler.tags = ['dl']
+handler.command = ['play', 'sc']
 
 export default handler
