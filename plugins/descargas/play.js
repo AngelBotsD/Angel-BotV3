@@ -1,134 +1,55 @@
-import axios from 'axios'
+import axios from "axios"
+import yts from "yt-search"
 
-const CLIENT_ID = 'bOhNcaq9F32sB3eS8zWLywAyh4OdDXbC'
-const BASE_API_URL = 'https://api-v2.soundcloud.com'
-const HEADERS = {
-  Origin: 'https://soundcloud.com',
-  Referer: 'https://soundcloud.com/',
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-}
+const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
+const API_KEY  = global.APIKeys.may || ""
 
-async function searchTracks(query) {
-  try {
-    const url = `${BASE_API_URL}/search/tracks`
-    const params = {
-      q: query,
-      client_id: CLIENT_ID,
-      limit: 10,
-      app_version: '1695286762',
-      app_locale: 'en'
-    }
-    const response = await axios.get(url, { headers: HEADERS, params })
-    return response.data.collection
-  } catch {
-    return []
-  }
-}
+const handler = async (m, { conn, text, usedPrefix, command }) => {
 
-async function resolveStreamUrl(transcodingUrl, trackAuthorization) {
-  try {
-    const params = {
-      client_id: CLIENT_ID,
-      track_authorization: trackAuthorization
-    }
-    const response = await axios.get(transcodingUrl, { headers: HEADERS, params })
-    return response.data.url
-  } catch {
-    return null
-  }
-}
+  if (!text)
+    return m.reply(`Uso: ${usedPrefix + command} <canción>`)
 
-let handler = async (m, { conn, args, usedPrefix, command }) => {
-  const quotedText =
-    m.quoted?.text ||
-    m.quoted?.caption ||
-    m.quoted?.conversation ||
-    ''
-
-  const inputText = args?.join(' ').trim()
-  const query = String(inputText || quotedText || '').trim()
-
-  if (!query)
-    return m.reply(`Uso: ${usedPrefix + command} <búsqueda soundcloud>`)
-
-  await m.react('⏳').catch(() => {})
+  await m.react("⏳").catch(() => {})
 
   try {
-    const tracks = await searchTracks(query)
-    const results = []
+    const search = await yts(text)
+    if (!search.videos?.length) throw "Sin resultados"
 
-    for (const track of tracks) {
-      if (track.kind !== 'track') continue
+    const video = search.videos[0]
 
-      let transcoding = null
-      if (track.media && track.media.transcodings) {
-        transcoding = track.media.transcodings.find(
-          t =>
-            t.format.protocol === 'progressive' &&
-            (t.format.mime_type === 'audio/mpeg' ||
-              t.format.mime_type === 'audio/mp3')
-        )
-      }
-
-      if (transcoding) {
-        const streamUrl = await resolveStreamUrl(
-          transcoding.url,
-          track.track_authorization
-        )
-
-        if (streamUrl) {
-          results.push({
-            title: track.title,
-            artwork: track.artwork_url
-              ? track.artwork_url.replace('-large', '-t500x500')
-              : '',
-            url: streamUrl,
-            permalink: track.permalink_url
-          })
+    const { data } = await axios.get(
+      `${API_BASE}/ytdl`,
+      {
+        params: {
+          url: video.url,
+          type: "Mp3",
+          apikey: API_KEY
         }
       }
+    )
 
-      if (results.length >= 3) break
-    }
-
-    if (results.length < 3) {
-      await m.react('✖️').catch(() => {})
-      return m.reply('No encontré al menos 3 resultados reproducibles.')
-    }
-
-    const track = results[2]
-
-    const contextInfo = {
-      externalAdReply: {
-        title: track.title,
-        body: 'SoundCloud Downloader',
-        thumbnailUrl: track.artwork || undefined,
-        sourceUrl: track.permalink,
-        mediaType: 1,
-        renderLargerThumbnail: true
-      }
-    }
+    if (!data?.status || !data.result?.url)
+      throw "No se pudo obtener el audio"
 
     await conn.sendMessage(
       m.chat,
       {
-        audio: { url: track.url },
-        mimetype: 'audio/mpeg',
-        contextInfo
+        audio: { url: data.result.url },
+        mimetype: "audio/mpeg"
       },
       { quoted: m }
     )
 
-    await m.react('✅').catch(() => {})
+    await m.react("✅").catch(() => {})
+
   } catch (e) {
-    await m.react('✖️').catch(() => {})
-    m.reply(`Error: ${e.message || e}`)
+    await m.react("✖️").catch(() => {})
+    m.reply(`Error`)
   }
 }
 
-handler.help = ['soundcloud <query>']
-handler.tags = ['dl']
-handler.command = ['play', 'sc']
+handler.command = ["play", "ytplay"]
+handler.tags = ["dl"]
+handler.help = ["play <texto>"]
 
 export default handler
