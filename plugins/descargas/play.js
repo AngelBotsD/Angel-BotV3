@@ -1,88 +1,66 @@
-import axios from "axios"
-import yts from "yt-search"
+import fetch from "node-fetch"
 
-const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
-const API_KEY  = global.APIKeys.may || ""
-
-const handler = async (msg, { conn, text, usedPrefix, command }) => {
-
-  const chatId = msg.key.remoteJid
-
-  if (!text) 
-    return conn.sendMessage(chatId, { 
-      text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree` 
-    }, { quoted: msg })
-
-  await conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } })
+let handler = async (m, { conn, text, command }) => {
+  if (!text) {
+    return m.reply(
+      "🍁 *SoundCloud Play*\n\n" +
+      "🌾 Usa:\n" +
+      "• `.play alan walker`\n" +
+      "• `.play https://soundcloud.com/...`"
+    )
+  }
 
   try {
+    await m.react("🍄")
 
-    const search = await yts(text)
+    // Scraper SoundCloud
+    const url = `https://scrapers.hostrta.win/scraper/33?query=${encodeURIComponent(text)}`
+    const res = await fetch(url)
+    const json = await res.json()
 
-    if (!search?.videos?.length) 
-      throw new Error("No se encontró ningún resultado")
+    if (!json || !json.status || !json.result) {
+      return m.reply("❌ No se encontraron resultados.")
+    }
 
-    const video = search.videos[0]
+    const data = json.result
 
-    const title     = video.title
-    const authorVid = video.author?.name || "Desconocido"
-    const duration  = video.timestamp || "Desconocida"
-    const thumb     = video.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg"
-    const videoLink = video.url
+    let caption =
+      `🍁 *SoundCloud*\n\n` +
+      `🎵 *Título:* ${data.title}\n` +
+      `👤 *Autor:* ${data.author}\n` +
+      `⏱ *Duración:* ${data.duration}\n` +
+      `🔗 *Link:* ${data.link}\n\n` +
+      `> _Author_: *Ryze🐐*`
 
-    const infoCaption = 
-`⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${authorVid}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-
-» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖  🎧
-» 𝘈𝘎𝘜𝘈𝘙𝘋𝘓𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
-
-⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
-
-> \`\`\`© 𝖯𝗈𝗐𝖾𝗋𝖾𝖽 𝖻𝗒 ${global.author}\`\`\`
-`
-
+    // Enviar imagen + audio
     await conn.sendMessage(
-      chatId,
-      { image: { url: thumb }, caption: infoCaption },
-      { quoted: msg }
-    )
-
-    const { data } = await axios.get(
-      `${API_BASE}/ytdl?url=${encodeURIComponent(videoLink)}&type=Mp3&apikey=${API_KEY}`
-    )
-
-    if (!data?.status || !data.result?.url) 
-      throw new Error(data?.message || "No se pudo obtener el audio")
-
-    await conn.sendMessage(
-      chatId,
-      { 
-        audio: { url: data.result.url },
-        mimetype: "audio/mpeg",
-        fileName: `${title}.mp3`,
-        ptt: false
+      m.chat,
+      {
+        image: { url: data.thumbnail },
+        caption
       },
-      { quoted: msg }
+      { quoted: m }
     )
-
-    await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
-
-  } catch (err) {
-
-    console.error("play error:", err)
 
     await conn.sendMessage(
-      chatId,
-      { text: `❌ Error: ${err?.message || "Fallo interno"}` },
-      { quoted: msg }
+      m.chat,
+      {
+        audio: { url: data.audio },
+        mimetype: "audio/mpeg"
+      },
+      { quoted: m }
     )
+
+    await m.react("🌾")
+
+  } catch (e) {
+    console.error(e)
+    m.reply("❌ Error al reproducir SoundCloud.")
   }
 }
 
-handler.command = ["play", "ytplay"]
-handler.help    = ["play <texto>"]
-handler.tags    = ["descargas"]
+handler.help = ["play"]
+handler.tags = ["music"]
+handler.command = ["play", "sc"]
 
 export default handler
