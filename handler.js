@@ -117,46 +117,46 @@ export async function handler(chatUpdate) {
     m.exp = 0
     if (typeof m.text !== "string") m.text = ""
 
-/* === STICKER → COMANDO (GLOBAL REAL) === */
+/* === STICKER → COMANDO (SEGURO) === */
 try {
-  // No interferir con addco/delco/listco
-  if (/^\.?(addco|delco|listco)\b/i.test(m.text)) return
+  // ❌ No tocar comandos de gestión
+  if (!m.text || /^\.?(addco|delco|listco)\b/i.test(m.text)) {
+    // NO return
+  } else {
+    const st =
+      m.sticker ||
+      m.quoted?.sticker ||
+      m.message?.stickerMessage ||
+      m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage
 
-  const st =
-    m.sticker ||
-    m.quoted?.sticker ||
-    m.message?.stickerMessage ||
-    m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage
+    if (st) {
+      const jsonPath = './comandos.json'
+      if (fs.existsSync(jsonPath)) {
+        const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
 
-  if (!st) return
+        const rawSha =
+          st.fileSha256 ||
+          st.fileSha256Hash ||
+          st.mediaKey ||
+          st.filehash
 
-  const jsonPath = './comandos.json'
-  if (!fs.existsSync(jsonPath)) return
+        if (rawSha) {
+          const hash = Buffer.isBuffer(rawSha)
+            ? rawSha.toString('base64')
+            : Buffer.from(rawSha).toString('base64')
 
-  const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
-
-  const rawSha =
-    st.fileSha256 ||
-    st.fileSha256Hash ||
-    st.mediaKey ||
-    st.filehash
-
-  if (!rawSha) return
-
-  const hash = Buffer.isBuffer(rawSha)
-    ? rawSha.toString('base64')
-    : Buffer.from(rawSha).toString('base64')
-
-  const cmd = map[hash]
-  if (!cmd) return
-
-  // ⚠️ FORZAR COMANDO
-  m.text = cmd
-  m.isCommand = true
-
-  console.log('🧩 Sticker ejecuta comando:', cmd)
+          const cmd = map[hash]
+          if (cmd) {
+            m.text = cmd
+            m.isCommand = true
+            console.log('🧩 Sticker ejecuta:', cmd)
+          }
+        }
+      }
+    }
+  }
 } catch (e) {
-  console.error('❌ Sticker handler error:', e)
+  console.error('❌ Sticker system error:', e)
 }
 /* === FIN STICKER → COMANDO === */
 
