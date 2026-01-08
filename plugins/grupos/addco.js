@@ -3,13 +3,19 @@ import path from 'path'
 
 const jsonPath = path.resolve('./comandos.json')
 
+const getQuotedSticker = (m) => {
+  if (!m.quoted) return null
+  if (m.quoted.mtype === 'stickerMessage') return m.quoted.msg
+  if (m.quoted.message?.stickerMessage) return m.quoted.message.stickerMessage
+  return null
+}
+
 let handler = async (
   m,
   { conn, args = [], usedPrefix = '.', command = 'addco' }
 ) => {
 
-  // 🔥 FORMA CORRECTA CON smsg()
-  const st = m.quoted?.message?.stickerMessage
+  const st = getQuotedSticker(m)
 
   if (!st) {
     return conn.sendMessage(
