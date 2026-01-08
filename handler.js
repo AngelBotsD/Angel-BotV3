@@ -114,52 +114,37 @@ export async function handler(chatUpdate) {
 
 /* === STICKER → COMANDO GLOBAL === */
 try {
-  // Detectar sticker
-  const st = m.message?.stickerMessage || m.message?.ephemeralMessage?.message?.stickerMessage || null;
-  if (st) {
-    // Crear comandos.json si no existe
-    const jsonPath = './comandos.json';
-    if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}');
+  const st = m.message?.stickerMessage || m.message?.ephemeralMessage?.message?.stickerMessage || null
+  if (st && m.chat) {
+    const jsonPath = './comandos.json'
+    if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}')
 
-    // Leer JSON
-    const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}');
+    const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
 
-    // Generar posibles hashes del sticker
-    const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash;
-    const candidates = [];
+    const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
+    const candidates = []
+
     if (rawSha) {
-      if (Buffer.isBuffer(rawSha)) {
-        candidates.push(rawSha.toString("base64"));
-      } else if (ArrayBuffer.isView(rawSha)) {
-        candidates.push(Buffer.from(rawSha).toString("base64"));
-      } else if (typeof rawSha === "string") {
-        candidates.push(rawSha);
-      }
+      if (Buffer.isBuffer(rawSha)) candidates.push(rawSha.toString('base64'))
+      else if (ArrayBuffer.isView(rawSha)) candidates.push(Buffer.from(rawSha).toString('base64'))
+      else if (typeof rawSha === 'string') candidates.push(rawSha)
     }
 
-    // Buscar comando asociado
-    let mapped = null;
+    let mapped = null
     for (const k of candidates) {
-      if (map[k] && map[k].trim()) {
-        mapped = map[k].trim();
-        break;
+      if (map[k] && map[k].cmd && map[k].chat === m.chat) {
+        mapped = map[k].cmd
+        break
       }
     }
 
     if (mapped) {
-      // Asegurar prefijo
-      const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || ".";
-      const injected = mapped.startsWith(pref) ? mapped : pref + mapped;
-
-      // Inyectar como m.text para que el handler lo vea como comando
-      m.text = injected.toLowerCase();
-
-      // Debug
-      console.log("✅ Sticker detectado, comando inyectado:", m.text);
+      const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || '.'
+      m.text = mapped.startsWith(pref) ? mapped.toLowerCase() : (pref + mapped).toLowerCase()
     }
   }
 } catch (e) {
-  console.error("❌ Error Sticker→cmd:", e);
+  console.error(e)
 }
 /* === FIN STICKER → COMANDO === */
 
