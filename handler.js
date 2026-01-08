@@ -110,7 +110,7 @@ export async function handler(chatUpdate) {
     if (!m) return
 
     m.exp = 0
-    if (typeof m.text !== "string") m.text = ""
+    m.text = typeof m.text === "string" ? m.text : ""
 
     const user = global.db.data.users[m.sender] ||= {
       name: m.name,
