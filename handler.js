@@ -117,58 +117,37 @@ export async function handler(chatUpdate) {
     m.exp = 0
     if (typeof m.text !== "string") m.text = ""
 
- // ===== STICKER → COMANDO (SOLO GRUPOS) =====
+ /* === STICKER → COMANDO (GLOBAL) === */
 try {
-  if (m.isGroup && m.message) {
-    const st =
-      m.message?.stickerMessage ||
-      m.message?.ephemeralMessage?.message?.stickerMessage ||
-      m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
-      m.message?.ephemeralMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
-      null
+  if (!m.text || /^\.?(addco|delco|listco)\b/i.test(m.text)) return
 
-    if (st) {
-      const jsonPath = "./comandos.json"
-      if (!fs.existsSync(jsonPath))
-        fs.writeFileSync(jsonPath, "{}", "utf-8")
+  const st = m.sticker || m.quoted?.sticker
+  if (!st) return
 
-      const map = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}")
-      const groupMap = map[m.chat]
-      if (!groupMap) return
+  const jsonPath = './comandos.json'
+  if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}')
 
-      const rawSha =
-        st.fileSha256 ||
-        st.fileSha256Hash ||
-        st.filehash ||
-        null
+  const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
 
-      if (!rawSha) return
+  const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
+  if (!rawSha) return
 
-      let hash = null
-      if (Buffer.isBuffer(rawSha)) {
-        hash = rawSha.toString("base64")
-      } else if (ArrayBuffer.isView(rawSha)) {
-        hash = Buffer.from(rawSha).toString("base64")
-      } else if (typeof rawSha === "string") {
-        hash = rawSha
-      }
+  let hash
+  if (Buffer.isBuffer(rawSha)) hash = rawSha.toString('base64')
+  else if (ArrayBuffer.isView(rawSha)) hash = Buffer.from(rawSha).toString('base64')
+  else hash = String(rawSha)
 
-      if (!hash) return
+  const mapped = map[hash]
+  if (!mapped) return
 
-      const mapped = groupMap[hash]
-      if (!mapped) return
+  const prefix = (Array.isArray(global.prefixes) && global.prefixes[0]) || '.'
+  m.text = mapped.startsWith(prefix) ? mapped : prefix + mapped
 
-      // 🔥 CLAVE: NO TOCAR PREFIJOS
-      m.text = mapped.toLowerCase()
-      m.isCommand = true
-
-      console.log("✅ Sticker → Cmd:", m.chat, m.text)
-    }
-  }
+  console.log('🧩 Sticker → comando:', m.text)
 } catch (e) {
-  console.error("❌ Error Sticker → Cmd:", e)
+  console.error('❌ Sticker system error:', e)
 }
-// ===== FIN STICKER → COMANDO =====
+/* === FIN STICKER → COMANDO === */
 
     const user = global.db.data.users[m.sender] ||= {
       name: m.name,
