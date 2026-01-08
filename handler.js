@@ -204,7 +204,6 @@ try {
     const isOwners = isROwner || m.sender === this.user.jid
 
     if (settings.self && !isOwners) return
-    if (m.isBaileys && !m.fromButton) return
 
     let groupMetadata = {}
     let participants = []
