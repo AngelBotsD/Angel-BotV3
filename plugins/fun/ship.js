@@ -1,29 +1,33 @@
-var handler = async (m, { conn, text, args }) => {
+var handler = async (m, { conn, args }) => {
 
-  if (!text) 
-    return conn.reply(m.chat, `🎌 *Escribe dos nombres o menciona a dos personas*\n\nEjemplo:\n• ship Juan María\n• ship @user1 @user2`, m)
+  let text = args.join(' ')
+  if (!text)
+    return conn.reply(
+      m.chat,
+      `🎌 *Escribe dos nombres o menciona a dos personas*\n\nEjemplo:\n• ship Juan María\n• ship @user1 @user2`,
+      m
+    )
 
   let mentioned = m.mentionedJid || []
 
   let name1, name2
 
   if (mentioned.length >= 2) {
-    // Caso: ship @user1 @user2
     name1 = await conn.getName(mentioned[0])
     name2 = await conn.getName(mentioned[1])
   } else if (mentioned.length === 1) {
-    // Caso: ship @user1 María
-    let resto = text.replace(/@\d+/g, "").trim()
-    if (!resto) return conn.reply(m.chat, `🚩 *Falta la segunda persona*`, m)
-    
+    let resto = text.replace(/@\d+/g, '').trim()
+    if (!resto)
+      return conn.reply(m.chat, `🚩 *Falta la segunda persona*`, m)
+
     name1 = await conn.getName(mentioned[0])
     name2 = resto
   } else {
-    // Caso: ship Juan María
     let [t1, ...t2] = text.split(' ')
     name1 = t1
     name2 = t2.join(' ')
-    if (!name2) return conn.reply(m.chat, `🚩 *Escribe el nombre de la segunda persona*`, m)
+    if (!name2)
+      return conn.reply(m.chat, `🚩 *Escribe el nombre de la segunda persona*`, m)
   }
 
   let lovePercent = Math.floor(Math.random() * 100)
@@ -32,13 +36,12 @@ var handler = async (m, { conn, text, args }) => {
 
   await conn.sendMessage(
     m.chat,
-    { 
+    {
       text: loveMsg,
-      mentions: mentioned // Solo menciona cuando realmente existen menciones
+      mentions: mentioned
     },
     { quoted: m }
   )
-
 }
 
 handler.help = ['ship']
