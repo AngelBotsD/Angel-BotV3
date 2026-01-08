@@ -8,11 +8,8 @@ let handler = async (
   { conn, args = [], usedPrefix = '.', command = 'addco' }
 ) => {
 
-  const st =
-    m.message?.stickerMessage ||
-    m.message?.ephemeralMessage?.message?.stickerMessage ||
-    m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
-    m.message?.ephemeralMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage
+  // 🔥 FORMA CORRECTA CON smsg()
+  const st = m.quoted?.message?.stickerMessage
 
   if (!st) {
     return conn.sendMessage(
@@ -29,7 +26,7 @@ let handler = async (
       {
         text:
           `❌ Debes indicar el comando.\n` +
-          `Ejemplo: ${usedPrefix + command} kick @user`
+          `Ejemplo: ${usedPrefix + command} kick`
       },
       { quoted: m }
     )
