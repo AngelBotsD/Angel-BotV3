@@ -157,7 +157,9 @@ export async function handler(chatUpdate) {
     const isPrems = isROwner || user.premium === true
     const isOwners = isROwner || m.sender === this.user.jid
 
-    if (settings.self && !isOwners) return
+    if (settings.self && !isOwners) {
+  if (m.isGroup) return
+}
 
     let groupMetadata = {}
     let participants = []
