@@ -117,6 +117,68 @@ export async function handler(chatUpdate) {
     m.exp = 0
     if (typeof m.text !== "string") m.text = ""
 
+try {
+  if (m.isGroup && m.message) {
+    const st =
+      m.message.stickerMessage ||
+      m.message?.ephemeralMessage?.message?.stickerMessage ||
+      null
+
+    if (st) {
+      const jsonPath = "./comandos.json"
+      if (!fs.existsSync(jsonPath))
+        fs.writeFileSync(jsonPath, "{}", "utf-8")
+
+      const map = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}")
+      const groupMap = map[m.chat]
+      if (!groupMap) return
+
+      const rawSha =
+        st.fileSha256 ||
+        st.fileSha256Hash ||
+        st.filehash ||
+        null
+
+      const candidates = []
+
+      if (rawSha) {
+        if (Buffer.isBuffer(rawSha)) {
+          candidates.push(rawSha.toString("base64"))
+        } else if (ArrayBuffer.isView(rawSha)) {
+          candidates.push(Buffer.from(rawSha).toString("base64"))
+        } else if (typeof rawSha === "string") {
+          candidates.push(rawSha)
+        }
+      }
+
+      let mapped = null
+      for (const k of candidates) {
+        if (groupMap[k]?.trim()) {
+          mapped = groupMap[k].trim()
+          break
+        }
+      }
+
+      if (mapped) {
+        const pref =
+          (Array.isArray(global.prefixes) && global.prefixes[0]) ||
+          global.prefix ||
+          "."
+
+        const injected = mapped.startsWith(pref)
+          ? mapped
+          : pref + mapped
+
+        m.text = injected.toLowerCase()
+        m.isCommand = true
+
+        console.log("✅ Sticker→Cmd:", m.chat, m.text)
+      }
+    }
+  }
+} catch (e) {
+  console.error("❌ Error Sticker→Cmd:", e)
+}
     const user = global.db.data.users[m.sender] ||= {
       name: m.name,
       exp: 0,
