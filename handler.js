@@ -117,33 +117,38 @@ export async function handler(chatUpdate) {
     m.exp = 0
     if (typeof m.text !== "string") m.text = ""
 
- /* === STICKER → COMANDO (GLOBAL) === */
+/* === STICKER → COMANDO (GLOBAL) === */
 try {
-  if (!m.text || /^\.?(addco|delco|listco)\b/i.test(m.text)) return
+  // ❌ NO usar return aquí
+  if (m.text && !/^\.?(addco|delco|listco)\b/i.test(m.text)) {
+    const st = m.sticker || m.quoted?.sticker
+    if (st) {
+      const jsonPath = './comandos.json'
+      if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}')
 
-  const st = m.sticker || m.quoted?.sticker
-  if (!st) return
+      const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
 
-  const jsonPath = './comandos.json'
-  if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}')
+      const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
+      if (rawSha) {
+        let hash
+        if (Buffer.isBuffer(rawSha)) hash = rawSha.toString('base64')
+        else if (ArrayBuffer.isView(rawSha)) hash = Buffer.from(rawSha).toString('base64')
+        else hash = String(rawSha)
 
-  const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
+        const mapped = map[hash]
+        if (mapped) {
+          const prefixes = Array.isArray(global.prefixes)
+            ? global.prefixes
+            : [global.prefix || '.']
 
-  const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
-  if (!rawSha) return
+          const pref = prefixes[0] || '.'
+          m.text = mapped.startsWith(pref) ? mapped : pref + mapped
 
-  let hash
-  if (Buffer.isBuffer(rawSha)) hash = rawSha.toString('base64')
-  else if (ArrayBuffer.isView(rawSha)) hash = Buffer.from(rawSha).toString('base64')
-  else hash = String(rawSha)
-
-  const mapped = map[hash]
-  if (!mapped) return
-
-  const prefix = (Array.isArray(global.prefixes) && global.prefixes[0]) || '.'
-  m.text = mapped.startsWith(prefix) ? mapped : prefix + mapped
-
-  console.log('🧩 Sticker → comando:', m.text)
+          console.log('🧩 Sticker → comando:', m.text)
+        }
+      }
+    }
+  }
 } catch (e) {
   console.error('❌ Sticker system error:', e)
 }
