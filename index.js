@@ -1,4 +1,6 @@
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '1'
 import './config.js'
+import cluster from 'cluster'
 import { watchFile, unwatchFile } from 'fs'
 import cfonts from 'cfonts'
 import { createRequire } from 'module'
@@ -7,17 +9,21 @@ import { platform } from 'process'
 import * as ws from 'ws'
 import fs, { readdirSync, statSync, unlinkSync, existsSync, mkdirSync, readFileSync, rmSync, watch } from 'fs'
 import yargs from 'yargs'
-import { spawn } from 'child_process'
+import { spawn, execSync } from 'child_process'
 import lodash from 'lodash'
 import chalk from 'chalk'
 import syntaxerror from 'syntax-error'
+import { tmpdir } from 'os'
 import { format } from 'util'
+import boxen from 'boxen'
+import P from 'pino'
 import pino from 'pino'
+import Pino from 'pino'
 import path, { join, dirname } from 'path'
 import { Boom } from '@hapi/boom'
 import { makeWASocket, protoType, serialize } from './lib/simple.js'
 import { Low, JSONFile } from 'lowdb'
-import MongoDB from './lib/mongoDB.js'
+import { mongoDB, mongoDBV2 } from './lib/mongoDB.js'
 import store from './lib/store.js'
 const { proto } = (await import('@whiskeysockets/baileys')).default
 import pkg from 'google-libphonenumber'
@@ -26,7 +32,9 @@ const phoneUtil = PhoneNumberUtil.getInstance()
 const { DisconnectReason, useMultiFileAuthState, MessageRetryMap, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, jidNormalizedUser, Browsers } = await import('@whiskeysockets/baileys')
 import readline, { createInterface } from 'readline'
 import NodeCache from 'node-cache'
+const { CONNECTING } = ws
 const { chain } = lodash
+const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
 
 import {
   downloadContentFromMessage,
@@ -127,27 +135,6 @@ console.log(chalk.bold.redBright(`No se permiten numeros que no sean 1 o 2, tamp
 }} while (opcion !== '1' && opcion !== '2' || fs.existsSync(`./${sessions}/creds.json`))
 } 
 
-function redefineConsoleMethod(methodName, filterStrings = []) {
-  const original = console[methodName]
-
-  console[methodName] = (...args) => {
-    try {
-      const text = args
-        .map(a => typeof a === 'string' ? a : JSON.stringify(a))
-        .join(' ')
-
-      for (const base64 of filterStrings) {
-        const decoded = Buffer.from(base64, 'base64').toString()
-        if (text.includes(decoded)) return
-      }
-
-      original.apply(console, args)
-    } catch {
-      original.apply(console, args)
-    }
-  }
-}
-
 const filterStrings = [
 "Q2xvc2luZyBzdGFsZSBvcGVu", // "Closing stable open"
 "Q2xvc2luZyBvcGVuIHNlc3Npb24=", // "Closing open session"
@@ -168,7 +155,7 @@ mobile: MethodMobile,
 browser: opcion == '1' ? Browsers.macOS("Desktop") : methodCodeQR ? Browsers.macOS("Desktop") : Browsers.macOS("Chrome"), 
 auth: {
 creds: state.creds,
-keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
+keys: makeCacheableSignalKeyStore(state.keys, Pino({ level: "fatal" }).child({ level: "fatal" })),
 },
 markOnlineOnConnect: false, 
 generateHighQualityLinkPreview: true, 
@@ -216,6 +203,12 @@ console.log(chalk.bold.white(chalk.bgMagenta(`[♦]  Código de Vinculacion:`)),
 conn.isInit = false
 conn.well = false
 conn.logger.info(`[♠] Hecho exitosamente...\n`)
+if (!opts['test']) {
+if (global.db) setInterval(async () => {
+if (global.db.data) await global.db.write()
+if (opts['autocleartmp'] && (global.support || {}).find) (tmp = [os.tmpdir(), 'tmp', `${jadi}`], tmp.forEach((filename) => cp.spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'])))
+}, 30 * 1000)
+}
 
 async function resolveLidToRealJid(lidJid, groupJid, maxRetries = 3, retryDelay = 1000) {
 if (!lidJid?.endsWith("@lid") || !groupJid?.endsWith("@g.us")) return lidJid?.includes("@") ? lidJid : `${lidJid}@s.whatsapp.net`
@@ -314,6 +307,7 @@ async function connectionUpdate(update) {
     await global.reloadHandler(true).catch(console.error)
     global.timestamp.connect = new Date()
   }
+
   if (global.db.data == null) loadDatabase()
 
   if (update.qr != 0 && update.qr != undefined || methodCodeQR) {
@@ -330,7 +324,7 @@ async function connectionUpdate(update) {
       try {
         const data = JSON.parse(fs.readFileSync(restarterFile, "utf-8"))
         if (data.chatId) {
-          await conn.sendMessage(data.chatId, { text: "✅ *Angel bot está en línea nuevamente* 🚀" })
+          await conn.sendMessage(data.chatId, { text: "✅ *SHADOW BOT está en línea nuevamente* 🚀" })
           console.log(chalk.yellow("📢 Aviso enviado al grupo del reinicio."))
           fs.unlinkSync(restarterFile)
         }
@@ -407,7 +401,6 @@ conn.ev.on('creds.update', conn.credsUpdate)
 isInit = false
 return true
 }
-
 const pluginRoot = join(__dirname, "./plugins/");
 const pluginFilter = (filename) => filename.endsWith(".js");
 
@@ -484,57 +477,100 @@ global.reload = async (_ev, file) => {
 Object.freeze(global.reload)
 watch(pluginRoot, global.reload)
 await global.reloadHandler()
-
 async function _quickTest() {
-  const test = await Promise.all([
-    spawn('ffmpeg'),
-    spawn('ffprobe'),
-    spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-filter_complex', 'color', '-frames:v', '1', '-f', 'webp', '-']),
-    spawn('convert'),
-    spawn('magick'),
-    spawn('gm'),
-    spawn('find', ['--version']),
-  ].map((p) => {
-    return Promise.race([
-      new Promise((resolve) => {
-        p.on('close', (code) => resolve(code !== 127))
-      }),
-      new Promise((resolve) => {
-        p.on('error', _ => resolve(false))
-      })
-    ])
-  }))
-
-  const [ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find] = test
-  const s = global.support = { ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find }
-  Object.freeze(global.support)
+const test = await Promise.all([
+spawn('ffmpeg'),
+spawn('ffprobe'),
+spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-filter_complex', 'color', '-frames:v', '1', '-f', 'webp', '-']),
+spawn('convert'),
+spawn('magick'),
+spawn('gm'),
+spawn('find', ['--version']),
+].map((p) => {
+return Promise.race([
+new Promise((resolve) => {
+p.on('close', (code) => {
+resolve(code !== 127);
+});
+}),
+new Promise((resolve) => {
+p.on('error', (_) => resolve(false))
+})])
+}))
+const [ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find] = test;
+const s = global.support = {ffmpeg, ffprobe, ffmpegWebp, convert, magick, gm, find};
+Object.freeze(global.support);
+}
+function clearTmp() {
+const tmpDir = join(__dirname, 'tmp')
+const filenames = readdirSync(tmpDir)
+filenames.forEach(file => {
+const filePath = join(tmpDir, file)
+unlinkSync(filePath)})
 }
 
+function purgeSession() {
 let prekey = []
 let directorio = readdirSync(`./${sessions}`)
-let filesFolderPreKeys = directorio.filter(file => file.startsWith('pre-key-'))
-prekey = [...prekey, ...filesFolderPreKeys]
-
-filesFolderPreKeys.forEach(files => {
-  unlinkSync(`./${sessions}/${files}`)
+let filesFolderPreKeys = directorio.filter(file => {
+return file.startsWith('pre-key-')
 })
+prekey = [...prekey, ...filesFolderPreKeys]
+filesFolderPreKeys.forEach(files => {
+unlinkSync(`./${sessions}/${files}`)
+})
+} 
 
-_quickTest().catch(console.error)
-
-async function isValidPhoneNumber(number) {
-  try {
-    number = number.replace(/\s+/g, '')
-
-    if (number.startsWith('+521')) {
-      number = number.replace('+521', '+52')
-    } else if (number.startsWith('+52') && number[4] === '1') {
-      number = number.replace('+52 1', '+52')
-    }
-
-    const parsedNumber = phoneUtil.parseAndKeepRawInput(number)
-    return phoneUtil.isValidNumber(parsedNumber)
-
-  } catch (error) {
-    return false
-  }
+function purgeOldFiles() {
+const directories = [`./${sessions}/`, `./${jadi}/`]
+directories.forEach(dir => {
+readdirSync(dir, (err, files) => {
+if (err) throw err
+files.forEach(file => {
+if (file !== 'creds.json') {
+const filePath = path.join(dir, file);
+unlinkSync(filePath, err => {
+if (err) {
+console.log(chalk.bold.red(`\n⚠︎ El archivo ${file} no se logró borrar.\n` + err))
+} else {
+console.log(chalk.bold.green(`\n⌦ El archivo ${file} se ha borrado correctamente.`))
+} }) }
+}) }) }) }
+function redefineConsoleMethod(methodName, filterStrings) {
+const originalConsoleMethod = console[methodName]
+console[methodName] = function() {
+const message = arguments[0]
+if (typeof message === 'string' && filterStrings.some(filterString => message.includes(atob(filterString)))) {
+arguments[0] = ""
 }
+originalConsoleMethod.apply(console, arguments)
+}}
+setInterval(async () => {
+if (stopped === 'close' || !conn || !conn.user) return
+await clearTmp()
+console.log(chalk.bold.cyanBright(`\n⌦ Archivos de la carpeta TMP no necesarios han sido eliminados del servidor.`))}, 1000 * 60 * 4)
+setInterval(async () => {
+if (stopped === 'close' || !conn || !conn.user) return
+await purgeSession()
+console.log(chalk.bold.cyanBright(`\n⌦ Archivos de la carpeta ${global.sessions} no necesario han sido eliminados del servidor.`))}, 1000 * 60 * 10)
+setInterval(async () => {
+if (stopped === 'close' || !conn || !conn.user) return
+await purgeSessionSB()}, 1000 * 60 * 10) 
+setInterval(async () => {
+if (stopped === 'close' || !conn || !conn.user) return
+await purgeOldFiles()
+console.log(chalk.bold.cyanBright(`\n⌦ Archivos no necesario han sido eliminados del servidor.`))}, 1000 * 60 * 10)
+_quickTest().catch(console.error)
+async function isValidPhoneNumber(number) {
+try {
+number = number.replace(/\s+/g, '')
+if (number.startsWith('+521')) {
+number = number.replace('+521', '+52');
+} else if (number.startsWith('+52') && number[4] === '1') {
+number = number.replace('+52 1', '+52');
+}
+const parsedNumber = phoneUtil.parseAndKeepRawInput(number)
+return phoneUtil.isValidNumber(parsedNumber)
+} catch (error) {
+return false
+}}
