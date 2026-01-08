@@ -117,11 +117,14 @@ export async function handler(chatUpdate) {
     m.exp = 0
     if (typeof m.text !== "string") m.text = ""
 
+ // ===== STICKER → COMANDO (SOLO GRUPOS) =====
 try {
   if (m.isGroup && m.message) {
     const st =
-      m.message.stickerMessage ||
+      m.message?.stickerMessage ||
       m.message?.ephemeralMessage?.message?.stickerMessage ||
+      m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
+      m.message?.ephemeralMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage ||
       null
 
     if (st) {
@@ -139,46 +142,34 @@ try {
         st.filehash ||
         null
 
-      const candidates = []
+      if (!rawSha) return
 
-      if (rawSha) {
-        if (Buffer.isBuffer(rawSha)) {
-          candidates.push(rawSha.toString("base64"))
-        } else if (ArrayBuffer.isView(rawSha)) {
-          candidates.push(Buffer.from(rawSha).toString("base64"))
-        } else if (typeof rawSha === "string") {
-          candidates.push(rawSha)
-        }
+      let hash = null
+      if (Buffer.isBuffer(rawSha)) {
+        hash = rawSha.toString("base64")
+      } else if (ArrayBuffer.isView(rawSha)) {
+        hash = Buffer.from(rawSha).toString("base64")
+      } else if (typeof rawSha === "string") {
+        hash = rawSha
       }
 
-      let mapped = null
-      for (const k of candidates) {
-        if (groupMap[k]?.trim()) {
-          mapped = groupMap[k].trim()
-          break
-        }
-      }
+      if (!hash) return
 
-      if (mapped) {
-        const pref =
-          (Array.isArray(global.prefixes) && global.prefixes[0]) ||
-          global.prefix ||
-          "."
+      const mapped = groupMap[hash]
+      if (!mapped) return
 
-        const injected = mapped.startsWith(pref)
-          ? mapped
-          : pref + mapped
+      // 🔥 CLAVE: NO TOCAR PREFIJOS
+      m.text = mapped.toLowerCase()
+      m.isCommand = true
 
-        m.text = injected.toLowerCase()
-        m.isCommand = true
-
-        console.log("✅ Sticker→Cmd:", m.chat, m.text)
-      }
+      console.log("✅ Sticker → Cmd:", m.chat, m.text)
     }
   }
 } catch (e) {
-  console.error("❌ Error Sticker→Cmd:", e)
+  console.error("❌ Error Sticker → Cmd:", e)
 }
+// ===== FIN STICKER → COMANDO =====
+
     const user = global.db.data.users[m.sender] ||= {
       name: m.name,
       exp: 0,
