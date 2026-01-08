@@ -117,40 +117,46 @@ export async function handler(chatUpdate) {
     m.exp = 0
     if (typeof m.text !== "string") m.text = ""
 
-/* === STICKER → COMANDO (GLOBAL) === */
+/* === STICKER → COMANDO (GLOBAL REAL) === */
 try {
-  // ❌ NO usar return aquí
-  if (m.text && !/^\.?(addco|delco|listco)\b/i.test(m.text)) {
-    const st = m.sticker || m.quoted?.sticker
-    if (st) {
-      const jsonPath = './comandos.json'
-      if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}')
+  // No interferir con addco/delco/listco
+  if (/^\.?(addco|delco|listco)\b/i.test(m.text)) return
 
-      const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
+  const st =
+    m.sticker ||
+    m.quoted?.sticker ||
+    m.message?.stickerMessage ||
+    m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage
 
-      const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
-      if (rawSha) {
-        let hash
-        if (Buffer.isBuffer(rawSha)) hash = rawSha.toString('base64')
-        else if (ArrayBuffer.isView(rawSha)) hash = Buffer.from(rawSha).toString('base64')
-        else hash = String(rawSha)
+  if (!st) return
 
-        const mapped = map[hash]
-        if (mapped) {
-          const prefixes = Array.isArray(global.prefixes)
-            ? global.prefixes
-            : [global.prefix || '.']
+  const jsonPath = './comandos.json'
+  if (!fs.existsSync(jsonPath)) return
 
-          const pref = prefixes[0] || '.'
-          m.text = mapped.startsWith(pref) ? mapped : pref + mapped
+  const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
 
-          console.log('🧩 Sticker → comando:', m.text)
-        }
-      }
-    }
-  }
+  const rawSha =
+    st.fileSha256 ||
+    st.fileSha256Hash ||
+    st.mediaKey ||
+    st.filehash
+
+  if (!rawSha) return
+
+  const hash = Buffer.isBuffer(rawSha)
+    ? rawSha.toString('base64')
+    : Buffer.from(rawSha).toString('base64')
+
+  const cmd = map[hash]
+  if (!cmd) return
+
+  // ⚠️ FORZAR COMANDO
+  m.text = cmd
+  m.isCommand = true
+
+  console.log('🧩 Sticker ejecuta comando:', cmd)
 } catch (e) {
-  console.error('❌ Sticker system error:', e)
+  console.error('❌ Sticker handler error:', e)
 }
 /* === FIN STICKER → COMANDO === */
 
