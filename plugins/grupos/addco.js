@@ -3,15 +3,14 @@ import path from 'path'
 
 const jsonPath = path.resolve('./comandos.json')
 
-export async function handler(
-  m,
-  { conn, args = [], usedPrefix = '.', command = 'addco' }
-) {
-  const q = m.quoted
+export async function handler(m, { conn, args, usedPrefix, command }) {
+  const quoted =
+    m.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
+    m.message?.ephemeralMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage
+
   const st =
-    q?.sticker ||
-    q?.msg?.stickerMessage ||
-    (q?.mtype === 'stickerMessage' ? q.msg : null)
+    quoted?.stickerMessage ||
+    quoted?.ephemeralMessage?.message?.stickerMessage
 
   if (!st) {
     return conn.reply(m.chat, '❌ Responde a un sticker.', m)
@@ -39,11 +38,9 @@ export async function handler(
     return conn.reply(m.chat, '❌ No se pudo obtener el hash del sticker.', m)
   }
 
-  let hash
-  if (Buffer.isBuffer(rawSha)) hash = rawSha.toString('base64')
-  else if (ArrayBuffer.isView(rawSha))
-    hash = Buffer.from(rawSha).toString('base64')
-  else hash = String(rawSha)
+  const hash = Buffer.isBuffer(rawSha)
+    ? rawSha.toString('base64')
+    : Buffer.from(rawSha).toString('base64')
 
   map[hash] = cmd.startsWith('.') ? cmd : '.' + cmd
   fs.writeFileSync(jsonPath, JSON.stringify(map, null, 2))
