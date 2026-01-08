@@ -1,28 +1,31 @@
 let linkRegex = /chat.whatsapp.com\/([0-9A-Za-z]{20,24})( [0-9]{1,3})?/i
 
-let handler = async (m, { conn, text, isOwner, usedPrefix, command }) => {
+let handler = async (m, { conn, args, usedPrefix, command }) => {
 
-  if (!text) return conn.sendMessage(
-    m.chat,
-    {
-      text: `*𝖨𝗇𝗀𝗋𝖾𝗌𝖺 𝖤𝗅 𝖤𝗇𝗅𝖺𝖼𝖾 𝖣𝖾𝗅 𝖦𝗋𝗎𝗉𝗈 𝖠𝗅 𝖰𝗎𝖾 𝖬𝖾 𝖴𝗇𝗂𝗋𝖾*`,
-      ...global.rcanal
-    },
-    { quoted: m }
-  )
-
-  try {
-    let [_, code] = text.match(linkRegex) || []
-    if (!code) return conn.sendMessage(
+  let text = args.join(' ')
+  if (!text)
+    return conn.sendMessage(
       m.chat,
       {
-        text: `*𝖤𝗇𝗅𝖺𝖼𝖾 𝖨𝗇𝗏𝖺𝗅𝗂𝖽𝗈*`,
+        text: `*𝖨𝗇𝗀𝗋𝖾𝗌𝖺 𝖤𝗅 𝖤𝗇𝗅𝖺𝖼𝖾 𝖣𝖾𝗅 𝖦𝗋𝗎𝗉𝗈 𝖠𝗅 𝖰𝗎𝖾 𝖬𝖾 𝖴𝗇𝗂𝗋𝖾*`,
         ...global.rcanal
       },
       { quoted: m }
     )
 
-    let res = await conn.groupAcceptInvite(code)
+  try {
+    let [_, code] = text.match(linkRegex) || []
+    if (!code)
+      return conn.sendMessage(
+        m.chat,
+        {
+          text: `*𝖤𝗇𝗅𝖺𝖼𝖾 𝖨𝗇𝗏𝖺𝗅𝗂𝖽𝗈*`,
+          ...global.rcanal
+        },
+        { quoted: m }
+      )
+
+    await conn.groupAcceptInvite(code)
 
     return conn.sendMessage(
       m.chat,
@@ -49,4 +52,5 @@ handler.help = ['𝖩𝗈𝗂𝗇 <𝖫𝗂𝗇𝗄>']
 handler.tags = ['𝖮𝖶𝖭𝖤𝖱']
 handler.command = ['join', 'entrar']
 handler.owner = true
+
 export default handler
