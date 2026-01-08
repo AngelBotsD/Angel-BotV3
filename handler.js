@@ -115,47 +115,6 @@ export async function handler(chatUpdate) {
     m.exp = 0
     if (typeof m.text !== "string") m.text = ""
 
-/* === STICKER → COMANDO (FIX) === */
-try {
-  // Ignorar SOLO comandos de gestión
-  if (m.text && /^\.?(addco|delco|listco)\b/i.test(m.text)) return
-
-  const st =
-    m.message?.stickerMessage ||
-    m.quoted?.message?.stickerMessage ||
-    m.message?.ephemeralMessage?.message?.stickerMessage ||
-    m.quoted?.message?.ephemeralMessage?.message?.stickerMessage
-
-  if (!st) return
-
-  const jsonPath = './comandos.json'
-  if (!fs.existsSync(jsonPath)) return
-
-  const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
-
-  const rawSha =
-    st.fileSha256 ||
-    st.fileSha256Hash ||
-    st.mediaKey ||
-    st.filehash
-
-  if (!rawSha) return
-
-  const hash = Buffer.isBuffer(rawSha)
-    ? rawSha.toString('base64')
-    : Buffer.from(rawSha).toString('base64')
-
-  const cmd = map[hash]
-  if (cmd) {
-    m.text = cmd
-    m.isCommand = true
-    console.log('🧩 Sticker ejecuta:', cmd)
-  }
-} catch (e) {
-  console.error('❌ Sticker system error:', e)
-}
-/* === FIN STICKER → COMANDO === */
-
     const user = global.db.data.users[m.sender] ||= {
       name: m.name,
       exp: 0,
