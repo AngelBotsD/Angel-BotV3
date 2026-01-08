@@ -11,20 +11,12 @@ export async function handler(m, { conn }) {
     m.message?.ephemeralMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage
 
   if (!st) {
-    return conn.sendMessage(
-      m.chat,
-      { text: '❌ Responde a un sticker para asignarle un comando.' },
-      { quoted: m }
-    )
+    return conn.sendMessage(m.chat, { text: '❌ Responde a un sticker.' }, { quoted: m })
   }
 
   const text = m.text?.split(/\s+/).slice(1).join(' ').trim()
   if (!text) {
-    return conn.sendMessage(
-      m.chat,
-      { text: '❌ Debes indicar el comando que quieres asociar al sticker.\nEjemplo: .addco kick' },
-      { quoted: m }
-    )
+    return conn.sendMessage(m.chat, { text: '❌ Indica el comando.' }, { quoted: m })
   }
 
   if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}')
@@ -32,11 +24,7 @@ export async function handler(m, { conn }) {
 
   const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
   if (!rawSha) {
-    return conn.sendMessage(
-      m.chat,
-      { text: '❌ No se pudo obtener el hash del sticker.' },
-      { quoted: m }
-    )
+    return conn.sendMessage(m.chat, { text: '❌ No se pudo obtener el hash.' }, { quoted: m })
   }
 
   let hash
@@ -44,13 +32,17 @@ export async function handler(m, { conn }) {
   else if (ArrayBuffer.isView(rawSha)) hash = Buffer.from(rawSha).toString('base64')
   else hash = rawSha.toString()
 
-  map[hash] = text.startsWith('.') ? text : '.' + text
+  map[hash] = {
+    cmd: text.startsWith('.') ? text : '.' + text,
+    chat: m.chat
+  }
+
   fs.writeFileSync(jsonPath, JSON.stringify(map, null, 2))
 
   await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
   return conn.sendMessage(
     m.chat,
-    { text: `✅ Sticker vinculado al comando: ${map[hash]}` },
+    { text: `✅ Sticker vinculado en este grupo a: ${map[hash].cmd}` },
     { quoted: m }
   )
 }
