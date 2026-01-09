@@ -4,7 +4,7 @@ import fetch from 'node-fetch'
 let thumb = null
 fetch('https://files.catbox.moe/mx6p6q.jpg')
   .then(r => r.arrayBuffer())
-  .then(b => thumb = Buffer.from(b))
+  .then(b => (thumb = Buffer.from(b)))
   .catch(() => null)
 
 function unwrapMessage(m = {}) {
@@ -41,7 +41,9 @@ const handler = async (m, { conn, participants }) => {
   const content = getText(m).trim()
   if (!/^\.?n(\s|$)/i.test(content)) return
 
-  await conn.sendMessage(m.chat, { react: { text: '🗣️', key: m.key } })
+  await conn.sendMessage(m.chat, {
+    react: { text: '🗣️', key: m.key }
+  })
 
   const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
 
@@ -53,7 +55,7 @@ const handler = async (m, { conn, participants }) => {
     },
     message: {
       locationMessage: {
-      name: '𝖧𝗈𝗅𝖺, 𝖲𝗈𝗒 ${global.author}',
+        name: `𝖧𝗈𝗅𝖺, 𝖲𝗈𝗒 ${global.author}`,
         jpegThumbnail: thumb
       }
     },
@@ -61,7 +63,11 @@ const handler = async (m, { conn, participants }) => {
   }
 
   const q = m.quoted ? unwrapMessage(m.quoted) : unwrapMessage(m)
-  const mtype = q.mtype || Object.keys(q.message || {})[0] || ''
+
+  const mtype =
+    m.quoted?.mtype ||
+    Object.keys(q.message || {})[0] ||
+    (q.conversation ? 'conversation' : '')
 
   const isMedia = [
     'imageMessage',
@@ -71,12 +77,17 @@ const handler = async (m, { conn, participants }) => {
   ].includes(mtype)
 
   const userText = content.replace(/^\.?n(\s|$)/i, '').trim()
-  const baseText = (q.text || q.msg?.caption || '').trim()
+  const baseText =
+    q.text ||
+    q.msg?.caption ||
+    q.conversation ||
+    ''
+
   const caption = userText || baseText || '🔊 Notificación'
 
   try {
     if (isMedia) {
-      const buffer = await q.download()
+      const buffer = await m.quoted.download()
       const msg = { mentions: users }
 
       if (mtype === 'audioMessage') {
@@ -110,14 +121,13 @@ const handler = async (m, { conn, participants }) => {
       return conn.sendMessage(m.chat, msg, { quoted: fkontak })
     }
 
-    if (m.quoted) {
+    if (m.quoted && mtype !== 'conversation') {
       const newMsg = conn.cMod(
         m.chat,
         generateWAMessageFromContent(
           m.chat,
           {
-            [mtype || 'extendedTextMessage']:
-              q?.message?.[mtype] || { text: caption }
+            [mtype]: q.message?.[mtype] || { text: caption }
           },
           { quoted: fkontak, userJid: conn.user.id }
         ),
@@ -139,7 +149,7 @@ const handler = async (m, { conn, participants }) => {
       { quoted: fkontak }
     )
 
-  } catch {
+  } catch (e) {
     return conn.sendMessage(
       m.chat,
       { text: '🔊 Notificación', mentions: users },
