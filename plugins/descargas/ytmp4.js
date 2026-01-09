@@ -53,9 +53,6 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
 ⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}
-
-» 𝙑𝙄𝘿𝙀𝙊 𝙀𝙉𝙑𝗜𝗔𝗗𝗢 🎧  
-» 𝘿𝗜𝙎𝗙𝗥𝗨𝗧𝗔𝗟𝗢 𝘾𝗔𝙈𝗣𝗘𝗢𝗡..
 `
 
     await conn.sendMessage(chatId, { video: { url: videoUrl }, mimetype: "video/mp4", caption }, { quoted: msg })
