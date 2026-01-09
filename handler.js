@@ -16,6 +16,7 @@ function isOwnerBySender(sender) {
   return OWNER_NUMBERS.includes(DIGITS(sender))
 }
 
+if (typeof global.beforeAll !== "function")
 global.beforeAll = async function (m, { conn }) {
   try {
     const nombreBot = global.namebot || "𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍"
