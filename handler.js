@@ -13,11 +13,23 @@ const OWNER_NUMBERS = (global.owner || []).map(v =>
   Array.isArray(v) ? DIGITS(v[0]) : DIGITS(v)
 )
 
+async function getIconBuffer() {
+  if (ICON_BUFFER) return ICON_BUFFER
+  try {
+    const res = await fetch("https://files.catbox.moe/izivd5.jpg")
+    ICON_BUFFER = Buffer.from(await res.arrayBuffer())
+    return ICON_BUFFER
+  } catch {
+    return null
+  }
+}
+
+getIconBuffer()
+
 if (typeof global.beforeAll !== "function")
 global.beforeAll = async function (m, { conn }) {
   try {
     const nombreBot = global.namebot || "𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍"
-    const bannerFinal = "https://files.catbox.moe/izivd5.jpg"
 
     const canales = [global.idcanal, global.idcanal2].filter(Boolean)
     const newsletterJidRandom = canales.length
@@ -38,7 +50,7 @@ global.beforeAll = async function (m, { conn }) {
         externalAdReply: {
           title: nombreBot,
           body: global.author,
-          thumbnailUrl: bannerFinal,
+          thumbnail: await getIconBuffer(),
           sourceUrl: null,
           mediaType: 1,
           renderLargerThumbnail: false
