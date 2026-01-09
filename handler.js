@@ -90,7 +90,7 @@ export async function handler(chatUpdate) {
   global.handledMessages.set(m.key.id, Date.now())
 }
 
-  if (Math.random() < 0.05) {
+  if (Date.now() % 20 === 0) {
     for (const [k, v] of global.handledMessages)
       if (Date.now() - v > 120000) global.handledMessages.delete(k)
     for (const [k, v] of global.groupMetaCache)
