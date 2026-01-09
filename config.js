@@ -1,5 +1,3 @@
-import { watchFile, unwatchFile } from 'fs'
-import chalk from 'chalk'
 import { fileURLToPath } from 'url'
 
 global.owner = [
@@ -25,21 +23,10 @@ global.author = global.bot.author
 global.sessions = global.bot.session
 global.banner = global.bot.banner
 
-
 global.APIs = {
-  sky: 'https://api-sky.ultraplus.click',
   may: 'https://api.soymaycol.icu'
 }
 
 global.APIKeys = {
-  sky: process.env.SKY_API_KEY || 'Angxlllll',
   may: process.env.MAY_API_KEY || 'may-e89378ce'
 }
-
-const file = fileURLToPath(import.meta.url)
-
-watchFile(file, () => {
-  unwatchFile(file)
-  console.log(chalk.redBright("config.js actualizado"))
-  import(`${file}?update=${Date.now()}`)
-})
