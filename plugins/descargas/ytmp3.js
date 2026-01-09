@@ -66,8 +66,7 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
 » 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
 
 ⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
-
-> ```© 𝖯𝗈𝗐𝖾𝗋𝗲𝖽 𝖻𝗒 ${global.author}````
+`
 
   await conn.sendMessage(chatId, { image: { url: thumbnail }, caption: infoCaption }, { quoted: msg })
   await conn.sendMessage(chatId, { audio: { url: audioUrl }, mimetype: "audio/mpeg", ptt: false, fileName: `${title}.mp3` }, { quoted: msg })
