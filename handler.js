@@ -210,8 +210,8 @@ try {
       const botParticipant = participants.find(p => p.id === this.user.jid || p.jid === this.user.jid)
 
       isRAdmin =
-        userParticipant?.admin === "superadmin" ||
-        DIGITS(m.sender) === DIGITS(groupMetadata.owner)
+  userParticipant?.admin === "superadmin" ||
+  senderNumber === DIGITS(groupMetadata.owner)
 
       isAdmin = isRAdmin || userParticipant?.admin === "admin"
       isBotAdmin =
