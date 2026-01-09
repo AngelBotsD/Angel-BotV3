@@ -38,7 +38,7 @@ global.prefix = /^[#!./]/
 protoType()
 serialize()
 
-console.log(chalk.magentaBright('\nAngel Bot iniciado'))
+console.log(chalk.magentaBright('\nAngel Bot iniciado\n'))
 cfonts.say('Angel Bot', {
   font: 'block',
   align: 'center',
@@ -51,6 +51,7 @@ global.db.data ||= { users: {}, chats: {}, settings: {}, stats: {} }
 
 const __dirname__ = global.__dirname(import.meta.url)
 const sessionsDir = join(__dirname__, 'sessions')
+if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir)
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -107,7 +108,7 @@ if (methodCode && !conn.authState.creds.registered) {
   let phoneNumber
   do {
     phoneNumber = await question(
-      chalk.green('\nIngresa tu número de WhatsApp (ej: +521234567890): ')
+      chalk.green('\nIngresa tu número de WhatsApp (ej: +52 591 115 3853): ')
     )
     phoneNumber = phoneNumber.replace(/\s+/g, '')
   } while (!isValidPhoneNumber(phoneNumber))
@@ -115,6 +116,7 @@ if (methodCode && !conn.authState.creds.registered) {
   rl.close()
 
   const number = phoneNumber.replace(/\D/g, '')
+
   setTimeout(async () => {
     const code = await conn.requestPairingCode(number)
     console.log(
@@ -178,6 +180,14 @@ process.on('uncaughtException', console.error)
 
 function isValidPhoneNumber(number) {
   try {
+    number = number.replace(/\s+/g, '')
+
+    if (number.startsWith('+521')) {
+      number = number.replace('+521', '+52')
+    } else if (number.startsWith('+52') && number[3] === '1') {
+      number = number.replace('+52' + number[3], '+52')
+    }
+
     const parsed = phoneUtil.parseAndKeepRawInput(number)
     return phoneUtil.isValidNumber(parsed)
   } catch {
