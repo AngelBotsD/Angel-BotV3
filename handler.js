@@ -106,7 +106,6 @@ export async function handler(chatUpdate) {
     m.exp = 0
     m.text = typeof m.text === "string" ? m.text : ""
 
-/* === STICKER → COMANDO GLOBAL === */
 try {
   const st = m.message?.stickerMessage || m.message?.ephemeralMessage?.message?.stickerMessage || null
   if (st && m.chat) {
@@ -140,7 +139,6 @@ try {
 } catch (e) {
   console.error(e)
 }
-/* === FIN STICKER → COMANDO === */
 
     const user = global.db.data.users[m.sender] ||= {
       name: m.name,
