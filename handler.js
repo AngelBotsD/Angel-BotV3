@@ -12,10 +12,6 @@ const OWNER_NUMBERS = (global.owner || []).map(v =>
   Array.isArray(v) ? DIGITS(v[0]) : DIGITS(v)
 )
 
-function isOwnerBySender(sender) {
-  return OWNER_NUMBERS.includes(DIGITS(sender))
-}
-
 if (typeof global.beforeAll !== "function")
 global.beforeAll = async function (m, { conn }) {
   try {
