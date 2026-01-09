@@ -54,7 +54,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
         audio: { url: data.result.url },
         mimetype: "audio/mpeg",
         fileName: `${title}.mp3`,
-        ptt: true
+        ptt: false
       },
       { quoted: msg }
     )
