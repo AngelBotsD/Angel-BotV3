@@ -49,20 +49,14 @@ const handler = async (msg, { conn, text, usedPrefix, command }) => {
     const videoUrl = data.result.url
     quality = data.result.quality || quality
 
-    const caption =
-`> *𝚈𝚃𝙼𝙿4 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝙴𝚁*
-
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+    const caption =`⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
 ⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}
 
 » 𝙑𝙄𝘿𝙀𝙊 𝙀𝙉𝙑𝗜𝗔𝗗𝗢 🎧  
 » 𝘿𝗜𝙎𝗙𝗥𝗨𝗧𝗔𝗟𝗢 𝘾𝗔𝙈𝗣𝗘𝗢𝗡..
-
-⇆‌ ㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤ↻
-
-> ```© 𝖯𝗈𝗐𝖾𝗋𝗲𝖽 𝖻𝗒 ${global.author}````
+`
 
     await conn.sendMessage(chatId, { video: { url: videoUrl }, mimetype: "video/mp4", caption }, { quoted: msg })
     await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
