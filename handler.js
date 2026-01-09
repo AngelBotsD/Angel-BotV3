@@ -3,6 +3,7 @@ import { fileURLToPath } from "url"
 import path, { join } from "path"
 import fs, { unwatchFile, watchFile } from "fs"
 import chalk from "chalk"
+import fetch from "node-fetch"
 
 const DIGITS = (s = "") => String(s).replace(/\D/g, "")
 
