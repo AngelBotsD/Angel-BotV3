@@ -4,57 +4,81 @@ import yts from "yt-search"
 const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
 const API_KEY  = global.APIKeys.may || ""
 
-const handler = async (
-  m,
-  { conn, args = [], usedPrefix = ".", command = "play" }
-) => {
+const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
-  const text = args.join(" ").trim()
+  const chatId = msg.key.remoteJid
 
-  if (!text)
-    return m.reply(`Uso: ${usedPrefix}${command} <canción>`)
+  if (!text) 
+    return conn.sendMessage(chatId, { 
+      text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree` 
+    }, { quoted: msg })
 
-  await m.react("⏳").catch(() => {})
+
+  await conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } })
+
 
   try {
-    const search = await yts(text)
-    if (!search.videos?.length) throw "Sin resultados"
+
+    const searchPromise = yts(text)
+    const search = await searchPromise
+
+    if (!search?.videos?.length) 
+      throw new Error("No se encontró ningún resultado")
+
 
     const video = search.videos[0]
 
-    const { data } = await axios.get(
-      `${API_BASE}/ytdl`,
-      {
-        params: {
-          url: video.url,
-          type: "Mp3",
-          apikey: API_KEY
-        }
-      }
-    )
+    const title    = video.title
+    const author   = video.author?.name || "Desconocido"
+    const duration = video.timestamp || "Desconocida"
+    const thumb    = video.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg"
+    const videoLink= video.url
 
-    if (!data?.status || !data.result?.url)
-      throw "No se pudo obtener el audio"
 
-    await conn.sendMessage(
-      m.chat,
-      {
-        audio: { url: data.result.url },
-        mimetype: "audio/mpeg"
-      },
-      { quoted: m }
-    )
+    const infoCaption = `⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
+`
 
-    await m.react("✅").catch(() => {})
 
-  } catch {
-    await m.react("✖️").catch(() => {})
-    m.reply("Error al obtener el audio")
+    conn.sendMessage(chatId, { image: { url: thumb }, caption: infoCaption }, { quoted: msg })
+
+
+    const { data } = await axios.get(`${API_BASE}/ytdl?url=${encodeURIComponent(videoLink)}&type=Mp3&apikey=${API_KEY}`)
+
+    if (!data?.status || !data.result?.url) 
+      throw new Error(data?.message || "No se pudo obtener el audio")
+
+
+    const videoUrl = data.result.url
+
+
+    conn.sendMessage(chatId, { 
+      audio: { url: videoUrl }, 
+      mimetype: "audio/mpeg", 
+      fileName: `${title}.mp3`, 
+      ptt: false 
+    }, { quoted: msg })
+
+
+    conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
+
+
+  } catch (err) {
+
+    console.error("play error:", err)
+
+    conn.sendMessage(chatId, { 
+      text: `❌ Error: ${err?.message || "Fallo interno"}` 
+    }, { quoted: msg })
+
   }
+
 }
 
+
 handler.command = ["play", "ytplay"]
-handler.tags = ["dl"]
-handler.help = ["play <texto>"]
+handler.help    = ["play <texto>"]
+handler.tags    = ["descargas"]
 
 export default handler
