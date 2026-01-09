@@ -5,6 +5,8 @@ import fs, { unwatchFile, watchFile } from "fs"
 import chalk from "chalk"
 import fetch from "node-fetch"
 
+let ICON_BUFFER = null
+
 const DIGITS = (s = "") => String(s).replace(/\D/g, "")
 
 const OWNER_NUMBERS = (global.owner || []).map(v =>
