@@ -102,6 +102,7 @@ export async function handler(chatUpdate) {
 
   try {
     m = smsg(this, m) || m
+    const senderNumber = DIGITS(m.sender)
     if (!m) return
 
     m.exp = 0
@@ -181,7 +182,7 @@ try {
       gponly: false
     }
 
-    const isROwner = isOwnerBySender(m.sender)
+    const isROwner =     OWNER_NUMBERS.includes(senderNumber)
     const isOwner = isROwner || m.fromMe
     const isPrems = isROwner || user.premium === true
     const isOwners = isROwner || m.sender === this.user.jid
