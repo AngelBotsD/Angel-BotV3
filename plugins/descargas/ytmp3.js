@@ -53,8 +53,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     return conn.sendMessage(chatId, { text: `❌ Error al obtener audio: ${err.message}` }, { quoted: msg })
   }
 
-  const infoCaption =`
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+  const infoCaption =`⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${artista}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
 
