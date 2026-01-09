@@ -1,196 +1,158 @@
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1'
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '1'
 import './config.js'
-
-import fs from 'fs'
-import path, { join } from 'path'
-import chalk from 'chalk'
-import yargs from 'yargs'
+import cluster from 'cluster'
+import fs, { readdirSync, statSync, unlinkSync, existsSync, mkdirSync, readFileSync, watch } from 'fs'
 import cfonts from 'cfonts'
+import { createRequire } from 'module'
+import { fileURLToPath, pathToFileURL } from 'url'
+import { platform } from 'process'
+import * as ws from 'ws'
+import yargs from 'yargs'
+import { spawn } from 'child_process'
+import lodash from 'lodash'
+import chalk from 'chalk'
+import syntaxerror from 'syntax-error'
+import { format } from 'util'
+import pino from 'pino'
+import path, { join } from 'path'
+import { Boom } from '@hapi/boom'
+import { makeWASocket, protoType, serialize } from './lib/simple.js'
+import { Low, JSONFile } from 'lowdb'
+import store from './lib/store.js'
+import pkg from 'google-libphonenumber'
 import readline from 'readline'
 import NodeCache from 'node-cache'
-import pino from 'pino'
-import { fileURLToPath } from 'url'
-import { createRequire } from 'module'
-import { Boom } from '@hapi/boom'
-import {
-  makeWASocket,
-  jidNormalizedUser,
-  DisconnectReason,
-  useMultiFileAuthState,
-  makeCacheableSignalKeyStore,
-  Browsers
-} from '@whiskeysockets/baileys'
-import store from './lib/store.js'
-import { protoType, serialize } from './lib/simple.js'
-import { Low, JSONFile } from 'lowdb'
-import pkg from 'google-libphonenumber'
+import { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, jidNormalizedUser, Browsers } from '@whiskeysockets/baileys'
 
 const { PhoneNumberUtil } = pkg
 const phoneUtil = PhoneNumberUtil.getInstance()
+const { chain } = lodash
+const { CONNECTING } = ws
 
-global.__filename = url => fileURLToPath(url)
-global.__dirname = url => path.dirname(fileURLToPath(url))
-global.__require = dir => createRequire(dir)
-
-global.opts = yargs(process.argv.slice(2)).exitProcess(false).parse()
-global.prefix = /^[#!./]/
+let { say } = cfonts
+console.log(chalk.magentaBright('\nMejor Bot Do Momento Start...'))
+say('Angel Bot', { font: 'block', align: 'center', gradient: ['grey', 'white'] })
+say('Hecho Y Optimizado Por Angel.xyz', { font: 'console', align: 'center', colors: ['cyan', 'magenta', 'yellow'] })
 
 protoType()
 serialize()
 
-console.log(chalk.magentaBright('\nAngel Bot iniciado\n'))
-cfonts.say('Angel Bot', {
-  font: 'block',
-  align: 'center',
-  gradient: ['cyan', 'white']
-})
+if (!existsSync('./tmp')) mkdirSync('./tmp')
+
+global.__filename = function (pathURL = import.meta.url, rmPrefix = platform !== 'win32') {
+  return rmPrefix ? fileURLToPath(pathURL) : pathToFileURL(pathURL).toString()
+}
+global.__dirname = function (pathURL) {
+  return path.dirname(global.__filename(pathURL, true))
+}
+global.__require = function (dir = import.meta.url) {
+  return createRequire(dir)
+}
+
+const __dirname = global.__dirname(import.meta.url)
+global.opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
+global.prefix = new RegExp('^[#!./]')
 
 global.db = new Low(new JSONFile('database.json'))
-await global.db.read()
-global.db.data ||= { users: {}, chats: {}, settings: {}, stats: {} }
+global.loadDatabase = async function () {
+  if (global.db.READ) return
+  global.db.READ = true
+  await global.db.read().catch(() => null)
+  global.db.READ = null
+  global.db.data ||= { users: {}, chats: {}, stats: {}, msgs: {}, sticker: {}, settings: {} }
+  global.db.chain = chain(global.db.data)
+}
+await global.loadDatabase()
 
-const __dirname__ = global.__dirname(import.meta.url)
-const sessionsDir = join(__dirname__, 'sessions')
-if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir)
+const { state, saveCreds } = await useMultiFileAuthState(global.sessions)
+const msgRetryCounterCache = new NodeCache()
+const userDevicesCache = new NodeCache()
+const { version } = await fetchLatestBaileysVersion()
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-})
+let phoneNumber = global.botNumber
+const methodCodeQR = process.argv.includes('qr')
+const methodCode = !!phoneNumber || process.argv.includes('code')
+const MethodMobile = process.argv.includes('mobile')
 
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 const question = q => new Promise(r => rl.question(q, r))
 
-let opcion = null
-const useQR = process.argv.includes('qr')
-const useCode = process.argv.includes('code')
-
-if (!fs.existsSync(join(sessionsDir, 'creds.json')) && !useQR && !useCode) {
+let opcion
+if (!methodCodeQR && !methodCode && !fs.existsSync(`./${sessions}/creds.json`)) {
   do {
-    opcion = await question(
-      chalk.cyan(
-        '\nSeleccione una opción:\n1. Con código QR\n2. Con código de texto\n> '
-      )
-    )
+    opcion = await question('Seleccione una opción:\n1. Con código QR\n2. Con código de texto de 8 dígitos\n--> ')
   } while (!['1', '2'].includes(opcion))
 }
 
-const methodQR = useQR || opcion === '1'
-const methodCode = useCode || opcion === '2'
-
-const { state, saveCreds } = await useMultiFileAuthState(sessionsDir)
-
-const msgRetryCounterCache = new NodeCache()
-const userDevicesCache = new NodeCache()
-
 const connectionOptions = {
   logger: pino({ level: 'silent' }),
-  printQRInTerminal: methodQR,
+  printQRInTerminal: opcion === '1' || methodCodeQR,
+  mobile: MethodMobile,
+  browser: Browsers.macOS('Desktop'),
   auth: {
     creds: state.creds,
-    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
+    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
   },
-  browser: Browsers.macOS('Desktop'),
-  markOnlineOnConnect: false,
-  syncFullHistory: false,
-  generateHighQualityLinkPreview: false,
   msgRetryCounterCache,
   userDevicesCache,
-  getMessage: async key => {
-    const jid = jidNormalizedUser(key.remoteJid)
-    const msg = await store.loadMessage(jid, key.id)
-    return msg?.message || ''
-  }
+  version
 }
 
 global.conn = makeWASocket(connectionOptions)
 
-if (methodCode && !conn.authState.creds.registered) {
-  let phoneNumber
+if (opcion === '2' && !conn.authState.creds.registered) {
   do {
-    phoneNumber = await question(
-      chalk.green('\nIngresa tu número de WhatsApp (ej: +52 591 115 3853): ')
-    )
-    phoneNumber = phoneNumber.replace(/\s+/g, '')
+    phoneNumber = await question('Ingrese su número de WhatsApp: ')
+    phoneNumber = phoneNumber.replace(/[^\d+]/g, '')
+    if (!phoneNumber.startsWith('+')) phoneNumber = `+${phoneNumber}`
   } while (!isValidPhoneNumber(phoneNumber))
 
   rl.close()
-
-  const number = phoneNumber.replace(/\D/g, '')
-
-  setTimeout(async () => {
-    const code = await conn.requestPairingCode(number)
-    console.log(
-      chalk.magenta('\nCódigo de vinculación:'),
-      chalk.bold(code.match(/.{1,4}/g).join('-'))
-    )
-  }, 2000)
-} else {
-  rl.close()
+  const code = await conn.requestPairingCode(phoneNumber.replace(/\D/g, ''))
+  console.log(`Código de Vinculación: ${code.match(/.{1,4}/g).join('-')}`)
 }
 
-let handler = await import('./handler.js')
-
-async function reloadHandler(restart = false) {
-  handler = await import(`./handler.js?update=${Date.now()}`)
-  if (restart) {
-    try { conn.ws.close() } catch {}
-    global.conn = makeWASocket(connectionOptions)
-  }
-  conn.ev.removeAllListeners()
-  conn.handler = handler.handler.bind(conn)
-  conn.ev.on('messages.upsert', conn.handler)
-  conn.ev.on('creds.update', saveCreds)
-  conn.ev.on('connection.update', connectionUpdate)
-}
-
-global.reloadHandler = reloadHandler
-
-async function connectionUpdate(update) {
-  const { connection, lastDisconnect } = update
-  const reason = new Boom(lastDisconnect?.error)?.output?.statusCode
-
-  if (connection === 'open') {
-    console.log(chalk.green('\nBot conectado correctamente'))
-  }
-
-  if (connection === 'close') {
-    if (reason !== DisconnectReason.loggedOut) {
-      console.log(chalk.yellow('Reconectando...'))
-      await reloadHandler(true)
-    } else {
-      console.log(chalk.red('Sesión cerrada'))
-    }
-  }
-}
-
-const pluginDir = join(__dirname__, 'plugins')
-global.plugins = {}
-
-for (const file of fs.readdirSync(pluginDir)) {
-  if (!file.endsWith('.js')) continue
-  const module = await import(`./plugins/${file}`)
-  global.plugins[file] = module.default || module
-}
-
-console.log('Plugins cargados:', Object.keys(global.plugins).length)
-
-await reloadHandler()
-
-process.on('uncaughtException', console.error)
-
-function isValidPhoneNumber(number) {
+async function isValidPhoneNumber(number) {
   try {
     number = number.replace(/\s+/g, '')
-
-    if (number.startsWith('+521')) {
-      number = number.replace('+521', '+52')
-    } else if (number.startsWith('+52') && number[3] === '1') {
-      number = number.replace('+52' + number[3], '+52')
-    }
-
-    const parsed = phoneUtil.parseAndKeepRawInput(number)
+    if (number.startsWith('+521')) number = number.replace('+521', '+52')
+    const parsed = phoneUtil.parse(number)
     return phoneUtil.isValidNumber(parsed)
   } catch {
     return false
   }
 }
+
+async function connectionUpdate(update) {
+  const { connection, lastDisconnect } = update
+  if (connection === 'open') console.log('Bot conectado')
+  if (connection === 'close') {
+    const reason = new Boom(lastDisconnect?.error)?.output?.statusCode
+    if (reason !== DisconnectReason.loggedOut) await global.reloadHandler(true)
+  }
+}
+
+let handler = await import('./handler.js')
+global.reloadHandler = async function (restart) {
+  handler = await import(`./handler.js?${Date.now()}`)
+  if (restart) {
+    try { conn.ws.close() } catch {}
+    global.conn = makeWASocket(connectionOptions)
+  }
+  conn.ev.on('messages.upsert', handler.handler.bind(global.conn))
+  conn.ev.on('connection.update', connectionUpdate)
+  conn.ev.on('creds.update', saveCreds)
+}
+
+const pluginRoot = join(__dirname, 'plugins')
+global.plugins = {}
+
+if (process.env.NODE_ENV !== 'production') {
+  watch(pluginRoot, async (_, file) => {
+    if (!file.endsWith('.js')) return
+    const module = await import(`${join(pluginRoot, file)}?${Date.now()}`)
+    global.plugins[file] = module.default || module
+  })
+}
+
+await global.reloadHandler()
