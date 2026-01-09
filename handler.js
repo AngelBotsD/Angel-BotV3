@@ -73,7 +73,6 @@ global.dfail = (type, m, conn) => {
 const fail = (type, m, conn) => global.dfail?.(type, m, conn)
 
 global.handledMessages ||= new Map()
-global.recentCommands ||= new Map()
 global.groupMetaCache ||= new Map()
 
 export async function handler(chatUpdate) {
@@ -93,8 +92,6 @@ export async function handler(chatUpdate) {
   if (Math.random() < 0.05) {
     for (const [k, v] of global.handledMessages)
       if (Date.now() - v > 120000) global.handledMessages.delete(k)
-    for (const [k, v] of global.recentCommands)
-      if (Date.now() - v > 60000) global.recentCommands.delete(k)
     for (const [k, v] of global.groupMetaCache)
       if (Date.now() - v.ts > 15000) global.groupMetaCache.delete(k)
   }
