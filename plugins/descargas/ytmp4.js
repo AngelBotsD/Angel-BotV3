@@ -8,9 +8,9 @@ function isYouTube(url = "") {
   return /^https?:\/\//i.test(url) && /(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(url)
 }
 
-const handler = async (msg, { conn, text, usedPrefix, command }) => {
+const handler = async (msg, { conn, args, usedPrefix, command }) => {
   const chatId = msg.key.remoteJid
-  const url = String(text || "").trim()
+  const url = args.join(' ').trim()
 
   if (!url) {
     return conn.sendMessage(chatId, {
