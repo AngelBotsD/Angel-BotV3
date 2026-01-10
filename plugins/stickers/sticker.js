@@ -49,6 +49,7 @@ async function addExif(buffer, packname) {
     emojis: ['']
   }
 
+  const jsonBuf = Buffer.from(JSON.stringify(json))
   const exif = Buffer.concat([
     Buffer.from([
       0x49, 0x49, 0x2A, 0x00,
@@ -58,10 +59,10 @@ async function addExif(buffer, packname) {
       0x00, 0x00, 0x16, 0x00,
       0x00, 0x00
     ]),
-    Buffer.from(JSON.stringify(json))
+    jsonBuf
   ])
 
-  exif.writeUIntLE(Buffer.byteLength(JSON.stringify(json)), 14, 4)
+  exif.writeUIntLE(jsonBuf.length, 14, 4)
   img.exif = exif
 
   return img.save(null, { lossless: true })
@@ -69,11 +70,25 @@ async function addExif(buffer, packname) {
 
 let handler = async (m, { conn }) => {
   try {
-    let q = m.quoted ? m.quoted : m
-    let mime = q.mimetype || ''
+    let mime = m.mimetype || ''
+    let isCaptionCmd = false
 
+    if (m.message?.imageMessage?.caption || m.message?.videoMessage?.caption) {
+      const cap = m.message.imageMessage?.caption || m.message.videoMessage?.caption || ''
+      isCaptionCmd = /^\.s\b/i.test(cap.trim())
+    }
+
+    let q = m.quoted ? m.quoted : m
+
+    if (!isCaptionCmd && !m.quoted) return
+
+    mime = q.mimetype || ''
     if (!/image|video/.test(mime)) {
-      return conn.sendMessage(m.chat, { text: '⚠️ Responde a una imagen o video' }, { quoted: m })
+      return conn.sendMessage(
+        m.chat,
+        { text: '⚠️ Responde a una imagen o video', ...global.rcanal },
+        { quoted: m }
+      )
     }
 
     await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } })
@@ -82,17 +97,27 @@ let handler = async (m, { conn }) => {
     const webpBuffer = await toWebp(media, /video/.test(mime))
     const sticker = await addExif(webpBuffer, m.pushName || 'Usuario')
 
-    await conn.sendMessage(m.chat, { sticker }, { quoted: m })
+    await conn.sendMessage(
+      m.chat,
+      { sticker, ...global.rcanal },
+      { quoted: m }
+    )
+
     await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
 
   } catch (e) {
     console.error(e)
-    await conn.sendMessage(m.chat, { text: '❌ Error al crear el sticker' }, { quoted: m })
+    await conn.sendMessage(
+      m.chat,
+      { text: '❌ Error al crear el sticker', ...global.rcanal },
+      { quoted: m }
+    )
   }
 }
 
-handler.help = ['sticker']
+handler.help = ['s']
 handler.tags = ['sticker']
-handler.command = ['s', 'sticker']
+handler.command = ['s']
+handler.customPrefix = /^\.s$/i
 
 export default handler
