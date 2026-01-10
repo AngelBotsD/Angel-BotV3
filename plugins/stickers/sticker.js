@@ -1,131 +1,206 @@
-import crypto from 'crypto'
-import ffmpeg from 'fluent-ffmpeg'
-import webp from 'node-webpmux'
-import fs from 'fs'
-import path from 'path'
+import fs from "fs";
+import path from "path";
+import Crypto from "crypto";
+import ffmpeg from "fluent-ffmpeg";
+import webp from "node-webpmux";
 
-const tmp = './tmp'
-if (!fs.existsSync(tmp)) fs.mkdirSync(tmp, { recursive: true })
+const tempFolder = path.join(path.dirname(new URL(import.meta.url).pathname), "../tmp/");
+if (!fs.existsSync(tempFolder)) fs.mkdirSync(tempFolder, { recursive: true });
 
-const random = ext =>
-  path.join(tmp, crypto.randomBytes(6).toString('hex') + '.' + ext)
-
-async function toWebp(buffer, isVideo) {
-  const input = random(isVideo ? 'mp4' : 'jpg')
-  const output = random('webp')
-
-  fs.writeFileSync(input, buffer)
-
-  await new Promise((res, rej) => {
-    ffmpeg(input)
-      .on('end', res)
-      .on('error', rej)
-      .addOutputOptions([
-        '-vcodec', 'libwebp',
-        '-vf',
-        'scale=320:320:force_original_aspect_ratio=decrease,fps=15,pad=320:320:-1:-1:color=white@0.0',
-        '-loop', '0',
-        '-preset', 'default',
-        '-an',
-        '-vsync', '0'
-      ])
-      .toFormat('webp')
-      .save(output)
-  })
-
-  const buff = fs.readFileSync(output)
-  fs.unlinkSync(input)
-  fs.unlinkSync(output)
-  return buff
+function unwrapMessage(m) {
+  let n = m;
+  while (
+    n?.viewOnceMessage?.message ||
+    n?.viewOnceMessageV2?.message ||
+    n?.viewOnceMessageV2Extension?.message ||
+    n?.ephemeralMessage?.message
+  ) {
+    n =
+      n.viewOnceMessage?.message ||
+      n.viewOnceMessageV2?.message ||
+      n.viewOnceMessageV2Extension?.message ||
+      n.ephemeralMessage?.message;
+  }
+  return n;
 }
 
-async function addExif(buffer, packname) {
-  const img = new webp.Image()
-  await img.load(buffer)
+function ensureWA(wa, conn) {
+  if (wa?.downloadContentFromMessage) return wa;
+  if (conn?.wa?.downloadContentFromMessage) return conn.wa;
+  if (global.wa?.downloadContentFromMessage) return global.wa;
+  return null;
+}
+
+function randomFileName(ext) {
+  return `${Crypto.randomBytes(6).readUIntLE(0, 6).toString(36)}.${ext}`;
+}
+
+const handler = async (msg, { conn, wa }) => {
+  const chatId = msg.key.remoteJid;
+  const pref = global.prefixes?.[0] || ".";
+
+  const ctx = msg.message?.extendedTextMessage?.contextInfo;
+  const quotedRaw = ctx?.quotedMessage;
+  const quoted = quotedRaw ? unwrapMessage(quotedRaw) : null;
+
+  let target = quoted || msg.message;
+
+  const isImage = target?.imageMessage;
+  const isVideo = target?.videoMessage;
+
+  if (!isImage && !isVideo) {
+     return conn.sendMessage(
+      chatId,
+      {
+        text: `⚠️ *Responde a una imagen o video para crear un sticker*`,
+      },
+      { quoted: msg }
+    );
+  }
+
+  try {
+    await conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } });
+
+    const WA = ensureWA(wa, conn);
+    if (!WA) throw new Error("No se pudo acceder a Baileys.");
+
+    const mediaType = isImage ? "image" : "video";
+    const mediaNode = target[`${mediaType}Message`];
+
+    const stream = await WA.downloadContentFromMessage(mediaNode, mediaType);
+
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+
+    const senderName = msg.pushName || "Usuario";
+    const metadata = {
+      packname: senderName,
+      author: ""
+    };
+
+    const outSticker =
+      mediaType === "image"
+        ? await writeExifImg(buffer, metadata)
+        : await writeExifVid(buffer, metadata);
+
+    await conn.sendMessage(
+      chatId,
+      { sticker: { url: outSticker }, ...global.rcanal },
+      { quoted: msg }
+    );
+
+    await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } });
+
+  } catch (err) {
+    await conn.sendMessage(
+      chatId,
+      { text: "❌ Hubo un error al crear el sticker.", ...global.rcanal },
+      { quoted: msg }
+    );
+
+    await conn.sendMessage(chatId, { react: { text: "❌", key: msg.key } });
+  }
+};
+
+handler.help = ["𝖲"]
+handler.tags = ["𝖲𝖳𝖨𝖢𝖪𝖤𝖱𝖲"]
+handler.customPrefix = /^(\.s|s)$/i
+handler.command = new RegExp
+export default handler;
+
+async function imageToWebp(media) {
+  const tmpIn = path.join(tempFolder, randomFileName("jpg"));
+  const tmpOut = path.join(tempFolder, randomFileName("webp"));
+  fs.writeFileSync(tmpIn, media);
+
+  await new Promise((resolve, reject) => {
+    ffmpeg(tmpIn)
+      .on("error", reject)
+      .on("end", resolve)
+      .addOutputOptions([
+        "-vcodec", "libwebp",
+        "-vf",
+        "scale='min(320,iw)':min'(320,ih)':force_original_aspect_ratio=decrease,fps=15,pad=320:320:-1:-1:color=white@0.0,split[a][b];[a]palettegen=reserve_transparent=on:transparency_color=ffffff[p];[b][p]paletteuse"
+      ])
+      .toFormat("webp")
+      .save(tmpOut);
+  });
+
+  const buff = fs.readFileSync(tmpOut);
+  fs.unlinkSync(tmpIn);
+  fs.unlinkSync(tmpOut);
+  return buff;
+}
+
+async function videoToWebp(media) {
+  const tmpIn = path.join(tempFolder, randomFileName("mp4"));
+  const tmpOut = path.join(tempFolder, randomFileName("webp"));
+  fs.writeFileSync(tmpIn, media);
+
+  await new Promise((resolve, reject) => {
+    ffmpeg(tmpIn)
+      .on("error", reject)
+      .on("end", resolve)
+      .addOutputOptions([
+        "-vcodec", "libwebp",
+        "-vf",
+        "scale='min(320,iw)':min'(320,ih)':force_original_aspect_ratio=decrease,fps=15,pad=320:320:-1:-1:color=white@0.0,split[a][b];[a]palettegen=reserve_transparent=on:transparency_color=ffffff[p];[b][p]paletteuse",
+        "-loop", "0",
+        "-ss", "00:00:00",
+        "-t", "00:00:05",
+        "-preset", "default",
+        "-an",
+        "-vsync", "0"
+      ])
+      .toFormat("webp")
+      .save(tmpOut);
+  });
+
+  const buff = fs.readFileSync(tmpOut);
+  fs.unlinkSync(tmpIn);
+  fs.unlinkSync(tmpOut);
+  return buff;
+}
+
+async function writeExifImg(media, metadata) {
+  const wMedia = await imageToWebp(media);
+  return await addExif(wMedia, metadata);
+}
+
+async function writeExifVid(media, metadata) {
+  const wMedia = await videoToWebp(media);
+  return await addExif(wMedia, metadata);
+}
+
+async function addExif(webpBuffer, metadata) {
+  const tmpIn = path.join(tempFolder, randomFileName("webp"));
+  const tmpOut = path.join(tempFolder, randomFileName("webp"));
+  fs.writeFileSync(tmpIn, webpBuffer);
 
   const json = {
-    'sticker-pack-id': crypto.randomBytes(16).toString('hex'),
-    'sticker-pack-name': packname,
-    'sticker-pack-publisher': '',
-    emojis: ['']
-  }
+    "sticker-pack-id": "suki-3.0",
+    "sticker-pack-name": metadata.packname,
+    "sticker-pack-publisher": metadata.author,
+    emojis: [""]
+  };
 
-  const jsonBuf = Buffer.from(JSON.stringify(json))
-  const exif = Buffer.concat([
-    Buffer.from([
-      0x49, 0x49, 0x2A, 0x00,
-      0x08, 0x00, 0x00, 0x00,
-      0x01, 0x00,
-      0x41, 0x57,
-      0x07, 0x00,
-      0x00, 0x00,
-      0x00, 0x00,
-      0x16, 0x00,
-      0x00, 0x00
-    ]),
-    jsonBuf
-  ])
+  const exifAttr = Buffer.from([
+    0x49, 0x49, 0x2A, 0x00,
+    0x08, 0x00, 0x00, 0x00,
+    0x01, 0x00, 0x41, 0x57,
+    0x07, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x16, 0x00,
+    0x00, 0x00
+  ]);
 
-  exif.writeUIntLE(jsonBuf.length, 14, 4)
-  img.exif = exif
+  const jsonBuff = Buffer.from(JSON.stringify(json), "utf-8");
+  const exif = Buffer.concat([exifAttr, jsonBuff]);
+  exif.writeUIntLE(jsonBuff.length, 14, 4);
 
-  return img.save(null, { lossless: true })
+  const img = new webp.Image();
+  await img.load(tmpIn);
+  img.exif = exif;
+  await img.save(tmpOut);
+  fs.unlinkSync(tmpIn);
+  return tmpOut;
 }
-
-let handler = async (m, { conn }) => {
-  try {
-    const caption =
-      m.message?.imageMessage?.caption ||
-      m.message?.videoMessage?.caption ||
-      ''
-
-    const usedByCaption = /^\.?(s|sticker)\b/i.test(caption.trim())
-
-    if (!usedByCaption && !m.quoted) return
-
-    const q = m.quoted || m
-    const isImage = q.message?.imageMessage
-    const isVideo = q.message?.videoMessage
-
-    if (!isImage && !isVideo) {
-      return conn.sendMessage(
-        m.chat,
-        { text: '⚠️ Responde a una imagen o video', ...global.rcanal },
-        { quoted: m }
-      )
-    }
-
-    await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } })
-
-    const media = await q.download?.()
-    if (!media) throw 'No media'
-
-    const webpBuffer = await toWebp(media, isVideo)
-    const sticker = await addExif(webpBuffer, m.pushName || 'Usuario')
-
-    await conn.sendMessage(
-      m.chat,
-      { sticker, ...global.rcanal },
-      { quoted: m }
-    )
-
-    await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
-
-  } catch (e) {
-    console.error(e)
-    await conn.sendMessage(
-      m.chat,
-      { text: '❌ Error al crear el sticker', ...global.rcanal },
-      { quoted: m }
-    )
-    await conn.sendMessage(m.chat, { react: { text: '❌', key: m.key } })
-  }
-}
-
-handler.help = ['s', 'sticker']
-handler.tags = ['sticker']
-
-handler.customPrefix = /^\.?(s|sticker)$/i
-handler.command = new RegExp()
-
-export default handler
