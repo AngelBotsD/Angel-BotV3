@@ -54,9 +54,12 @@ async function addExif(buffer, packname) {
     Buffer.from([
       0x49, 0x49, 0x2A, 0x00,
       0x08, 0x00, 0x00, 0x00,
-      0x01, 0x00, 0x41, 0x57,
-      0x07, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x16, 0x00,
+      0x01, 0x00,
+      0x41, 0x57,
+      0x07, 0x00,
+      0x00, 0x00,
+      0x00, 0x00,
+      0x16, 0x00,
       0x00, 0x00
     ]),
     jsonBuf
@@ -70,20 +73,25 @@ async function addExif(buffer, packname) {
 
 let handler = async (m, { conn }) => {
   try {
-    let mime = m.mimetype || ''
-    let isCaptionCmd = false
+    const caption =
+      m.message?.imageMessage?.caption ||
+      m.message?.videoMessage?.caption ||
+      ''
 
-    if (m.message?.imageMessage?.caption || m.message?.videoMessage?.caption) {
-      const cap = m.message.imageMessage?.caption || m.message.videoMessage?.caption || ''
-      isCaptionCmd = /^\.s\b/i.test(cap.trim())
-    }
+    const isCaptionCmd = /^\.s\b/i.test(caption.trim())
+    const q = m.quoted ? m.quoted : m
 
-    let q = m.quoted ? m.quoted : m
+    const isImage =
+      q.message?.imageMessage ||
+      q.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage
+
+    const isVideo =
+      q.message?.videoMessage ||
+      q.message?.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage
 
     if (!isCaptionCmd && !m.quoted) return
 
-    mime = q.mimetype || ''
-    if (!/image|video/.test(mime)) {
+    if (!isImage && !isVideo) {
       return conn.sendMessage(
         m.chat,
         { text: '⚠️ Responde a una imagen o video', ...global.rcanal },
@@ -93,8 +101,10 @@ let handler = async (m, { conn }) => {
 
     await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } })
 
-    const media = await q.download()
-    const webpBuffer = await toWebp(media, /video/.test(mime))
+    const media = await q.download?.()
+    if (!media) throw 'No media'
+
+    const webpBuffer = await toWebp(media, Boolean(isVideo))
     const sticker = await addExif(webpBuffer, m.pushName || 'Usuario')
 
     await conn.sendMessage(
