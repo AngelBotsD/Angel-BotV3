@@ -79,7 +79,7 @@ let handler = async (m, { conn }) => {
       m.message?.videoMessage?.caption ||
       ''
 
-    const usedByCaption = /^\.?(s|sticker)$/i;.test(caption.trim())
+    const usedByCaption = /^\.?(s|sticker)\b/i.test(caption.trim())
 
     if (!usedByCaption && !m.quoted) return
 
@@ -122,9 +122,10 @@ let handler = async (m, { conn }) => {
   }
 }
 
-handler.help = ['s']
+handler.help = ['s', 'sticker']
 handler.tags = ['sticker']
-handler.command = ['s']
-handler.customPrefix = /^\.?(s|sticker)$/i;
-handler.command = new RegExp();
+
+handler.customPrefix = /^\.?(s|sticker)$/i
+handler.command = new RegExp()
+
 export default handler
