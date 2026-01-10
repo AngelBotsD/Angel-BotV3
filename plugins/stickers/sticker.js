@@ -117,7 +117,6 @@ let handler = async (m, { conn }) => {
 
 handler.help = ['s']
 handler.tags = ['sticker']
-handler.command = ['s']
-handler.customPrefix = /^\.s$/i
+handler.customPrefix = /^\.?(s|sticker)$/i;
 
 export default handler
