@@ -73,25 +73,20 @@ async function addExif(buffer, packname) {
 
 let handler = async (m, { conn }) => {
   try {
-    const caption =
-      m.message?.imageMessage?.caption ||
-      m.message?.videoMessage?.caption ||
-      ''
+    let mediaMsg = null
+    let isVideo = false
 
-    const isCaptionCmd = /^\.s\b/i.test(caption.trim())
-    const q = m.quoted ? m.quoted : m
+    if (m.message?.imageMessage || m.message?.videoMessage) {
+      mediaMsg = m
+      isVideo = Boolean(m.message.videoMessage)
+    }
 
-    const isImage =
-      q.message?.imageMessage ||
-      q.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage
+    else if (m.quoted?.message?.imageMessage || m.quoted?.message?.videoMessage) {
+      mediaMsg = m.quoted
+      isVideo = Boolean(m.quoted.message.videoMessage)
+    }
 
-    const isVideo =
-      q.message?.videoMessage ||
-      q.message?.extendedTextMessage?.contextInfo?.quotedMessage?.videoMessage
-
-    if (!isCaptionCmd && !m.quoted) return
-
-    if (!isImage && !isVideo) {
+    if (!mediaMsg) {
       return conn.sendMessage(
         m.chat,
         { text: '⚠️ Responde a una imagen o video', ...global.rcanal },
@@ -101,10 +96,10 @@ let handler = async (m, { conn }) => {
 
     await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } })
 
-    const media = await q.download?.()
+    const media = await mediaMsg.download?.()
     if (!media) throw 'No media'
 
-    const webpBuffer = await toWebp(media, Boolean(isVideo))
+    const webpBuffer = await toWebp(media, isVideo)
     const sticker = await addExif(webpBuffer, m.pushName || 'Usuario')
 
     await conn.sendMessage(
