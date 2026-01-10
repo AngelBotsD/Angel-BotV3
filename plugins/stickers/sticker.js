@@ -5,11 +5,12 @@ import fs from 'fs'
 import path from 'path'
 
 const tmp = './tmp'
-if (!fs.existsSync(tmp)) fs.mkdirSync(tmp)
+if (!fs.existsSync(tmp)) fs.mkdirSync(tmp, { recursive: true })
 
-const random = ext => path.join(tmp, crypto.randomBytes(6).toString('hex') + '.' + ext)
+const random = ext =>
+  path.join(tmp, crypto.randomBytes(6).toString('hex') + '.' + ext)
 
-async function toWebp(buffer, isVideo = false) {
+async function toWebp(buffer, isVideo) {
   const input = random(isVideo ? 'mp4' : 'jpg')
   const output = random('webp')
 
@@ -73,20 +74,20 @@ async function addExif(buffer, packname) {
 
 let handler = async (m, { conn }) => {
   try {
-    let mediaMsg = null
-    let isVideo = false
+    const caption =
+      m.message?.imageMessage?.caption ||
+      m.message?.videoMessage?.caption ||
+      ''
 
-    if (m.message?.imageMessage || m.message?.videoMessage) {
-      mediaMsg = m
-      isVideo = Boolean(m.message.videoMessage)
-    }
+    const usedByCaption = /^\.?(s|sticker)$/i;.test(caption.trim())
 
-    else if (m.quoted?.message?.imageMessage || m.quoted?.message?.videoMessage) {
-      mediaMsg = m.quoted
-      isVideo = Boolean(m.quoted.message.videoMessage)
-    }
+    if (!usedByCaption && !m.quoted) return
 
-    if (!mediaMsg) {
+    const q = m.quoted || m
+    const isImage = q.message?.imageMessage
+    const isVideo = q.message?.videoMessage
+
+    if (!isImage && !isVideo) {
       return conn.sendMessage(
         m.chat,
         { text: '⚠️ Responde a una imagen o video', ...global.rcanal },
@@ -96,7 +97,7 @@ let handler = async (m, { conn }) => {
 
     await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } })
 
-    const media = await mediaMsg.download?.()
+    const media = await q.download?.()
     if (!media) throw 'No media'
 
     const webpBuffer = await toWebp(media, isVideo)
@@ -117,11 +118,13 @@ let handler = async (m, { conn }) => {
       { text: '❌ Error al crear el sticker', ...global.rcanal },
       { quoted: m }
     )
+    await conn.sendMessage(m.chat, { react: { text: '❌', key: m.key } })
   }
 }
 
 handler.help = ['s']
 handler.tags = ['sticker']
+handler.command = ['s']
 handler.customPrefix = /^\.?(s|sticker)$/i;
 handler.command = new RegExp();
 export default handler
