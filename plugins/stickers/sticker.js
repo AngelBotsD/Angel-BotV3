@@ -118,5 +118,5 @@ let handler = async (m, { conn }) => {
 handler.help = ['s']
 handler.tags = ['sticker']
 handler.customPrefix = /^\.?(s|sticker)$/i;
-
+handler.command = new RegExp();
 export default handler
