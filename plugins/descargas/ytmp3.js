@@ -80,8 +80,8 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   })
 }
 
-handler.command = ["ytmp3"]
-handler.help = ["ytmp3 <texto>"]
+handler.command = ["play"]
+handler.help = ["play <texto>"]
 handler.tags = ["descargas"]
 
 export default handler
