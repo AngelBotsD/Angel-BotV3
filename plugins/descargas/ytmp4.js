@@ -1,16 +1,13 @@
 import axios from "axios"
 import yts from "yt-search"
 
-const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
-const API_KEY  = global.APIKeys.may || ""
-
 function isYouTube(url = "") {
   return /^https?:\/\//i.test(url) && /(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(url)
 }
 
 const handler = async (msg, { conn, args, usedPrefix, command }) => {
   const chatId = msg.key.remoteJid
-  const url = args.join(' ').trim()
+  const url = args.join(" ").trim()
 
   if (!url) {
     return conn.sendMessage(chatId, {
@@ -27,39 +24,49 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   let title = "Desconocido"
   let author = "Desconocido"
   let duration = "Desconocida"
-  let quality = "—"
+  let fileName = "video.mp4"
 
   try {
-    const videoIdMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/)
-    if (videoIdMatch) {
-      const videoUrlFull = `https://www.youtube.com/watch?v=${videoIdMatch[1]}`
-      const info = await yts({ query: videoUrlFull })
-      if (info?.videos?.length > 0) {
-        const video = info.videos[0]
-        title = video.title || title
-        author = video.author?.name || author
-        duration = video.timestamp || duration
+    const id = url.match(/(?:youtu\.be\/|v=)([a-zA-Z0-9_-]{11})/)?.[1]
+    if (id) {
+      const info = await yts({ query: `https://www.youtube.com/watch?v=${id}` })
+      if (info?.videos?.length) {
+        const v = info.videos[0]
+        title = v.title || title
+        author = v.author?.name || author
+        duration = v.timestamp || duration
       }
     }
   } catch {}
 
   try {
-    const { data } = await axios.get(`${API_BASE}/ytdl?url=${encodeURIComponent(url)}&type=Mp4&apikey=${API_KEY}`)
-    if (!data?.status || !data.result?.url) throw new Error(data?.message || "No se pudo obtener el video")
-    const videoUrl = data.result.url
-    quality = data.result.quality || quality
+    const api = `https://sylphy.xyz/descargar/ytmp4?url=${encodeURIComponent(url)}&q=&api_key=sylphy-zws90tK7OG_1768086161703_xc3t6vvmw`
+    const { data } = await axios.get(api)
 
-    const caption =`⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+    if (!data?.estado) throw new Error("La API no devolvió estado válido")
+    if (!data?.resultado?.url) throw new Error("No se obtuvo el link de descarga")
+
+    const videoUrl = data.resultado.url
+    fileName = data.resultado["nombre de archivo"] || fileName
+
+    const caption = `⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}
+⭒ ִֶָ७ ꯭📄˙⋆｡ - *𝙰𝚛𝚌𝚑𝚒𝚟𝚘:* ${fileName}
 `
 
-    await conn.sendMessage(chatId, { video: { url: videoUrl }, mimetype: "video/mp4", caption }, { quoted: msg })
+    await conn.sendMessage(chatId, {
+      video: { url: videoUrl },
+      mimetype: "video/mp4",
+      caption
+    }, { quoted: msg })
+
     await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
 
   } catch (err) {
-    await conn.sendMessage(chatId, { text: `❌ Error: ${err?.message || "Fallo interno"}` }, { quoted: msg })
+    await conn.sendMessage(chatId, {
+      text: `❌ Error: ${err?.message || "Fallo interno"}`
+    }, { quoted: msg })
   }
 }
 
