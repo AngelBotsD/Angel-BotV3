@@ -46,15 +46,19 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     const api = `https://sylphy.xyz/descargar/ytmp4?url=${encodeURIComponent(url)}&q=&api_key=sylphy-zws90tK7OG_1768086161703_xc3t6vvmw`
     const { data } = await axios.get(api, { timeout: 60000 })
 
-    const videoUrl =
+    let videoUrl =
       data?.resultado?.url ||
       data?.url ||
       data?.link ||
       data?.download
 
-    if (!videoUrl) {
-      throw new Error("La API no devolvió ningún link de descarga")
+    if (!videoUrl) throw new Error("No se obtuvo link de descarga")
+
+    if (typeof videoUrl === "function") {
+      videoUrl = videoUrl()
     }
+
+    videoUrl = String(videoUrl)
 
     const fileName =
       data?.resultado?.["nombre de archivo"] ||
