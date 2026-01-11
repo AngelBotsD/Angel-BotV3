@@ -1,24 +1,18 @@
-// plugins/_allButtons.js
 export async function all(m) {
   if (!m.message) return
 
-  // 🟢 Botones clásicos
-  if (m.message.buttonsResponseMessage) {
-    const id = m.message.buttonsResponseMessage.selectedButtonId
-    if (id) {
-      m.isButton = true
-      m.text = id
-    }
-    return
-  }
+  const msg = m.message
 
-  // 🟡 Template buttons (por compatibilidad)
-  if (m.message.templateButtonReplyMessage) {
-    const id = m.message.templateButtonReplyMessage.selectedId
-    if (id) {
+  // BOTONES NATIVOS
+  if (msg.interactiveResponseMessage) {
+    const params = msg.interactiveResponseMessage.nativeFlowResponseMessage?.paramsJson
+    if (!params) return
+
+    const data = JSON.parse(params)
+
+    if (data.id) {
+      m.text = data.id          // << AQUÍ SE CONVIERTE EN COMANDO
       m.isButton = true
-      m.text = id
     }
-    return
   }
 }
