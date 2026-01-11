@@ -69,6 +69,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     }
 
     audioUrl = data.result.url
+title = data.result.title || title
 
   } catch (err) {
     return conn.sendMessage(chatId, {
