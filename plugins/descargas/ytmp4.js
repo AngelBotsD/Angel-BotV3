@@ -45,27 +45,27 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   try {
     const apiUrl = `https://sylphy.xyz/descargar/ytmp4?url=${encodeURIComponent(url)}&q=&api_key=sylphy-zws90tK7OG_1768086161703_xc3t6vvmw`
 
-    let res = await axios.get(apiUrl, {
+    const res = await axios.get(apiUrl, {
       timeout: 60000,
       responseType: "text"
     })
 
-    let data = res.data
-    if (typeof data === "string") {
-      data = JSON.parse(data)
+    let videoUrl = null
+
+    if (typeof res.data === "string" && res.data.trim().startsWith("{")) {
+      const json = JSON.parse(res.data)
+      videoUrl = json?.resultado?.url
     }
 
-    let videoUrl = data?.resultado?.url
-    if (!videoUrl) throw new Error("No se pudo obtener el link de descarga")
+    if (!videoUrl) {
+      videoUrl = apiUrl
+    }
 
     videoUrl = String(videoUrl)
-
-    const fileName = data.resultado["nombre de archivo"] || "video.mp4"
 
     const caption = `⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-⭒ ִֶָ७ ꯭📄˙⋆｡ - *𝙰𝚛𝚌𝚑𝚒𝚟𝚘:* ${fileName}
 `
 
     await conn.sendMessage(chatId, {
