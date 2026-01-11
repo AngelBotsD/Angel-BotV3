@@ -1,15 +1,17 @@
-import pkg from 'baileys_helper'
-const { sendButtons } = pkg
+import { sendButtons } from '../lib/miniButtons.js'
 
 const handler = async (m, { conn }) => {
-  await sendButtons(conn, m.chat, {
-    text: '👋 Hola, elige una opción:',
-    footer: 'Angel Bot',
-    buttons: [
-      { id: 'menu', text: '📋 Menu' },
-      { id: 'owner', text: '👑 Owner' }
-    ]
-  }, { quoted: m })
+  await sendButtons(
+    conn,
+    m.chat,
+    '👋 Hola, elige una opción:',
+    'Angel Bot',
+    [
+      { text: 'Menu', id: '.menu' },
+      { text: 'Owner', id: '.owner' }
+    ],
+    m
+  )
 }
 
 handler.command = ['hola']
