@@ -16,10 +16,11 @@
 "plugins":"plugins"
 },
 "dependencies":{
-"@whiskeysockets/baileys":"github:AngelBotsD/baileyss",
+"@whiskeysockets/baileys":"github:ds6/buils",
 "@hapi/boom":"^10.0.1",
 "awesome-phonenumber":"^5.10.0",
 "acrcloud":"^1.4.0",
+"baileys_helper": "^1.0.0",
 "boxen":"^7.1.1",
 "cfonts": "latest",
 "chalk":"^4.1.2",
