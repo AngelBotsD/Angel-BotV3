@@ -16,7 +16,7 @@
 "plugins":"plugins"
 },
 "dependencies":{
-"@whiskeysockets/baileys":"github:AngelBotsD/bailiyss",
+"@whiskeysockets/baileys":"github:AngelBotsD/baileyss",
 "@hapi/boom":"^10.0.1",
 "awesome-phonenumber":"^5.10.0",
 "acrcloud":"^1.4.0",
