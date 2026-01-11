@@ -1,9 +1,12 @@
 import axios from "axios"
 import yts from "yt-search"
-import fetch from "node-fetch"
+
+const API_BASE = (global.APIs?.may || "").replace(/\/+$/, "")
+const API_KEY = global.APIKeys?.may || ""
 
 function isYouTube(url = "") {
-  return /^https?:\/\//i.test(url) && /(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(url)
+  return /^https?:\/\//i.test(url) &&
+    /(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(url)
 }
 
 const handler = async (msg, { conn, args, usedPrefix, command }) => {
@@ -29,58 +32,51 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   let title = "Desconocido"
   let author = "Desconocido"
   let duration = "Desconocida"
+  let quality = "—"
 
   try {
-    const id = url.match(/(?:youtu\.be\/|v=)([a-zA-Z0-9_-]{11})/)?.[1]
+    const id = url.match(/(?:youtu\.be\/|v=|\/shorts\/)([a-zA-Z0-9_-]{11})/)?.[1]
     if (id) {
-      const info = await yts({ query: `https://www.youtube.com/watch?v=${id}` })
-      if (info?.videos?.length) {
-        const v = info.videos[0]
-        title = v.title || title
-        author = v.author?.name || author
-        duration = v.timestamp || duration
+      const info = await yts({ videoId: id })
+      if (info) {
+        title = info.title || title
+        author = info.author?.name || author
+        duration = info.timestamp || duration
       }
     }
   } catch {}
 
   try {
-    const apiUrl = `https://sylphy.xyz/descargar/ytmp4?url=${encodeURIComponent(url)}&q=&api_key=sylphy-zws90tK7OG_1768086161703_xc3t6vvmw`
+    const res = await axios.get(
+      `${API_BASE}/ytdl`,
+      {
+        params: {
+          url,
+          type: "Mp4",
+          apikey: API_KEY
+        },
+        timeout: 20000
+      }
+    )
 
-    const res = await axios.get(apiUrl, {
-      timeout: 60000,
-      responseType: "text"
-    })
-
-    let data = res.data
-    if (typeof data === "string" && data.trim().startsWith("{")) {
-      data = JSON.parse(data)
+    if (typeof res.data !== "object") {
+      throw new Error("La API devolvió HTML")
     }
 
-    const videoUrl = data?.resultado?.url
-    if (!videoUrl) throw new Error("No se pudo obtener el link de descarga")
+    const videoUrl = res.data?.result?.url
+    quality = res.data?.result?.quality || quality
 
-    await conn.sendMessage(chatId, {
-      react: { text: "⬇️", key: msg.key }
-    })
-
-    const videoRes = await fetch(videoUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "*/*"
-      }
-    })
-
-    if (!videoRes.ok) throw new Error("Falló la descarga del video")
-
-    const buffer = await videoRes.buffer()
+    if (!videoUrl || !/^https?:\/\//i.test(videoUrl)) {
+      throw new Error("No se pudo obtener el link MP4")
+    }
 
     const caption = `⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-`
+⭒ ִֶָ७ ꯭📺˙⋆｡ - *𝙲𝚊𝚕𝚒𝚍𝚊𝚍:* ${quality}`
 
     await conn.sendMessage(chatId, {
-      video: buffer,
+      video: { url: videoUrl },
       mimetype: "video/mp4",
       caption
     }, { quoted: msg })
@@ -91,13 +87,13 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
   } catch (err) {
     await conn.sendMessage(chatId, {
-      text: `❌ Error: ${err.message}`
+      text: `❌ Error: ${err.message || "Fallo interno"}`
     }, { quoted: msg })
   }
 }
 
 handler.command = ["ytmp4", "yta4"]
-handler.help = ["𝖸𝗍𝗆𝗉4 <𝖴𝗋𝗅>"]
-handler.tags = ["𝖣𝖤𝖲𝖢𝖠𝖱𝖦𝖠𝖲"]
+handler.help = ["Ytmp4 <URL>"]
+handler.tags = ["descargas"]
 
 export default handler
