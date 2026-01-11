@@ -1,4 +1,4 @@
-import { sendButtons } from '../lib/miniButtons.js'
+import { sendButtons } from './lib/miniButtons.js'
 
 const handler = async (m, { conn }) => {
   await sendButtons(
