@@ -1,5 +1,7 @@
 import { smsg } from "./lib/simple.js"
 import { fileURLToPath } from "url"
+import pkg from 'baileys_helper'
+const { sendButtons } = pkg
 import path, { join } from "path"
 import fs, { unwatchFile, watchFile } from "fs"
 import chalk from "chalk"
