@@ -1,11 +1,11 @@
 import yts from 'yt-search';
 
-const handler = async (m, { conn, text, usedPrefix, command }) => {
-  if (!text) {
+const handler = async (msg, { conn, args, usedPrefix, command }) => {
+  if (!query) {
     throw `❗ Por favor ingresa un texto para buscar.\nEjemplo: ${usedPrefix + command} Nombre del video`;
   }
 
-  const search = await yts(text);
+  const url = args.join(" ").trim()
   const videoInfo = search.all?.[0];
 
   if (!videoInfo) {
