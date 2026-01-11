@@ -17,7 +17,6 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } }).catch(() => {})
 
   try {
-    /* 🔍 BÚSQUEDA (rápida) */
     const search = await yts(query)
     const video = search?.videos?.[0]
     if (!video) throw "No se encontró ningún resultado"
@@ -28,7 +27,6 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     const thumb    = video.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg"
     const link     = video.url
 
-    /* 🖼 INFO (NO BLOQUEANTE) */
     conn.sendMessage(chatId, {
       image: { url: thumb },
       caption: `
@@ -40,7 +38,6 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 `.trim()
     }, { quoted: msg }).catch(() => {})
 
-    /* 🎧 DESCARGA (blindada) */
     const res = await axios.get(`${API_BASE}/ytdl`, {
       params: {
         url: link,
@@ -66,7 +63,6 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
     const cleanTitle = (data.result.title || title).replace(/\.mp3$/i, "")
 
-    /* ▶️ AUDIO */
     await conn.sendMessage(chatId, {
       audio: { url: audioUrl },
       mimetype: "audio/mpeg",
