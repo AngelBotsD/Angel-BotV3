@@ -4,41 +4,51 @@ import yts from "yt-search"
 const API_BASE = (global.APIs?.may || "").replace(/\/+$/, "")
 const API_KEY  = global.APIKeys?.may || ""
 
-const handler = async (msg, { conn, args, usedPrefix, command }) => {
-  const chatId = msg.key.remoteJid
-  const query = args.join(" ").trim()
+const handler = async (msg, { conn, text, usedPrefix, command }) => {
 
-  if (!query) {
+  const chatId = msg.key.remoteJid
+
+  if (!text)
     return conn.sendMessage(chatId, {
-      text: `✳️ Usa:\n${usedPrefix}${command} <nombre de la canción>\nEj:\n${usedPrefix}${command} karma police`
+      text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree`
     }, { quoted: msg })
-  }
 
   await conn.sendMessage(chatId, {
-    react: { text: "🔎", key: msg.key }
+    react: { text: "🕒", key: msg.key }
   })
 
-  let video
-
   try {
-    const search = await yts(query)
-    if (!search.videos?.length) {
-      throw new Error("Sin resultados")
-    }
-    video = search.videos[0]
-  } catch {
-    return conn.sendMessage(chatId, {
-      text: "❌ No encontré resultados en YouTube."
+
+    const search = await yts(text)
+
+    if (!search?.videos?.length)
+      throw new Error("No se encontró ningún resultado")
+
+    const video = search.videos[0]
+
+    const title     = video.title
+    const author    = video.author?.name || "Desconocido"
+    const duration  = video.timestamp || "Desconocida"
+    const thumb     = video.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg"
+    const videoLink = video.url
+
+    const infoCaption = `
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
+
+» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖 🎧
+» 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
+`.trim()
+
+    await conn.sendMessage(chatId, {
+      image: { url: thumb },
+      caption: infoCaption
     }, { quoted: msg })
-  }
 
-  let audioUrl
-  let title = video.title
-
-  try {
     const res = await axios.get(`${API_BASE}/ytdl`, {
       params: {
-        url: video.url,
+        url: videoLink,
         type: "Mp3",
         apikey: API_KEY
       },
@@ -49,48 +59,44 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
       timeout: 20000
     })
 
-    const data = res.data
-    if (!data?.status || !data?.result?.url) {
-      throw new Error("No se pudo obtener el audio")
+    if (
+      !res?.data ||
+      typeof res.data !== "object" ||
+      !res.data.status ||
+      !res.data.result?.url ||
+      !/^https?:\/\//i.test(res.data.result.url)
+    ) {
+      throw new Error("La API no devolvió un link válido")
     }
 
-    audioUrl = data.result.url
-    title = (data.result.title || title).replace(/\.mp3$/i, "")
+    const audioUrl = res.data.result.url
+    const cleanTitle = (res.data.result.title || title).replace(/\.mp3$/i, "")
+
+    await conn.sendMessage(chatId, {
+      audio: { url: audioUrl },
+      mimetype: "audio/mpeg",
+      fileName: `${cleanTitle}.mp3`,
+      ptt: false
+    }, { quoted: msg })
+
+    await conn.sendMessage(chatId, {
+      react: { text: "✅", key: msg.key }
+    })
 
   } catch (err) {
-    return conn.sendMessage(chatId, {
-      text: `❌ Error al obtener audio: ${err?.response?.status || ""} ${err?.message || ""}`
+
+    console.error("play error:", err)
+
+    await conn.sendMessage(chatId, {
+      text: `❌ Error: ${err?.message || "Fallo interno"}`
     }, { quoted: msg })
+
   }
 
-  const caption = `
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${video.author?.name || "Desconocido"}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${video.timestamp}
-
-» 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖 🎧
-» 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
-`.trim()
-
-  await conn.sendMessage(chatId, {
-    image: { url: video.thumbnail },
-    caption
-  }, { quoted: msg })
-
-  await conn.sendMessage(chatId, {
-    audio: { url: audioUrl },
-    mimetype: "audio/mpeg",
-    ptt: false,
-    fileName: `${title}.mp3`
-  }, { quoted: msg })
-
-  await conn.sendMessage(chatId, {
-    react: { text: "✅", key: msg.key }
-  })
 }
 
-handler.command = ["play"]
-handler.help = ["play <texto>"]
-handler.tags = ["descargas"]
+handler.command = ["play", "ytplay"]
+handler.help    = ["play <texto>"]
+handler.tags    = ["descargas"]
 
 export default handler
