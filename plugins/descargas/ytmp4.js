@@ -1,5 +1,6 @@
 import axios from "axios"
 import yts from "yt-search"
+import fetch from "node-fetch"
 
 function isYouTube(url = "") {
   return /^https?:\/\//i.test(url) && /(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(url)
@@ -50,18 +51,28 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
       responseType: "text"
     })
 
-    let videoUrl = null
-
-    if (typeof res.data === "string" && res.data.trim().startsWith("{")) {
-      const json = JSON.parse(res.data)
-      videoUrl = json?.resultado?.url
+    let data = res.data
+    if (typeof data === "string" && data.trim().startsWith("{")) {
+      data = JSON.parse(data)
     }
 
-    if (!videoUrl) {
-      videoUrl = apiUrl
-    }
+    const videoUrl = data?.resultado?.url
+    if (!videoUrl) throw new Error("No se pudo obtener el link de descarga")
 
-    videoUrl = String(videoUrl)
+    await conn.sendMessage(chatId, {
+      react: { text: "⬇️", key: msg.key }
+    })
+
+    const videoRes = await fetch(videoUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "*/*"
+      }
+    })
+
+    if (!videoRes.ok) throw new Error("Falló la descarga del video")
+
+    const buffer = await videoRes.buffer()
 
     const caption = `⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
@@ -69,7 +80,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 `
 
     await conn.sendMessage(chatId, {
-      video: { url: videoUrl },
+      video: buffer,
       mimetype: "video/mp4",
       caption
     }, { quoted: msg })
