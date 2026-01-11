@@ -8,16 +8,20 @@ export async function all(m) {
   let params
   try {
     params = JSON.parse(native.paramsJson)
-  } catch {
+  } catch (e) {
+    console.error('❌ Error parseando paramsJson:', e)
     return
   }
 
-  // 👇 ESTE ES EL ID QUE DEFINES EN sendButtons
-  const id = params.id || params.buttonId || params.cmd
-  if (!id) return
+  // 🔥 DEBUG (MIRA ESTO EN CONSOLA)
+  console.log('📦 native_flow params:', params)
+
+  // 🧠 Agarramos EL PRIMER VALOR STRING que exista
+  let value = Object.values(params).find(v => typeof v === 'string')
+  if (!value) return
 
   m.isButton = true
 
-  // 🔑 Convertimos el botón en comando REAL
-  m.text = id.startsWith('.') ? id : '.' + id
+  // 🔑 Lo convertimos en comando REAL
+  m.text = value.startsWith('.') ? value : '.' + value
 }
