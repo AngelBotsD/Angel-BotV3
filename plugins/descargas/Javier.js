@@ -1,20 +1,14 @@
+import pkg from 'baileys_helper'
+const { sendButtons } = pkg
+
 const handler = async (m, { conn }) => {
-  await conn.sendMessage(m.chat, {
+  await sendButtons(conn, m.chat, {
     text: '👋 Hola, elige una opción:',
     footer: 'Angel Bot',
     buttons: [
-      {
-        buttonId: '.menu',
-        buttonText: { displayText: '📋 Menu' },
-        type: 1
-      },
-      {
-        buttonId: '.owner',
-        buttonText: { displayText: '👑 Owner' },
-        type: 1
-      }
-    ],
-    headerType: 1
+      { id: 'menu', text: '📋 Menu' },
+      { id: 'owner', text: '👑 Owner' }
+    ]
   }, { quoted: m })
 }
 
