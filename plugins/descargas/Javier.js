@@ -27,7 +27,7 @@ let handler = async (m, { conn, usedPrefix }) => {
             video: { url: randomMeme },
             caption: "¡Aquí tienes un meme para disfrutar!",
             buttons: buttons,
-            viewOnce: true
+            viewOnce: false
         },
         { quoted: m }
     );
