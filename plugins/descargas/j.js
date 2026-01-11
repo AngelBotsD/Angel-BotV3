@@ -5,7 +5,7 @@ export async function all(m) {
   if (!m.isButton) return
 
   if (m.text === 'link_btn') {
-    m.text = 'linl'
+    m.text = 'link'
   }
 
   if (m.text === 'owner_btn') {
