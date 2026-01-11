@@ -2,15 +2,35 @@ import pkg from 'baileys_helper'
 const { sendButtons } = pkg
 
 const handler = async (m, { conn }) => {
+
+  // 🔘 Si viene de botón
+  if (m.isButton) {
+
+    if (m.text === 'menu_btn') {
+      // 🔥 ejecuta .menu REAL
+      m.text = '.menu'
+      return
+    }
+
+    if (m.text === 'owner_btn') {
+      // 🔥 ejecuta .owner REAL
+      m.text = '.owner'
+      return
+    }
+
+    return
+  }
+
+  // 👋 .hola normal
   await sendButtons(conn, m.chat, {
-    text: '🧪 Prueba de botones',
-    footer: 'Bot test',
+    text: '👋 Hola, elige una opción:',
+    footer: 'Angel Bot',
     buttons: [
-      { id: 'btn_1', text: 'Opción 1' },
-      { id: 'btn_2', text: 'Opción 2' }
+      { id: 'menu_btn', text: 'Menu' },
+      { id: 'owner_btn', text: 'Owner' }
     ]
   })
 }
 
-handler.command = ['to']
+handler.command = ['hola']
 export default handler
