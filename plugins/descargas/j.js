@@ -1,57 +1,62 @@
-import yts from 'yt-search';
+import yts from 'yt-search'
 
-const handler = async (msg, { conn, args, usedPrefix, command }) => {
+const handler = async (m, { conn, args, usedPrefix, command }) => {
+  const query = args.join(' ').trim()
   if (!query) {
-    throw `❗ Por favor ingresa un texto para buscar.\nEjemplo: ${usedPrefix + command} Nombre del video`;
+    throw `❗ Por favor ingresa un texto para buscar.\nEjemplo: ${usedPrefix + command} Nombre del video`
   }
 
-  const url = args.join(" ").trim()
-  const videoInfo = search.all?.[0];
+  const search = await yts(query)
+  const videoInfo = search.videos?.[0]
 
   if (!videoInfo) {
-    throw '❗ No se encontraron resultados para tu búsqueda. Intenta con otro título.';
+    throw '❗ No se encontraron resultados para tu búsqueda.'
   }
 
   const body = `\`\`\`El mejor bot de WhatsApp ⚔️
-  
-Elige una de las opciones para descargar:
-🎧 *Audio* o 📽️ *Video*
-  `;
+
+Elige una opción para descargar:
+🎧 Audio o 📽️ Video
+\`\`\``
 
   await conn.sendMessage(
     m.chat,
     {
-      image: { url: videoInfo.thumbnail },
-      caption: body,
-      footer: `𝕭𝖑𝖆𝖈𝖐 𝕮𝖑𝖔𝖛𝖊𝖗 ☘︎| ⚔️🥷`,
+      text: body,
+      footer: '𝕭𝖑𝖆𝖈𝖐 𝕮𝖑𝖔𝖛𝖊𝖗 ☘︎',
       buttons: [
-        { buttonId: `.ytmp3 ${videoInfo.url}`, buttonText: { displayText: '🎧 Audio' } },
-        { buttonId: `.ytmp4 ${videoInfo.url}`, buttonText: { displayText: '📽️ Video' } },
-        { buttonId: `.ytmp3doc ${videoInfo.url}`, buttonText: { displayText: '💿 audio doc' } },
-        { buttonId: `.ytmp4doc ${videoInfo.url}`, buttonText: { displayText: '🎥 vídeo doc' } },
-      ],
-      viewOnce: true,
-      headerType: 4,
-      contextInfo: {
-        externalAdReply: {
-          showAdAttribution: false,
-          title: '📡 Descargas clover',
-          body: '✡︎ Dev • TheCarlos',
-          mediaType: 2,
-          sourceUrl: global.redes || '',
-          thumbnail: global.icons || null
+        {
+          buttonId: `.ytmp3 ${videoInfo.url}`,
+          buttonText: { displayText: '🎧 Audio' },
+          type: 1
+        },
+        {
+          buttonId: `.ytmp4 ${videoInfo.url}`,
+          buttonText: { displayText: '📽️ Video' },
+          type: 1
+        },
+        {
+          buttonId: `.ytmp3doc ${videoInfo.url}`,
+          buttonText: { displayText: '💿 Audio Doc' },
+          type: 1
+        },
+        {
+          buttonId: `.ytmp4doc ${videoInfo.url}`,
+          buttonText: { displayText: '🎥 Video Doc' },
+          type: 1
         }
-      }
+      ],
+      headerType: 1
     },
     { quoted: m }
-  );
+  )
 
-  m.react('✅'); 
-};
+  await m.react('✅')
+}
 
-handler.command = ['playa', 'playvid', 'play2'];
-handler.tags = ['descargas'];
-handler.group = true;
-handler.limit = 6;
+handler.command = ['playa', 'playvid', 'play2']
+handler.tags = ['descargas']
+handler.group = true
+handler.limit = 6
 
-export default handler;
+export default handler
