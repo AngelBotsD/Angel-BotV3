@@ -1,12 +1,12 @@
 import axios from "axios"
 import yts from "yt-search"
 
-const API_BASE = (global.APIs?.may || "").replace(//+$/, "")
-const API_KEY  = global.APIKeys?.may || ""
+const API_BASE = (global.APIs?.may || "").replace(/\/+$/, "")
+const API_KEY = global.APIKeys?.may || ""
 
 function isYouTube(url = "") {
-  return /^https?:///i.test(url) &&
-    /(youtube.com|youtu.be|music.youtube.com)/i.test(url)
+  return /^https?:\/\//i.test(url) &&
+    /(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(url)
 }
 
 const handler = async (msg, { conn, args, usedPrefix, command }) => {
@@ -17,7 +17,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     return conn.sendMessage(
       chatId,
       {
-        text: ✳️ Usa:\n${usedPrefix}${command} <url>\nEj:\n${usedPrefix}${command} https://youtu.be/xxxx
+        text: `✳️ Usa:\n${usedPrefix}${command} <url>\nEj:\n${usedPrefix}${command} https://youtu.be/xxxx`
       },
       { quoted: msg }
     )
@@ -26,9 +26,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   if (!isYouTube(url)) {
     return conn.sendMessage(
       chatId,
-      {
-        text: "❌ URL de YouTube inválida."
-      },
+      { text: "❌ URL de YouTube inválida." },
       { quoted: msg }
     )
   }
@@ -44,13 +42,11 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
   try {
     const id = url.match(
-      /(?:youtu.be\/|youtube.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
+      /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{11})/
     )?.[1]
 
     if (id) {
-      const info = await yts({
-        query: https://www.youtube.com/watch?v=${id}
-      })
+      const info = await yts({ query: `https://www.youtube.com/watch?v=${id}` })
 
       if (info?.videos?.length) {
         const v = info.videos[0]
@@ -65,21 +61,18 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   let audioUrl
 
   try {
-    const res = await axios.get(
-      ${API_BASE}/ytdl,
-      {
-        params: {
-          url,
-          type: "Mp3",
-          apikey: API_KEY
-        },
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          "Accept": "application/json"
-        },
-        timeout: 20000
-      }
-    )
+    const res = await axios.get(`${API_BASE}/ytdl`, {
+      params: {
+        url,
+        type: "Mp3",
+        apikey: API_KEY
+      },
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+      },
+      timeout: 20000
+    })
 
     const data = res.data
 
@@ -94,7 +87,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     return conn.sendMessage(
       chatId,
       {
-        text: ❌ Error al obtener audio: ${err?.response?.status || ""} ${err?.message || "Fallo interno"}
+        text: `❌ Error al obtener audio: ${err?.response?.status || ""} ${err?.message || "Fallo interno"}`
       },
       { quoted: msg }
     )
@@ -124,7 +117,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
       audio: { url: audioUrl },
       mimetype: "audio/mpeg",
       ptt: false,
-      fileName: ${title}.mp3
+      fileName: `${title}.mp3`
     },
     { quoted: msg }
   )
