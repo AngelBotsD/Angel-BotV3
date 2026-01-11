@@ -1,3 +1,6 @@
+import pkg from 'baileys_helper'
+const { sendButtons } = pkg
+
 const handler = async (m, { conn }) => {
   await sendButtons(conn, m.chat, {
     text: '🧪 Prueba de botones',
@@ -9,5 +12,5 @@ const handler = async (m, { conn }) => {
   })
 }
 
-handler.command = ['tnf']
+handler.command = ['to']
 export default handler
