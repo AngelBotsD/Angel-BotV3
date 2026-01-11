@@ -69,7 +69,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     }
 
     audioUrl = data.result.url
-title = data.result.title || title
+title = (data.result.title || title).replace(/\.mp3$/i, "")
 
   } catch (err) {
     return conn.sendMessage(chatId, {
