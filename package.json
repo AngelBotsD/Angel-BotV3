@@ -9,7 +9,7 @@
 "start": "node index.js"
 },
 "engines":{
-"node":">=22.21.1"
+"node":">=21.7.3"
 },
 "directories":{
 "lib":"lib",
