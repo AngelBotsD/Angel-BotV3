@@ -1,123 +1,140 @@
-import axios from "axios"
-import yts from "yt-search"
+import {
+  proto,
+  generateWAMessage,
+  areJidsSameUser
+} from "@whiskeysockets/baileys"
 
-const API_BASE = (global.APIs.may || "").replace(/\/+$/, "")
-const API_KEY  = global.APIKeys.may || ""
+export async function all(m, chatUpdate) {
+  if (m.isBaileys) return
+  if (!m.message) return
 
-const handler = async (msg, { conn, args, usedPrefix, command }) => {
-  const chatId = msg.key.remoteJid
- const input = args.join(" ").trim()
+  let id = null
+  let text = null
 
-  if (input.startsWith("audio|") || input.startsWith("video|")) {
-    const [type, url] = input.split("|")
+  // ==========================
+  // BOTONES CLÁSICOS
+  // ==========================
+  if (m.message.buttonsResponseMessage) {
+    id = m.message.buttonsResponseMessage.selectedButtonId
+    text = m.message.buttonsResponseMessage.selectedDisplayText
+  }
 
-    await conn.sendMessage(chatId, {
-      react: { text: type === "audio" ? "🎵" : "🎬", key: msg.key }
-    })
+  // ==========================
+  // TEMPLATE BUTTON
+  // ==========================
+  else if (m.message.templateButtonReplyMessage) {
+    id = m.message.templateButtonReplyMessage.selectedId
+    text = m.message.templateButtonReplyMessage.selectedDisplayText
+  }
 
-    try {
-      const dlType = type === "audio" ? "Mp3" : "Mp4"
+  // ==========================
+  // LIST MESSAGE
+  // ==========================
+  else if (m.message.listResponseMessage) {
+    id = m.message.listResponseMessage.singleSelectReply?.selectedRowId
+    text = m.message.listResponseMessage.title
+  }
 
-      const { data } = await axios.get(
-        `${API_BASE}/ytdl?url=${encodeURIComponent(url)}&type=${dlType}&apikey=${API_KEY}`
-      )
+  // ==========================
+  // INTERACTIVE (EL BUENO)
+  // ==========================
+  else if (m.message.interactiveResponseMessage) {
+    const ir = m.message.interactiveResponseMessage
 
-      if (!data?.status || !data.result?.url)
-        throw new Error("No se pudo obtener el archivo")
-
-      if (type === "audio") {
-        await conn.sendMessage(chatId, {
-          audio: { url: data.result.url },
-          mimetype: "audio/mpeg",
-          ptt: false
-        }, { quoted: msg })
-      } else {
-        await conn.sendMessage(chatId, {
-          video: { url: data.result.url },
-          mimetype: "video/mp4"
-        }, { quoted: msg })
-      }
-
-      await conn.sendMessage(chatId, {
-        react: { text: "✅", key: msg.key }
-      })
-
-    } catch (e) {
-      await conn.sendMessage(chatId, {
-        text: "❌ Error al descargar"
-      }, { quoted: msg })
+    // 🔥 ESTE ERA EL QUE FALTABA
+    if (ir.buttonReply) {
+      id = ir.buttonReply.id
+      text = ir.buttonReply.title
     }
 
-    return
+    // nativeFlow (por si acaso)
+    else if (ir.nativeFlowResponseMessage?.paramsJson) {
+      try {
+        const json = JSON.parse(ir.nativeFlowResponseMessage.paramsJson)
+        id = json.id
+        text = json.title
+      } catch {}
+    }
   }
 
-  if (!input) {
-    return conn.sendMessage(chatId, {
-      text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree`
-    }, { quoted: msg })
+  if (!id) return
+
+  // ==========================
+  // DETECTAR COMANDO
+  // ==========================
+  let isIdMessage = false
+  let usedPrefix = ""
+  let finalText = id
+
+  for (const name in global.plugins) {
+    const plugin = global.plugins[name]
+    if (!plugin || plugin.disabled || !plugin.command) continue
+
+    const prefixes = Array.isArray(global.prefixes)
+      ? global.prefixes
+      : [global.prefix || "."]
+
+    const found = prefixes.find(p =>
+      typeof p === "string"
+        ? id.startsWith(p)
+        : p instanceof RegExp
+          ? p.test(id)
+          : false
+    )
+
+    if (!found) continue
+
+    usedPrefix =
+      found instanceof RegExp
+        ? id.match(found)?.[0] || ""
+        : found
+
+    const noPrefix = id.slice(usedPrefix.length)
+    let [command] = noPrefix.trim().split(/\s+/)
+    command = (command || "").toLowerCase()
+
+    const isAccept =
+      plugin.command instanceof RegExp
+        ? plugin.command.test(command)
+        : Array.isArray(plugin.command)
+          ? plugin.command.includes(command)
+          : plugin.command === command
+
+    if (!isAccept) continue
+
+    isIdMessage = true
+    finalText = `${usedPrefix}${noPrefix}`
+    break
   }
 
-  await conn.sendMessage(chatId, {
-    react: { text: "🕒", key: msg.key }
-  })
+  // ==========================
+  // REINYECTAR COMO TEXTO
+  // ==========================
+  const messages = await generateWAMessage(
+    m.chat,
+    { text: finalText },
+    {
+      userJid: this.user.id,
+      quoted: m.quoted && m.quoted.fakeObj
+    }
+  )
 
-  try {
-    const search = await yts(input)
-    if (!search?.videos?.length)
-      throw new Error("Sin resultados")
+  messages.fromButton = true
+  messages.key.fromMe = areJidsSameUser(m.sender, this.user.id)
+  messages.key.id = m.key.id
+  messages.pushName = m.name
 
-    const video = search.videos[0]
-    const title    = video.title
-    const author   = video.author?.name || "Desconocido"
-    const duration = video.timestamp || "Desconocida"
-    const thumb    = video.thumbnail
-    const url      = video.url
-
-    const caption =
-`⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-
-Selecciona el formato 👇
-
-⇆‌ ㅤ◁ㅤ❚❚ㅤ▷ㅤ↻
-
-> \`\`\`© Powered by Angel.xyz\`\`\`
-`
-
-    const buttons = [
-      {
-        buttonId: `${usedPrefix}${command} audio|${url}`,
-        buttonText: { displayText: "🎵 Audio" },
-        type: 1
-      },
-      {
-        buttonId: `${usedPrefix}${command} video|${url}`,
-        buttonText: { displayText: "🎬 Video" },
-        type: 1
-      }
-    ]
-
-    await conn.sendMessage(chatId, {
-      image: { url: thumb },
-      caption,
-      buttons,
-      headerType: 4
-    }, { quoted: msg })
-
-    await conn.sendMessage(chatId, {
-      react: { text: "✅", key: msg.key }
-    })
-
-  } catch (err) {
-    await conn.sendMessage(chatId, {
-      text: `❌ Error: ${err?.message || "Fallo interno"}`
-    }, { quoted: msg })
+  if (m.isGroup) {
+    messages.key.participant = m.sender
   }
+
+  const msg = {
+    ...chatUpdate,
+    messages: [
+      proto.WebMessageInfo.fromObject(messages)
+    ].map(v => (v.conn = this, v)),
+    type: "append"
+  }
+
+  this.ev.emit("messages.upsert", msg)
 }
-
-handler.command = ["playa", "ytplaya"]
-handler.help = ["play <texto>"]
-handler.tags = ["descargas"]
-
-export default handler
