@@ -4,8 +4,8 @@ const { sendButtons } = pkg
 export async function all(m) {
   if (!m.isButton) return
 
-  if (m.text === 'menu_btn') {
-    m.text = '.menu'
+  if (m.text === 'link_btn') {
+    m.text = 'linl'
   }
 
   if (m.text === 'owner_btn') {
@@ -18,7 +18,7 @@ const handler = async (m, { conn }) => {
     text: '👋 Hola, elige una opción:',
     footer: 'Angel Bot',
     buttons: [
-      { id: 'menu_btn', text: 'Menu' },
+      { id: 'link_btn', text: 'link' },
       { id: 'owner_btn', text: 'Owner' }
     ]
   })
