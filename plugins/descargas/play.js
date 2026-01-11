@@ -27,6 +27,9 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
     const video = search.videos[0]
 
+    if (video.seconds > 600)
+      throw new Error("El audio es demasiado largo (máx 10 minutos)")
+
     const title     = video.title
     const author    = video.author?.name || "Desconocido"
     const duration  = video.timestamp || "Desconocida"
@@ -56,7 +59,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
         "User-Agent": "Mozilla/5.0",
         "Accept": "application/json"
       },
-      timeout: 20000
+      timeout: 12000
     })
 
     if (
@@ -70,7 +73,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     }
 
     const audioUrl = res.data.result.url
-    const cleanTitle = (res.data.result.title || title).replace(/\.mp3$/i, "")
+    const cleanTitle = (res.data.result.title ?? title).replace(/\.mp3$/i, "")
 
     await conn.sendMessage(chatId, {
       audio: { url: audioUrl },
