@@ -16,15 +16,18 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   }
 
   if (!isYouTube(url)) {
-    return conn.sendMessage(chatId, { text: "❌ URL de YouTube inválida." }, { quoted: msg })
+    return conn.sendMessage(chatId, {
+      text: "❌ URL de YouTube inválida."
+    }, { quoted: msg })
   }
 
-  await conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } })
+  await conn.sendMessage(chatId, {
+    react: { text: "🕒", key: msg.key }
+  })
 
   let title = "Desconocido"
   let author = "Desconocido"
   let duration = "Desconocida"
-  let fileName = "video.mp4"
 
   try {
     const id = url.match(/(?:youtu\.be\/|v=)([a-zA-Z0-9_-]{11})/)?.[1]
@@ -43,11 +46,10 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     const api = `https://sylphy.xyz/descargar/ytmp4?url=${encodeURIComponent(url)}&q=&api_key=sylphy-zws90tK7OG_1768086161703_xc3t6vvmw`
     const { data } = await axios.get(api)
 
-    if (!data?.estado) throw new Error("La API no devolvió estado válido")
-    if (!data?.resultado?.url) throw new Error("No se obtuvo el link de descarga")
+    const videoUrl = data?.resultado?.url
+    if (!videoUrl) throw new Error("No se pudo obtener el link de descarga")
 
-    const videoUrl = data.resultado.url
-    fileName = data.resultado["nombre de archivo"] || fileName
+    const fileName = data.resultado["nombre de archivo"] || "video.mp4"
 
     const caption = `⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
@@ -61,7 +63,9 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
       caption
     }, { quoted: msg })
 
-    await conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
+    await conn.sendMessage(chatId, {
+      react: { text: "✅", key: msg.key }
+    })
 
   } catch (err) {
     await conn.sendMessage(chatId, {
