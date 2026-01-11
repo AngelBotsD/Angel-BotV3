@@ -7,9 +7,9 @@ const API_KEY  = global.APIKeys?.may || ""
 const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
   const chatId = msg.key.remoteJid
-  const url = args.join(" ").trim()
+  const query = args.join(" ").trim()
 
-  if (!text)
+  if (!query)
     return conn.sendMessage(chatId, {
       text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree`
     }, { quoted: msg })
@@ -20,7 +20,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
   try {
 
-    const search = await yts(text)
+    const search = await yts(query)
 
     if (!search?.videos?.length)
       throw new Error("No se encontró ningún resultado")
@@ -34,12 +34,11 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     const videoLink = video.url
 
     const infoCaption = `
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝒊́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
 
 » 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖 🎧
-» 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
 `.trim()
 
     await conn.sendMessage(chatId, {
@@ -85,8 +84,6 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     })
 
   } catch (err) {
-
-    console.error("play error:", err)
 
     await conn.sendMessage(chatId, {
       text: `❌ Error: ${err?.message || "Fallo interno"}`
