@@ -4,9 +4,10 @@ import yts from "yt-search"
 const API_BASE = (global.APIs?.may || "").replace(/\/+$/, "")
 const API_KEY  = global.APIKeys?.may || ""
 
-const handler = async (msg, { conn, text, usedPrefix, command }) => {
+const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
   const chatId = msg.key.remoteJid
+  const url = args.join(" ").trim()
 
   if (!text)
     return conn.sendMessage(chatId, {
