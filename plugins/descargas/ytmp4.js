@@ -43,26 +43,24 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   } catch {}
 
   try {
-    const api = `https://sylphy.xyz/descargar/ytmp4?url=${encodeURIComponent(url)}&q=&api_key=sylphy-zws90tK7OG_1768086161703_xc3t6vvmw`
-    const { data } = await axios.get(api, { timeout: 60000 })
+    const apiUrl = `https://sylphy.xyz/descargar/ytmp4?url=${encodeURIComponent(url)}&q=&api_key=sylphy-zws90tK7OG_1768086161703_xc3t6vvmw`
 
-    let videoUrl =
-      data?.resultado?.url ||
-      data?.url ||
-      data?.link ||
-      data?.download
+    let res = await axios.get(apiUrl, {
+      timeout: 60000,
+      responseType: "text"
+    })
 
-    if (!videoUrl) throw new Error("No se obtuvo link de descarga")
-
-    if (typeof videoUrl === "function") {
-      videoUrl = videoUrl()
+    let data = res.data
+    if (typeof data === "string") {
+      data = JSON.parse(data)
     }
+
+    let videoUrl = data?.resultado?.url
+    if (!videoUrl) throw new Error("No se pudo obtener el link de descarga")
 
     videoUrl = String(videoUrl)
 
-    const fileName =
-      data?.resultado?.["nombre de archivo"] ||
-      "video.mp4"
+    const fileName = data.resultado["nombre de archivo"] || "video.mp4"
 
     const caption = `⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
@@ -82,7 +80,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
   } catch (err) {
     await conn.sendMessage(chatId, {
-      text: `❌ Error: ${err?.message || "Fallo interno"}`
+      text: `❌ Error: ${err.message}`
     }, { quoted: msg })
   }
 }
