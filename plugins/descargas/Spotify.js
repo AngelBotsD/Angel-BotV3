@@ -2,8 +2,8 @@ let handler = async (m, { conn }) => {
   const text = `Hola 👋\nElige una opción`
 
   const buttons = [
-    { buttonId: '.owner', buttonText: { displayText: 'Owner' }, type: 1 },
-    { buttonId: '.menu', buttonText: { displayText: 'Menu' }, type: 1 }
+    { buttonId: 'owner', buttonText: { displayText: 'Owner' }, type: 1 },
+    { buttonId: 'menu', buttonText: { displayText: 'Menu' }, type: 1 }
   ]
 
   await conn.sendMessage(m.chat, {
