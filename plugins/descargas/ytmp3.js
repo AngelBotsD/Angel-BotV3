@@ -15,7 +15,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   }
 
   await conn.sendMessage(chatId, {
-    react: { text: "🕒", key: msg.key }
+    react: { text: "🔎", key: msg.key }
   })
 
   let video
@@ -80,7 +80,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   })
 }
 
-handler.command = ["play"]
+handler.command = ["ytmp3"]
 handler.help = ["ytmp3 <texto>"]
 handler.tags = ["descargas"]
 
