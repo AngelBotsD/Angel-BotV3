@@ -23,7 +23,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   try {
     const search = await yts(query)
     if (!search.videos?.length) {
-      throw new Error("No se encontraron resultados")
+      throw new Error("Sin resultados")
     }
     video = search.videos[0]
   } catch {
@@ -33,6 +33,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   }
 
   let audioUrl
+  let title = video.title
 
   try {
     const res = await axios.get(`${API_BASE}/ytdl`, {
@@ -54,25 +55,33 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     }
 
     audioUrl = data.result.url
+    title = (data.result.title || title).replace(/\.mp3$/i, "")
+
   } catch (err) {
     return conn.sendMessage(chatId, {
-      text: `❌ Error al obtener audio: ${err?.response?.status || ""}`
+      text: `❌ Error al obtener audio: ${err?.response?.status || ""} ${err?.message || ""}`
     }, { quoted: msg })
   }
 
   const caption = `
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${video.title}
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${video.author?.name || "Desconocido"}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${video.timestamp}
 
 » 𝘌𝘕𝘝𝘐𝘈𝘕𝘋𝘖 𝘈𝘜𝘋𝘐𝘖 🎧
+» 𝘈𝘎𝘜𝘈𝘙𝘋𝘌 𝘜𝘕 𝘗𝘖𝘊𝘖...
 `.trim()
+
+  await conn.sendMessage(chatId, {
+    image: { url: video.thumbnail },
+    caption
+  }, { quoted: msg })
 
   await conn.sendMessage(chatId, {
     audio: { url: audioUrl },
     mimetype: "audio/mpeg",
-    fileName: `${video.title}.mp3`,
-    caption
+    ptt: false,
+    fileName: `${title}.mp3`
   }, { quoted: msg })
 
   await conn.sendMessage(chatId, {
