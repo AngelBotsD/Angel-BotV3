@@ -17,7 +17,6 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
   conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } }).catch(() => {})
 
   try {
-    /* 🔍 BÚSQUEDA (rápida) */
     const search = await yts(query)
     const video = search?.videos?.[0]
     if (!video) throw "No se encontró ningún resultado"
