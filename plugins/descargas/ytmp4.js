@@ -44,12 +44,21 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
   try {
     const api = `https://sylphy.xyz/descargar/ytmp4?url=${encodeURIComponent(url)}&q=&api_key=sylphy-zws90tK7OG_1768086161703_xc3t6vvmw`
-    const { data } = await axios.get(api)
+    const { data } = await axios.get(api, { timeout: 60000 })
 
-    const videoUrl = data?.resultado?.url
-    if (!videoUrl) throw new Error("No se pudo obtener el link de descarga")
+    const videoUrl =
+      data?.resultado?.url ||
+      data?.url ||
+      data?.link ||
+      data?.download
 
-    const fileName = data.resultado["nombre de archivo"] || "video.mp4"
+    if (!videoUrl) {
+      throw new Error("La API no devolvió ningún link de descarga")
+    }
+
+    const fileName =
+      data?.resultado?.["nombre de archivo"] ||
+      "video.mp4"
 
     const caption = `⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
