@@ -1,32 +1,67 @@
-const {
+import {
   proto,
   generateWAMessage,
   areJidsSameUser
-} = (await import('@whiskeysockets/baileys')).default
+} from "@whiskeysockets/baileys"
 
 export async function all(m, chatUpdate) {
   if (m.isBaileys) return
   if (!m.message) return
 
-  if (
-    !m.message.buttonsResponseMessage &&
-    !m.message.templateButtonReplyMessage &&
-    !m.message.listResponseMessage
-  ) return
+  const msgButtons =
+    m.message.buttonsResponseMessage ||
+    m.message.templateButtonReplyMessage ||
+    m.message.listResponseMessage ||
+    m.message.interactiveResponseMessage
 
-  const id =
-    m.message.buttonsResponseMessage?.selectedButtonId ||
-    m.message.templateButtonReplyMessage?.selectedId ||
-    m.message.listResponseMessage?.singleSelectReply?.selectedRowId
+  if (!msgButtons) return
 
-  const text =
-    m.message.buttonsResponseMessage?.selectedDisplayText ||
-    m.message.templateButtonReplyMessage?.selectedDisplayText ||
-    m.message.listResponseMessage?.title
+  // ===============================
+  // EXTRAER ID Y TEXTO DEL BOTÓN
+  // ===============================
+
+  let id = null
+  let text = null
+
+  if (m.message.buttonsResponseMessage) {
+    id = m.message.buttonsResponseMessage.selectedButtonId
+    text = m.message.buttonsResponseMessage.selectedDisplayText
+  }
+
+  else if (m.message.templateButtonReplyMessage) {
+    id = m.message.templateButtonReplyMessage.selectedId
+    text = m.message.templateButtonReplyMessage.selectedDisplayText
+  }
+
+  else if (m.message.listResponseMessage) {
+    id = m.message.listResponseMessage.singleSelectReply?.selectedRowId
+    text = m.message.listResponseMessage.title
+  }
+
+  else if (m.message.interactiveResponseMessage) {
+    const params =
+      m.message.interactiveResponseMessage.nativeFlowResponseMessage?.paramsJson
+
+    if (params) {
+      try {
+        const json = JSON.parse(params)
+        id = json.id || null
+        text = json.title || null
+      } catch {
+        return
+      }
+    }
+  }
+
+  if (!id) return
+
+  // ===============================
+  // DETECTAR COMANDO
+  // ===============================
 
   let isIdMessage = false
   let usedPrefix = ""
-  let finalText = text
+  let finalText = text || id
 
   for (const name in global.plugins) {
     const plugin = global.plugins[name]
@@ -34,6 +69,7 @@ export async function all(m, chatUpdate) {
     if (typeof plugin !== "function") continue
     if (!plugin.command) continue
 
+    // customPrefix
     if (plugin.customPrefix) {
       if (plugin.customPrefix instanceof RegExp) {
         const match = id.match(plugin.customPrefix)
@@ -83,6 +119,10 @@ export async function all(m, chatUpdate) {
     finalText = `${usedPrefix}${noPrefix}`
     break
   }
+
+  // ===============================
+  // REINYECTAR MENSAJE COMO TEXTO
+  // ===============================
 
   const messages = await generateWAMessage(
     m.chat,
