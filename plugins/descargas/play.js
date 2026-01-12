@@ -1,4 +1,4 @@
-pimport axios from "axios"
+import axios from "axios"
 import yts from "yt-search"
 
 const API_BASE = (global.APIs?.may || "").replace(/\/+$/, "")
