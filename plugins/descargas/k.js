@@ -49,8 +49,9 @@ async function getMp3(downloadPage) {
   return link.startsWith("http") ? link : BASE + link
 }
 
-const handler = async (m, { conn, query, usedPrefix, command }) => {
+const handler = async (m, { conn, args, usedPrefix, command }) => {
 const query = args.join(" ").trim()
+
   if (!query)
     return m.reply(`Uso: ${usedPrefix + command} <canción>`)
 
