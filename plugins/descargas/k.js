@@ -5,27 +5,25 @@ const BASE = "https://tubidy.as"
 
 const HEADERS = {
   "User-Agent":
-    "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+    "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+  "Accept": "text/html"
 }
 
 async function searchTubidy(query) {
-  const res = await axios.get(
-    `${BASE}/search`,
-    {
-      params: { q: query },
-      headers: HEADERS,
-      timeout: 20000
-    }
-  )
+  const url = `${BASE}/search/${encodeURIComponent(query)}`
+  const res = await axios.get(url, {
+    headers: HEADERS,
+    timeout: 20000
+  })
 
   const $ = cheerio.load(res.data)
   const results = []
 
-  $("a").each((_, el) => {
+  $("a[href^='/download/']").each((_, el) => {
     const href = $(el).attr("href")
     const title = $(el).text().trim()
 
-    if (href && href.startsWith("/download/") && title) {
+    if (href && title) {
       results.push({
         title,
         url: BASE + href
@@ -43,15 +41,16 @@ async function getMp3(downloadPage) {
   })
 
   const $ = cheerio.load(res.data)
-  const link = $("a[href$='.mp3']").attr("href")
 
+  const link = $("a[href*='/mp3']").attr("href")
   if (!link) return null
+
   return link.startsWith("http") ? link : BASE + link
 }
 
 const handler = async (m, { conn, args, usedPrefix, command }) => {
-const query = args.join(" ").trim()
 
+  const query = args.join(" ").trim()
   if (!query)
     return m.reply(`Uso: ${usedPrefix + command} <canción>`)
 
@@ -83,6 +82,6 @@ const query = args.join(" ").trim()
 
 handler.help = ["tubidy <texto>"]
 handler.tags = ["dl"]
-handler.command = ["tubidy"]
+handler.command = ["tu"]
 
 export default handler
