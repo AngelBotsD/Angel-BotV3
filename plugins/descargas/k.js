@@ -1,36 +1,34 @@
 import axios from "axios"
 import * as cheerio from "cheerio"
 
-const BASE = "https://mp3juices.cc"
+const BASE = "https://tubidy.as"
 
 const HEADERS = {
   "User-Agent":
-    "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-  Referer: BASE
+    "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Safari/537.36"
 }
 
-async function searchMp3(query) {
-  const res = await axios.get(`${BASE}/search/${encodeURIComponent(query)}`, {
-    headers: HEADERS,
-    timeout: 20000
-  })
+async function searchTubidy(query) {
+  const res = await axios.get(
+    `${BASE}/search`,
+    {
+      params: { q: query },
+      headers: HEADERS,
+      timeout: 20000
+    }
+  )
 
   const $ = cheerio.load(res.data)
   const results = []
 
   $("a").each((_, el) => {
     const href = $(el).attr("href")
-    const text = $(el).text().trim()
+    const title = $(el).text().trim()
 
-    if (
-      href &&
-      href.startsWith("http") &&
-      href.includes(".mp3") &&
-      text.length
-    ) {
+    if (href && href.startsWith("/download/") && title) {
       results.push({
-        title: text,
-        url: href
+        title,
+        url: BASE + href
       })
     }
   })
@@ -38,22 +36,36 @@ async function searchMp3(query) {
   return results
 }
 
-let handler = async (m, { conn, args, text, usedPrefix, command }) => {
-  const query = (text || args.join(" ")).trim()
-  if (!query) return m.reply(`Uso: ${usedPrefix + command} <canción>`)
+async function getMp3(downloadPage) {
+  const res = await axios.get(downloadPage, {
+    headers: HEADERS,
+    timeout: 20000
+  })
+
+  const $ = cheerio.load(res.data)
+  const link = $("a[href$='.mp3']").attr("href")
+
+  if (!link) return null
+  return link.startsWith("http") ? link : BASE + link
+}
+
+const handler = async (m, { conn, query, usedPrefix, command }) => {
+  if (!query)
+    return m.reply(`Uso: ${usedPrefix + command} <canción>`)
 
   await m.react("⏳").catch(() => {})
 
   try {
-    const results = await searchMp3(query)
-    if (!results.length) throw "No encontré MP3 disponible"
+    const list = await searchTubidy(query)
+    if (!list.length) throw "Sin resultados"
 
-    const audio = results[0]
+    const mp3 = await getMp3(list[0].url)
+    if (!mp3) throw "MP3 no encontrado"
 
     await conn.sendMessage(
       m.chat,
       {
-        audio: { url: audio.url },
+        audio: { url: mp3 },
         mimetype: "audio/mpeg"
       },
       { quoted: m }
@@ -61,14 +73,14 @@ let handler = async (m, { conn, args, text, usedPrefix, command }) => {
 
     await m.react("⚡").catch(() => {})
   } catch (e) {
-    console.error("MP3JUICES ERROR:", e)
+    console.error(e)
     await m.react("✖️").catch(() => {})
-    m.reply(String(e))
+    m.reply("Tubidy falló")
   }
 }
 
-handler.help = ["mp3 <texto>"]
+handler.help = ["tubidy <texto>"]
 handler.tags = ["dl"]
-handler.command = ["mp3", "mp3j"]
+handler.command = ["tubidy"]
 
 export default handler
