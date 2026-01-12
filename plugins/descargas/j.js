@@ -5,7 +5,8 @@ const apis = {
   delirius: 'https://delirius-apiofc.vercel.app/'
 };
 
-const handler = async (m, { conn, command, args, text, usedPrefix }) => {
+const handler = async (msg, { conn, args, usedPrefix, command }) => {
+const query = args.join(" ").trim()
 
   if (!text) return m.reply(`*💽 𝙸𝚗𝚐𝚛𝚎𝚜𝚊 𝚎𝚕 𝙽𝚘𝚖𝚋𝚛𝚎 𝚍𝚎 𝙰𝚕𝚐𝚞𝚗𝚊 𝙲𝚊𝚗𝚌𝚒𝚘𝚗 𝙴𝚗 𝚂𝚙𝚘𝚝𝚒𝚏𝚢*`);
 
