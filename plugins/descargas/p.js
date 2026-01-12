@@ -103,7 +103,7 @@ let handler = async (m, { conn, command, args, text, usedPrefix }) => {
   }
 }
 
-handler.command = ["play"]
+handler.command = ["pla"]
 handler.exp = 0
 export default handler
 
