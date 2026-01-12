@@ -13,7 +13,7 @@ const handler = async (m, { conn, args, usedPrefix }) => {
         await m.react('🕒')
 
         const res = await axios.get(
-            `https://api-adonix.ultraplus.click/download/spotify?apikey=${global.APIs.adonix.key}&q=${encodeURIComponent(query)}`
+            `https://api-adonix.ultraplus.click/download/spotify?apikey=dvyer&q=${encodeURIComponent(query)}`
         )
 
         if (!res.data?.status || !res.data?.song || !res.data?.downloadUrl) {
