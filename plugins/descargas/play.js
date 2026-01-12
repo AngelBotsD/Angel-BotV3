@@ -63,6 +63,16 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
     const cleanTitle = (data.result.title || title).replace(/\.mp3$/i, "")
 
+    let isProgressive = false
+    try {
+      const head = await axios.head(audioUrl, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        timeout: 10000
+      })
+      const type = head.headers["content-type"] || ""
+      if (type.includes("audio/mpeg")) isProgressive = true
+    } catch {}
+
     await conn.sendMessage(chatId, {
       audio: { url: audioUrl },
       mimetype: "audio/mpeg",
@@ -70,7 +80,9 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
       ptt: false
     }, { quoted: msg })
 
-    conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } }).catch(() => {})
+    conn.sendMessage(chatId, {
+      react: { text: isProgressive ? "⚡" : "🐢", key: msg.key }
+    }).catch(() => {})
 
   } catch (e) {
     conn.sendMessage(chatId, {
