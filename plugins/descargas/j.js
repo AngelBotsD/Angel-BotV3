@@ -48,7 +48,7 @@ const handler = async (m, { conn, args, usedPrefix }) => {
                 contextInfo: {
                     externalAdReply: {
                         title: '✧ s⍴᥆𝗍і𝖿ᥡ • mᥙsіᥴ ✧',
-                        body: dev,
+                        body: 'Spotify Downloader',
                         mediaType: 1,
                         mediaUrl: data.url,
                         sourceUrl: data.url,
