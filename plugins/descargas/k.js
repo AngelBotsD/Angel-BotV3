@@ -1,98 +1,153 @@
 import axios from "axios"
 import yts from "yt-search"
 
-const API_BASE = (global.APIs?.may || "").replace(/\/+$/, "")
-const API_KEY  = global.APIKeys?.may || ""
+const CLIENT_ID = "bOhNcaq9F32sB3eS8zWLywAyh4OdDXbC"
+const BASE_API_URL = "https://api-v2.soundcloud.com"
 
-const handler = async (msg, { conn, args, usedPrefix, command }) => {
+const HEADERS = {
+  Origin: "https://soundcloud.com",
+  Referer: "https://soundcloud.com/",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+}
 
-  const chatId = msg.key.remoteJid
-  const query = args.join(" ").trim()
+function cleanTitle(text = "") {
+  return text
+    .replace(/\(.*?\)|\[.*?\]/g, "")
+    .replace(/official|video|lyrics|audio|hd|4k/gi, "")
+    .replace(/feat\.?|ft\.?/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
 
-  if (!query)
-    return conn.sendMessage(chatId, {
-      text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree`
-    }, { quoted: msg })
-
-  conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } }).catch(() => {})
-
+async function searchTracks(query) {
   try {
-    const search = await yts(query)
-    const video = search?.videos?.[0]
-    if (!video) throw "No se encontró ningún resultado"
-
-    const title    = video.title
-    const author   = video.author?.name || "Desconocido"
-    const duration = video.timestamp || "Desconocida"
-    const thumb    = video.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg"
-    const link     = video.url
-
-    conn.sendMessage(chatId, {
-      image: { url: thumb },
-      caption: `
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *Título:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *Artista:* ${author}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *Duración:* ${duration}
-
-» Enviando audio 🎧
-`.trim()
-    }, { quoted: msg }).catch(() => {})
-
-    const res = await axios.get(`${API_BASE}/ytdl`, {
+    const res = await axios.get(`${BASE_API_URL}/search/tracks`, {
+      headers: HEADERS,
       params: {
-        url: link,
-        type: "Mp3",
-        apikey: API_KEY
-      },
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        "Accept": "application/json"
-      },
-      timeout: 20000
+        q: query,
+        client_id: CLIENT_ID,
+        limit: 15,
+        app_version: "1695286762",
+        app_locale: "en"
+      }
     })
-
-    const data = res?.data
-    const audioUrl = data?.result?.url
-
-    if (
-      !data?.status ||
-      !audioUrl ||
-      typeof audioUrl !== "string" ||
-      !audioUrl.startsWith("http")
-    ) throw "La API no devolvió un audio válido"
-
-    const cleanTitle = (data.result.title || title).replace(/\.mp3$/i, "")
-
-    let isProgressive = false
-    try {
-      const head = await axios.head(audioUrl, {
-        headers: { "User-Agent": "Mozilla/5.0" },
-        timeout: 10000
-      })
-      const type = head.headers["content-type"] || ""
-      if (type.includes("audio/mpeg")) isProgressive = true
-    } catch {}
-
-    await conn.sendMessage(chatId, {
-      audio: { url: audioUrl },
-      mimetype: "audio/mpeg",
-      fileName: `${cleanTitle}.mp3`,
-      ptt: false
-    }, { quoted: msg })
-
-    conn.sendMessage(chatId, {
-      react: { text: isProgressive ? "⚡" : "🐢", key: msg.key }
-    }).catch(() => {})
-
-  } catch (e) {
-    conn.sendMessage(chatId, {
-      text: `❌ Error: ${typeof e === "string" ? e : "Fallo interno"}`
-    }, { quoted: msg })
+    return res.data?.collection || []
+  } catch {
+    return []
   }
 }
 
-handler.command = ["playa", "ytplaya"]
-handler.help    = ["play <texto>"]
-handler.tags    = ["descargas"]
+async function resolveStreamUrl(transcodingUrl, trackAuthorization) {
+  try {
+    const res = await axios.get(transcodingUrl, {
+      headers: HEADERS,
+      params: {
+        client_id: CLIENT_ID,
+        track_authorization: trackAuthorization
+      }
+    })
+    return res.data?.url || null
+  } catch {
+    return null
+  }
+}
+
+function scoreTrack(sc, yt) {
+  let score = 0
+
+  const scTitle = sc.title.toLowerCase()
+  const ytTitle = cleanTitle(yt.title).toLowerCase()
+
+  if (scTitle.includes(ytTitle)) score += 5
+  if (Math.abs(sc.duration / 1000 - yt.seconds) <= 5) score += 4
+  if (!/remix|sped|slowed|nightcore/i.test(scTitle)) score += 2
+
+  return score
+}
+
+let handler = async (m, { conn, args, text, usedPrefix, command }) => {
+  const query = (text || args.join(" ")).trim()
+  if (!query) return m.reply(`Uso: ${usedPrefix + command} <canción>`)
+
+  await m.react("⏳").catch(() => {})
+
+  try {
+    const ytSearch = await yts(query)
+    const yt = ytSearch.videos?.[0]
+    if (!yt) throw "No encontré coincidencias en YouTube"
+
+    const ytTitle = cleanTitle(yt.title)
+    const ytAuthor = yt.author?.name || ""
+    const scQuery = `${ytTitle} ${ytAuthor}`
+
+    const tracks = await searchTracks(scQuery)
+    const candidates = []
+
+    for (const track of tracks) {
+      if (track.kind !== "track") continue
+      if (!track.media?.transcodings) continue
+
+      const transcoding = track.media.transcodings.find(
+        t =>
+          t.format.protocol === "progressive" &&
+          (t.format.mime_type === "audio/mpeg" ||
+            t.format.mime_type === "audio/mp3")
+      )
+
+      if (!transcoding) continue
+
+      const url = await resolveStreamUrl(
+        transcoding.url,
+        track.track_authorization
+      )
+
+      if (!url) continue
+
+      candidates.push({
+        title: track.title,
+        duration: track.duration,
+        artwork: track.artwork_url
+          ? track.artwork_url.replace("-large", "-t500x500")
+          : "",
+        permalink: track.permalink_url,
+        url,
+        score: scoreTrack(track, yt)
+      })
+    }
+
+    if (!candidates.length) throw "No encontré audio progressive"
+
+    const best = candidates.sort((a, b) => b.score - a.score)[0]
+
+    await conn.sendMessage(
+      m.chat,
+      {
+        audio: { url: best.url },
+        mimetype: "audio/mpeg",
+        contextInfo: {
+          externalAdReply: {
+            title: best.title,
+            body: "SoundCloud • Progressive Audio",
+            thumbnailUrl: best.artwork || undefined,
+            sourceUrl: best.permalink,
+            mediaType: 1,
+            renderLargerThumbnail: true
+          }
+        }
+      },
+      { quoted: m }
+    )
+
+    await m.react("⚡").catch(() => {})
+  } catch (e) {
+    await m.react("✖️").catch(() => {})
+    m.reply(typeof e === "string" ? e : "Error inesperado")
+  }
+}
+
+handler.help = ["soundcloud <texto>"]
+handler.tags = ["dl"]
+handler.command = ["soundcloud", "sc"]
 
 export default handler
