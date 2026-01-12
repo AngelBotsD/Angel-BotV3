@@ -67,7 +67,7 @@ let handler = async (m, { conn, args, text, usedPrefix, command }) => {
   }
 }
 
-handler.help = ["mp3juices <texto>"]
+handler.help = ["mp3 <texto>"]
 handler.tags = ["dl"]
 handler.command = ["mp3", "mp3j"]
 
