@@ -1,73 +1,87 @@
-import fetch from 'node-fetch'
 import axios from 'axios'
+import fetch from 'node-fetch'
 
-const handler = async (m, { conn, command, args, usedPrefix }) => {
+const handler = async (m, { conn, args, usedPrefix }) => {
 
     const query = args.join(' ').trim()
 
-    if (!query) throw `_*[ ⚠️ ] Agrega lo que quieres buscar*_\n\n_Ejemplo:_\n${usedPrefix + command} Marshmello Moving On`
+    if (!query) {
+        return m.reply("❀ Por favor, proporciona el nombre de una canción o artista.")
+    }
 
     try {
+        await m.react('🕒')
 
-        let { data } = await axios.get(
-            `https://deliriussapi-oficial.vercel.app/search/spotify?q=${encodeURIComponent(query)}&limit=10`
+        const res = await axios.get(
+            `https://api-adonix.ultraplus.click/download/spotify?apikey=${global.APIs.adonix.key}&q=${encodeURIComponent(query)}`
         )
 
-        if (!data.data || data.data.length === 0) {
-            throw `_*[ ⚠️ ] No se encontraron resultados para "${query}" en Spotify.*_`
+        if (!res.data?.status || !res.data?.song || !res.data?.downloadUrl) {
+            throw new Error("No se encontró la canción en Adonix.")
         }
 
-        const song = data.data[0]
-        const img = song.image
-        const url = song.url
+        const s = res.data.song
 
-        const info = `⧁ 𝙏𝙄𝙏𝙐𝙇𝙊
-» ${song.title}
-﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘
-⧁ 𝙋𝙐𝘽𝙇𝙄𝘾𝘼𝘿𝙊
-» ${song.publish}
-﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘
-⧁ 𝗗𝗨𝗥𝗔𝗖𝗜𝗢𝗡
-» ${song.duration}
-﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘
-⧁  𝙋𝙊𝙋𝙐𝙇𝘼𝙍𝙄𝘿𝘼𝘿
-» ${song.popularity}
-﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘
-⧁  𝘼𝙍𝙏𝙄𝙎𝙏𝘼
-» ${song.artist}
-﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘﹘
-⧁ 𝙐𝙍𝙇
-» ${url}
+        const data = {
+            title: s.title || "Desconocido",
+            artist: s.artist || "Desconocido",
+            duration: s.duration || "Desconocido",
+            image: s.thumbnail || null,
+            download: res.data.downloadUrl,
+            url: s.spotifyUrl || query
+        }
 
-_*🎶 Enviando música...*_`.trim()
+        const caption = `「✦」Descargando *<${data.title}>*
 
-        await conn.sendFile(m.chat, img, 'imagen.jpg', info, m)
+ꕥ Autor » *${data.artist}*
+ⴵ Duración » *${data.duration}*
+🜸 Enlace » ${data.url}`
 
-        const apiUrl = `https://deliriussapi-oficial.vercel.app/download/spotifydl?url=${encodeURIComponent(url)}`
-        const response = await fetch(apiUrl)
-        const result = await response.json()
-
-        if (!result?.data?.url) throw '_*[ ❌ ] Ocurrió un error al descargar el archivo mp3_*'
-
-        const filename = `${result.data.title || 'audio'}.mp3`
+        const bannerBuffer = data.image
+            ? await (await fetch(data.image)).buffer()
+            : null
 
         await conn.sendMessage(
             m.chat,
             {
-                audio: { url: result.data.url },
-                fileName: filename,
-                mimetype: 'audio/mpeg',
-                caption: `╭━❰  *Spotify* ${filename}`
+                text: caption,
+                contextInfo: {
+                    externalAdReply: {
+                        title: '✧ s⍴᥆𝗍і𝖿ᥡ • mᥙsіᥴ ✧',
+                        body: dev,
+                        mediaType: 1,
+                        mediaUrl: data.url,
+                        sourceUrl: data.url,
+                        thumbnail: bannerBuffer,
+                        showAdAttribution: false,
+                        containsAutoReply: true,
+                        renderLargerThumbnail: true
+                    }
+                }
             },
             { quoted: m }
         )
 
-    } catch (e) {
-        await conn.reply(m.chat, `❌ _*Comando Spotify Falló, intenta nuevamente*_`, m)
-        console.log(e)
+        await conn.sendMessage(
+            m.chat,
+            {
+                audio: { url: data.download },
+                fileName: `${data.title}.mp3`,
+                mimetype: 'audio/mpeg'
+            },
+            { quoted: m }
+        )
+
+        await m.react('✔️')
+
+    } catch (err) {
+        await m.react('✖️')
+        m.reply(`⚠︎ Se ha producido un problema.\n> Usa *${usedPrefix}report* para informarlo.\n\n${err.message}`)
     }
 }
 
-handler.tags = ['downloader']
-handler.command = ['spotify']
+handler.help = ["spotify"]
+handler.tags = ["download"]
+handler.command = ["spotify", "splay"]
+
 export default handler
