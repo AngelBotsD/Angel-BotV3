@@ -8,7 +8,7 @@ const HEADERS = {
   Origin: "https://soundcloud.com",
   Referer: "https://soundcloud.com/",
   "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+    "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120 Safari/537.36"
 }
 
 function cleanTitle(text = "") {
@@ -27,7 +27,7 @@ async function searchTracks(query) {
       params: {
         q: query,
         client_id: CLIENT_ID,
-        limit: 15,
+        limit: 20,
         app_version: "1695286762",
         app_locale: "en"
       }
@@ -55,12 +55,12 @@ async function resolveStreamUrl(transcodingUrl, trackAuthorization) {
 
 function scoreTrack(sc, yt) {
   let score = 0
-
+  const ytDuration = yt.seconds || yt.duration?.seconds || 0
   const scTitle = sc.title.toLowerCase()
   const ytTitle = cleanTitle(yt.title).toLowerCase()
 
   if (scTitle.includes(ytTitle)) score += 5
-  if (Math.abs(sc.duration / 1000 - yt.seconds) <= 5) score += 4
+  if (ytDuration && Math.abs(sc.duration / 1000 - ytDuration) <= 5) score += 4
   if (!/remix|sped|slowed|nightcore/i.test(scTitle)) score += 2
 
   return score
@@ -75,7 +75,7 @@ let handler = async (m, { conn, args, text, usedPrefix, command }) => {
   try {
     const ytSearch = await yts(query)
     const yt = ytSearch.videos?.[0]
-    if (!yt) throw "No encontré coincidencias en YouTube"
+    if (!yt) throw "No encontré resultados en YouTube"
 
     const ytTitle = cleanTitle(yt.title)
     const ytAuthor = yt.author?.name || ""
@@ -86,6 +86,7 @@ let handler = async (m, { conn, args, text, usedPrefix, command }) => {
 
     for (const track of tracks) {
       if (track.kind !== "track") continue
+      if (!track.track_authorization) continue
       if (!track.media?.transcodings) continue
 
       const transcoding = track.media.transcodings.find(
@@ -141,8 +142,9 @@ let handler = async (m, { conn, args, text, usedPrefix, command }) => {
 
     await m.react("⚡").catch(() => {})
   } catch (e) {
+    console.error("SC ERROR =>", e)
     await m.react("✖️").catch(() => {})
-    m.reply(typeof e === "string" ? e : "Error inesperado")
+    m.reply(String(e))
   }
 }
 
