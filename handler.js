@@ -166,33 +166,32 @@ if (m.isGroup) {
   groupMetadata = cached.meta
   participants = groupMetadata.participants || []
 
-  const userJid = m.sender.split(":")[0]
-  const botJid = (this.user.id || this.user.jid).split(":")[0]
+  const normalize = jid => jid?.split(':')[0]
 
-  const getJid = p => (p.id || p.jid || "").split(":")[0]
+const userJid = normalize(m.sender)
+const botJid = normalize(this.user.jid)
 
-  const userP = participants.find(p => getJid(p) === userJid)
-  const botP = participants.find(p => getJid(p) === botJid)
+const userParticipant = participants.find(
+  p => normalize(p.id || p.jid) === userJid
+)
 
-  const isParticipantAdmin = p =>
-    p?.admin === true ||
-    p?.admin === "admin" ||
-    p?.admin === "superadmin" ||
-    p?.role === "admin" ||
-    p?.role === "superadmin"
+const botParticipant = participants.find(
+  p => normalize(p.id || p.jid) === botJid
+)
 
-  isAdmin =
-    isParticipantAdmin(userP) ||
-    DIGITS(groupMetadata.owner) === DIGITS(userJid)
+isAdmin =
+  userParticipant?.admin === "admin" ||
+  userParticipant?.admin === "superadmin" ||
+  DIGITS(groupMetadata.owner) === DIGITS(userJid)
 
-  isBotAdmin =
-    isParticipantAdmin(botP)
+isBotAdmin =
+  botParticipant?.admin === "admin" ||
+  botParticipant?.admin === "superadmin"
 
-  m.isAdmin = isAdmin
-  m.isBotAdmin = isBotAdmin
-
-  this.isAdmin = isAdmin
-  this.isBotAdmin = isBotAdmin
+m.isAdmin = isAdmin
+m.isBotAdmin = isBotAdmin
+this.isAdmin = isAdmin
+this.isBotAdmin = isBotAdmin
   }
 
   for (const name in global.plugins) {
