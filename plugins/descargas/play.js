@@ -30,11 +30,9 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     conn.sendMessage(chatId, {
       image: { url: thumb },
       caption: `
-⭒ ִֶָ७ ꯭🎵˙⋆｡ - *Título:* ${title}
-⭒ ִֶָ७ ꯭🎤˙⋆｡ - *Artista:* ${author}
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *𝚃𝚒́𝚝𝚞𝚕𝚘:* ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *𝙰𝚛𝚝𝚒𝚜𝚝𝚊:* ${author}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
-
-» Enviando audio 🎧
 `.trim()
     }, { quoted: msg }).catch(() => {})
 
