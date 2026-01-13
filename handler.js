@@ -168,16 +168,17 @@ export async function handler(chatUpdate) {
     let isAccept = false
 
 if (plugin.command) {
+  let isAccept = false
+
+if (plugin.customPrefix instanceof RegExp) {
+  isAccept = plugin.customPrefix.test(m.text)
+} else {
   isAccept =
     plugin.command instanceof RegExp
       ? plugin.command.test(command)
       : Array.isArray(plugin.command)
         ? plugin.command.includes(command)
         : plugin.command === command
-} else if (plugin.customPrefix) {
-  isAccept = plugin.customPrefix.test(m.text)
-} else {
-  isAccept = true
 }
 
 if (!isAccept) continue
