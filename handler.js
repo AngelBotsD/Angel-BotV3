@@ -276,6 +276,8 @@ export async function handler(chatUpdate) {
 
     if (!exec) continue
 
+this.sendMessage(m.chat, { text: "⚡" }).catch(() => {})
+
     enqueue(async () => {
   await exec.call(this, m, {
       conn: this,
