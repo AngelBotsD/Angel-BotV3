@@ -151,50 +151,48 @@ if (!isCommandLike && !Object.values(global.plugins).some(p => p.customPrefix))
   const isPrems = isROwner || user.premium === true
 
   let groupMetadata = {}
-  let participants = []
-  let isAdmin = false
-  let isBotAdmin = !m.isGroup
+let participants = []
+let isAdmin = false
+let isBotAdmin = !m.isGroup
 
-  if (m.isGroup) {
-    let cached = global.groupMetaCache.get(m.chat)
-    if (!cached) {
-      const meta = await this.groupMetadata(m.chat)
-      cached = { ts: Date.now(), meta }
-      global.groupMetaCache.set(m.chat, cached)
-    }
+if (m.isGroup) {
+  let cached = global.groupMetaCache.get(m.chat)
+  if (!cached) {
+    const meta = await this.groupMetadata(m.chat)
+    cached = { ts: Date.now(), meta }
+    global.groupMetaCache.set(m.chat, cached)
+  }
 
-    groupMetadata = cached.meta
-    participants = groupMetadata.participants || []
+  groupMetadata = cached.meta
+  participants = groupMetadata.participants || []
 
-    const userJid = m.sender.split(':')[0]
-const botJid = (this.user.id || this.user.jid).split(':')[0]
+  const userJid = m.sender.split(":")[0]
+  const botJid = (this.user.id || this.user.jid).split(":")
 
-const getJid = p => (p.id || p.jid || "").split(":")[0]
+  const getJid = p => (p.id || p.jid || "").split(":")[0]
 
-const userP = participants.find(
-  p => getJid(p) === userJid
-)
+  const userP = participants.find(p => getJid(p) === userJid)
+  const botP = participants.find(p => getJid(p) === botJid)
 
-const botP = participants.find(
-  p => getJid(p) === botJid
-)
+  const isParticipantAdmin = p =>
+    p?.admin === true ||
+    p?.admin === "admin" ||
+    p?.admin === "superadmin" ||
+    p?.role === "admin" ||
+    p?.role === "superadmin"
 
-    isAdmin =
-  userP?.admin === true ||
-  userP?.admin === "admin" ||
-  userP?.admin === "superadmin" ||
-  DIGITS(groupMetadata.owner) === DIGITS(userJid)
+  isAdmin =
+    isParticipantAdmin(userP) ||
+    DIGITS(groupMetadata.owner) === DIGITS(userJid)
 
-isBotAdmin =
-  botP?.admin === true ||
-  botP?.admin === "admin" ||
-  botP?.admin === "superadmin"
+  isBotAdmin =
+    isParticipantAdmin(botP)
 
-m.isBotAdmin = isBotAdmin
-m.isAdmin = isAdmin
+  m.isAdmin = isAdmin
+  m.isBotAdmin = isBotAdmin
 
-this.isBotAdmin = isBotAdmin
-this.isAdmin = isAdmin
+  this.isAdmin = isAdmin
+  this.isBotAdmin = isBotAdmin
   }
 
   for (const name in global.plugins) {
