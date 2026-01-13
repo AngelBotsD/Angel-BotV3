@@ -276,29 +276,30 @@ global.beforeAll?.call(this, m).catch(() => {})
 
     if (!exec) continue
 
+// ⚡ RESPUESTA INSTANTÁNEA
 this.sendMessage(m.chat, { text: "⚡" }).catch(() => {})
 
-    enqueue(async () => {
+// 🚀 EJECUCIÓN EN BACKGROUND
+enqueue(async () => {
   await exec.call(this, m, {
-      conn: this,
-      args,
-      usedPrefix,
-      command,
-      participants,
-      groupMetadata,
-      isROwner,
-      isOwner,
-      isAdmin,
-      isBotAdmin,
-      isPrems,
-      chat,
-      user,
-      settings
-    })
+    conn: this,
+    args,
+    usedPrefix,
+    command,
+    participants,
+    groupMetadata,
+    isROwner,
+    isOwner,
+    isAdmin,
+    isBotAdmin,
+    isPrems,
+    chat,
+    user,
+    settings
+  })
+})
 
-    break
-  }
-}
+break
 
 if (process.env.NODE_ENV === "development") {
   const file = fileURLToPath(import.meta.url)
