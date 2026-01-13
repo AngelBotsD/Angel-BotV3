@@ -5,36 +5,13 @@ import fs from "fs"
 import chalk from "chalk"
 import fetch from "node-fetch"
 
-const JOB_QUEUE = []
-let RUNNING = false
-
-function enqueue(job) {
-  JOB_QUEUE.push(job)
-  runQueue()
-}
-
-async function runQueue() {
-  if (RUNNING || JOB_QUEUE.length === 0) return
-  RUNNING = true
-
-  const job = JOB_QUEUE.shift()
-  try {
-    await job()
-  } catch (e) {
-    console.error(e)
-  }
-
-  RUNNING = false
-  setImmediate(runQueue)
-}
-
-let ICON_BUFFER = null
-
 const DIGITS = (s = "") => String(s).replace(/\D/g, "")
 
 const OWNER_NUMBERS = (global.owner || []).map(v =>
   Array.isArray(v) ? DIGITS(v[0]) : DIGITS(v)
 )
+
+let ICON_BUFFER = null
 
 async function getIconBuffer() {
   if (ICON_BUFFER) return ICON_BUFFER
@@ -46,8 +23,13 @@ async function getIconBuffer() {
     return null
   }
 }
-
 getIconBuffer()
+
+function timeout(ms) {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("PLUGIN_TIMEOUT")), ms)
+  )
+}
 
 if (typeof global.beforeAll !== "function")
   global.beforeAll = async function (m) {
@@ -91,13 +73,12 @@ global.dfail = (type, m, conn) => {
     group: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖥𝗎𝗇𝖼𝗂𝗈𝗇𝖺 𝖤𝗇 𝖦𝗋𝗎𝗉𝗈𝗌",
     private: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖲𝖾 𝖯𝗎𝖾𝖽𝖾 𝖮𝖼𝗎𝗉𝖺𝗋 𝖤𝗇 𝖤𝗅 𝖯𝗋𝗂𝗏𝖺𝖽𝗈",
     admin: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖠𝖽𝗆𝗂𝗇𝗂𝗌𝗍𝗋𝖺𝖽𝗈𝗋𝖾𝗌",
-    botAdmin: "𝖭𝖾𝖼𝖾𝗌𝗂𝗍𝗈 𝗌𝖾𝗋 𝖠𝖽𝗆𝗂𝗇 𝖯𝖺𝗋𝖺 𝖴𝗌𝖺𝗋 𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈",
+    botAdmin: "𝖭𝖾𝖼𝗌𝗂𝗍𝗈 𝗌𝖾𝗋 𝖠𝖽𝗆𝗂𝗇 𝖯𝖺𝗋𝖺 𝖴𝗌𝖺𝗋 𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈",
     restrict: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖧𝖺 𝖲𝗂𝖽𝗈 𝖣𝖾𝗌𝖺𝖻𝗂𝗅𝗂𝗍𝖺𝖽𝗈"
   }[type]
 
   if (msg)
     conn.reply(m.chat, msg, m, global.rcanal || {})
-      .then(() => m.react("✖️"))
 }
 
 global.handledMessages ||= new Map()
@@ -119,41 +100,38 @@ export async function handler(chatUpdate) {
 
   if (m.key?.id) {
     const prev = global.handledMessages.get(m.key.id)
-    if (prev && Date.now() - prev < 10000) return
+    if (prev && Date.now() - prev < 8000) return
     global.handledMessages.set(m.key.id, Date.now())
   }
-
-  if (global.db.data == null)
-    await global.loadDatabase()
 
   m = smsg(this, m)
   if (!m || !m.text) return
 
-  const isCommandLike =
-    (Array.isArray(global.prefixes)
-      ? global.prefixes
-      : [global.prefix || "."])
-      .some(p => typeof p === "string"
-        ? m.text.startsWith(p)
-        : p instanceof RegExp && p.test(m.text))
+  const prefixes = Array.isArray(global.prefixes)
+    ? global.prefixes
+    : [global.prefix || "."]
 
-  if (!isCommandLike && !Object.values(global.plugins).some(p => p.customPrefix))
-    return
+  const usedPrefix = prefixes.find(p =>
+    typeof p === "string"
+      ? m.text.startsWith(p)
+      : p instanceof RegExp && p.test(m.text)
+  )
+  if (!usedPrefix) return
+
+  const text = m.text.slice(
+    usedPrefix instanceof RegExp
+      ? m.text.match(usedPrefix)[0].length
+      : usedPrefix.length
+  )
+
+  const args = text.trim().split(/\s+/)
+  const command = (args.shift() || "").toLowerCase()
 
   global.beforeAll?.call(this, m).catch(() => {})
 
   const senderNumber = DIGITS(m.sender)
-
-  const settings = global.db.data.settings[this.user.jid] ||= {
-    self: false,
-    restrict: true
-  }
-
-  let user = null
-
   const isROwner = OWNER_NUMBERS.includes(senderNumber)
   const isOwner = isROwner || m.fromMe
-  const isPrems = isROwner
 
   let groupMetadata = {}
   let participants = []
@@ -176,8 +154,7 @@ export async function handler(chatUpdate) {
 
     isAdmin =
       userP?.admin === "admin" ||
-      userP?.admin === "superadmin" ||
-      DIGITS(groupMetadata.owner) === senderNumber
+      userP?.admin === "superadmin"
 
     isBotAdmin =
       botP?.admin === "admin" ||
@@ -188,64 +165,20 @@ export async function handler(chatUpdate) {
     const plugin = global.plugins[name]
     if (!plugin || plugin.disabled) continue
 
-    let usedPrefix = ""
-    let command = ""
-    let args = []
+    const isAccept =
+      plugin.command instanceof RegExp
+        ? plugin.command.test(command)
+        : Array.isArray(plugin.command)
+          ? plugin.command.includes(command)
+          : plugin.command === command
 
-    if (plugin.customPrefix) {
-      const match = m.text.match(plugin.customPrefix)
-      if (!match) continue
-      usedPrefix = match[0]
-      const text = m.text.slice(usedPrefix.length)
-      args = text.trim().split(/\s+/)
-      command = (args.shift() || "").toLowerCase()
-    } else {
-      const prefixes = Array.isArray(global.prefixes)
-        ? global.prefixes
-        : [global.prefix || "."]
-
-      const found = prefixes.find(p =>
-        typeof p === "string"
-          ? m.text.startsWith(p)
-          : p instanceof RegExp && p.test(m.text)
-      )
-
-      if (!found) continue
-
-      usedPrefix = found instanceof RegExp
-        ? m.text.match(found)?.[0] || ""
-        : found
-
-      const text = m.text.slice(usedPrefix.length)
-      args = text.trim().split(/\s+/)
-      command = (args.shift() || "").toLowerCase()
-    }
-
-    if (plugin.command) {
-      if (
-        plugin.customPrefix &&
-        plugin.command instanceof RegExp &&
-        plugin.command.source === "(?:)"
-      ) {
-      } else {
-        const isAccept =
-          plugin.command instanceof RegExp
-            ? plugin.command.test(command)
-            : Array.isArray(plugin.command)
-              ? plugin.command.includes(command)
-              : plugin.command === command
-
-        if (!isAccept) continue
-      }
-    }
+    if (!isAccept) continue
 
     if (plugin.rowner && !isROwner) return global.dfail("rowner", m, this)
     if (plugin.owner && !isOwner) return global.dfail("owner", m, this)
-    if (plugin.premium && !isPrems) return global.dfail("premium", m, this)
     if (plugin.group && !m.isGroup) return global.dfail("group", m, this)
     if (plugin.botAdmin && !isBotAdmin) return global.dfail("botAdmin", m, this)
     if (plugin.admin && !isAdmin) return global.dfail("admin", m, this)
-    if (plugin.private && m.isGroup) return global.dfail("private", m, this)
 
     const exec =
       typeof plugin === "function"
@@ -256,8 +189,8 @@ export async function handler(chatUpdate) {
 
     if (!exec) continue
 
-    enqueue(async () => {
-      await exec.call(this, m, {
+    Promise.race([
+      exec.call(this, m, {
         conn: this,
         args,
         usedPrefix,
@@ -268,12 +201,10 @@ export async function handler(chatUpdate) {
         isOwner,
         isAdmin,
         isBotAdmin,
-        isPrems,
-        chat: null,
-        user: null,
-        settings
-      })
-    })
+        chat: m.chat
+      }),
+      timeout(1500)
+    ]).catch(() => {})
 
     break
   }
@@ -283,6 +214,6 @@ if (process.env.NODE_ENV === "development") {
   const file = fileURLToPath(import.meta.url)
   fs.watchFile(file, () => {
     fs.unwatchFile(file)
-    console.log(chalk.magenta("Se actualizo 'handler.js'"))
+    console.log(chalk.magenta("Se actualizó 'handler.js'"))
   })
 }
