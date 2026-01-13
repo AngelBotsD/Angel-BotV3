@@ -5,6 +5,29 @@ import fs from "fs"
 import chalk from "chalk"
 import fetch from "node-fetch"
 
+const JOB_QUEUE = []
+let RUNNING = false
+
+function enqueue(job) {
+  JOB_QUEUE.push(job)
+  runQueue()
+}
+
+async function runQueue() {
+  if (RUNNING || JOB_QUEUE.length === 0) return
+  RUNNING = true
+
+  const job = JOB_QUEUE.shift()
+  try {
+    await job()
+  } catch (e) {
+    console.error(e)
+  }
+
+  RUNNING = false
+  setImmediate(runQueue)
+}
+
 let ICON_BUFFER = null
 
 const DIGITS = (s = "") => String(s).replace(/\D/g, "")
