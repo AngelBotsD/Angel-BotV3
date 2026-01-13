@@ -206,15 +206,22 @@ export async function handler(chatUpdate) {
     }
 
     if (plugin.command) {
-      const ok =
-        plugin.command instanceof RegExp
-          ? plugin.command.test(command)
-          : Array.isArray(plugin.command)
-            ? plugin.command.includes(command)
-            : plugin.command === command
+  if (
+    plugin.customPrefix &&
+    plugin.command instanceof RegExp &&
+    plugin.command.source === "(?:)"
+  ) {
+  } else {
+    const isAccept =
+      plugin.command instanceof RegExp
+        ? plugin.command.test(command)
+        : Array.isArray(plugin.command)
+          ? plugin.command.includes(command)
+          : plugin.command === command
 
-      if (!ok) continue
-    }
+    if (!isAccept) continue
+  }
+}
 
     user.commands++
 
