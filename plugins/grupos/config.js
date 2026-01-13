@@ -47,5 +47,4 @@ handler.customPrefix = /^(?:\.?grupo\s*(abrir|cerrar|open|close)|\.?(abrir|cerra
 handler.command = new RegExp()
 handler.group = true
 handler.admin = true
-handler.botAdmin = true
 export default handler
