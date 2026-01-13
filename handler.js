@@ -140,7 +140,7 @@ export async function handler(chatUpdate) {
   if (!isCommandLike && !Object.values(global.plugins).some(p => p.customPrefix))
     return
 
-  await global.beforeAll?.call(this, m)
+global.beforeAll?.call(this, m).catch(() => {})
 
   const senderNumber = DIGITS(m.sender)
 
