@@ -182,6 +182,8 @@ export async function handler(chatUpdate) {
   let groupMetadata = {}, participants = []
   let isAdmin = false, isBotAdmin = false
 
+  if (!m.isGroup) isBotAdmin = true
+
   if (m.isGroup) {
     let cached = global.groupMetaCache.get(m.chat)
     if (!cached) {
