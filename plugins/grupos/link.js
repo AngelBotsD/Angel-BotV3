@@ -16,18 +16,15 @@ const safeFetch = async (url, timeout = 5000) => {
 async function handler(m, { conn }) {
   const chat = m.chat
 
-  // Reacción rápida
   await conn.sendMessage(chat, {
     react: { text: '🔗', key: m.key }
   })
 
-  // Obtener enlace
   const code = await conn.groupInviteCode(chat).catch(() => null)
   const link = code
     ? `https://chat.whatsapp.com/${code}`
     : 'Sin enlace disponible'
 
-  // Obtener imagen del grupo
   const fallback = 'https://files.catbox.moe/xr2m6u.jpg'
   let thumb = null
 
@@ -42,7 +39,6 @@ async function handler(m, { conn }) {
     thumb = await safeFetch(fallback)
   }
 
-  // Enviar mensaje con preview
   await conn.sendMessage(chat, {
     text: link,
     contextInfo: {
@@ -64,5 +60,4 @@ handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
 handler.customPrefix = /^\.?(link)$/i;
 handler.command = new RegExp();
 handler.group = true;
-handler.botAdmin = true
 export default handler;
