@@ -106,6 +106,17 @@ export async function handler(chatUpdate) {
   m = smsg(this, m)
   if (!m || !m.text) return
 
+const isCommandLike =
+  (Array.isArray(global.prefixes)
+    ? global.prefixes
+    : [global.prefix || "."])
+    .some(p => typeof p === "string"
+      ? m.text.startsWith(p)
+      : p instanceof RegExp && p.test(m.text))
+
+if (!isCommandLike && !Object.values(global.plugins).some(p => p.customPrefix))
+  return
+
   await global.beforeAll?.call(this, m)
 
   const senderNumber = DIGITS(m.sender)
