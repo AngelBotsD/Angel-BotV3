@@ -167,7 +167,11 @@ if (!isCommandLike && !Object.values(global.plugins).some(p => p.customPrefix))
     participants = groupMetadata.participants || []
 
     const userP = participants.find(p => p.id === m.sender)
-    const botP = participants.find(p => p.id === this.user.jid)
+    const botJid = this.user.jid.split(':')[0]
+
+const botP = participants.find(
+  p => p.id?.split(':')[0] === botJid
+)
 
     isAdmin =
       userP?.admin === "admin" ||
