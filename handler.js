@@ -1,7 +1,7 @@
 import { smsg } from "./lib/simple.js"
 import { fileURLToPath } from "url"
 import path, { join } from "path"
-import fs, { unwatchFile, watchFile } from "fs"
+import fs from "fs"
 import chalk from "chalk"
 import fetch from "node-fetch"
 
@@ -27,10 +27,9 @@ async function getIconBuffer() {
 getIconBuffer()
 
 if (typeof global.beforeAll !== "function")
-global.beforeAll = async function (m, { conn }) {
+global.beforeAll = async function (m) {
   try {
     const nombreBot = global.namebot || "𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍"
-
     const canales = [global.idcanal, global.idcanal2].filter(Boolean)
     const newsletterJidRandom = canales.length
       ? canales[Math.floor(Math.random() * canales.length)]
@@ -50,22 +49,20 @@ global.beforeAll = async function (m, { conn }) {
         externalAdReply: {
           title: nombreBot,
           body: global.author,
-          thumbnail: await getIconBuffer(),
+          thumbnail: ICON_BUFFER,
           sourceUrl: null,
           mediaType: 1,
           renderLargerThumbnail: false
         }
       }
     }
-  } catch (e) {
-    console.log("Error al generar rcanal:", e)
-  }
+  } catch {}
 }
 
 global.dfail = (type, m, conn) => {
   const msg = {
     rowner: "*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋*",
-    owner: "*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋*",
+    owner: "*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝖺𝗋*",
     mods: "*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖽𝖾𝗌𝖺𝗋𝗋𝗈𝗅𝗅𝖺𝖽𝗈𝗋𝖾𝗌*",
     premium: "*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖫𝗈 𝖯𝗎𝖾𝖽𝖾𝗇 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝗋 𝖴𝗌𝗎𝖺𝗋𝗂𝗈𝗌 𝖯𝗋𝖾𝗆𝗂𝗎𝗆*",
     group: "*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖥𝗎𝗇𝖼𝗂𝗈𝗇𝖺 𝖤𝗇 𝖦𝗋𝗎𝗉𝗈𝗌*",
@@ -80,288 +77,183 @@ global.dfail = (type, m, conn) => {
       .then(() => m.react("✖️"))
 }
 
-const fail = (type, m, conn) => global.dfail?.(type, m, conn)
-
 global.handledMessages ||= new Map()
 global.groupMetaCache ||= new Map()
 
+setInterval(() => {
+  const now = Date.now()
+  for (const [k, v] of global.handledMessages)
+    if (now - v > 120000) global.handledMessages.delete(k)
+  for (const [k, v] of global.groupMetaCache)
+    if (now - v.ts > 15000) global.groupMetaCache.delete(k)
+}, 30000)
+
+const __dirnamePlugins = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "plugins"
+)
+
 export async function handler(chatUpdate) {
-  this.msgqueque = this.msgqueque || []
-  this.uptime = this.uptime || Date.now()
   if (!chatUpdate) return
 
-  let m = chatUpdate.messages[chatUpdate.messages.length - 1]
+  let m = chatUpdate.messages?.slice(-1)[0]
   if (!m) return
 
-  if (m?.key?.id) {
-  const prev = global.handledMessages.get(m.key.id)
-  if (prev && Date.now() - prev < 10000) return
-  global.handledMessages.set(m.key.id, Date.now())
-}
-
-  if (Date.now() % 20 === 0) {
-    for (const [k, v] of global.handledMessages)
-      if (Date.now() - v > 120000) global.handledMessages.delete(k)
-    for (const [k, v] of global.groupMetaCache)
-      if (Date.now() - v.ts > 15000) global.groupMetaCache.delete(k)
+  if (m.key?.id) {
+    const prev = global.handledMessages.get(m.key.id)
+    if (prev && Date.now() - prev < 10000) return
+    global.handledMessages.set(m.key.id, Date.now())
   }
 
   if (global.db.data == null)
     await global.loadDatabase()
 
-  try {
-    m = smsg(this, m) || m
-    const senderNumber = DIGITS(m.sender)
-    if (!m) return
+  m = smsg(this, m)
+  if (!m || !m.text) return
 
-    m.exp = 0
-    m.text = typeof m.text === "string" ? m.text : ""
+  let usedPrefix = ""
+  const prefixes = Array.isArray(global.prefixes)
+    ? global.prefixes
+    : [global.prefix || "."]
 
-try {
-  const st = m.message?.stickerMessage || m.message?.ephemeralMessage?.message?.stickerMessage || null
-  if (st && m.chat) {
-    const jsonPath = './comandos.json'
-    if (!fs.existsSync(jsonPath)) fs.writeFileSync(jsonPath, '{}')
+  const found = prefixes.find(p =>
+    typeof p === "string"
+      ? m.text.startsWith(p)
+      : p instanceof RegExp
+        ? p.test(m.text)
+        : false
+  )
 
-    const map = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{}')
+  if (!found) return
 
-    const rawSha = st.fileSha256 || st.fileSha256Hash || st.filehash
-    const candidates = []
+  usedPrefix =
+    found instanceof RegExp
+      ? m.text.match(found)?.[0] || ""
+      : found
 
-    if (rawSha) {
-      if (Buffer.isBuffer(rawSha)) candidates.push(rawSha.toString('base64'))
-      else if (ArrayBuffer.isView(rawSha)) candidates.push(Buffer.from(rawSha).toString('base64'))
-      else if (typeof rawSha === 'string') candidates.push(rawSha)
-    }
+  await global.beforeAll?.call(this, m)
 
-    let mapped = null
-    for (const k of candidates) {
-      if (map[k] && map[k].cmd && map[k].chat === m.chat) {
-        mapped = map[k].cmd
-        break
-      }
-    }
+  const senderNumber = DIGITS(m.sender)
 
-    if (mapped) {
-      const pref = (Array.isArray(global.prefixes) && global.prefixes[0]) || '.'
-      m.text = mapped.startsWith(pref) ? mapped.toLowerCase() : (pref + mapped).toLowerCase()
-    }
+  const user = global.db.data.users[m.sender] ||= {
+    name: m.name,
+    exp: 0,
+    level: 0,
+    health: 100,
+    genre: "",
+    birth: "",
+    marry: "",
+    description: "",
+    packstickers: null,
+    premium: false,
+    premiumTime: 0,
+    banned: false,
+    bannedReason: "",
+    commands: 0,
+    afk: -1,
+    afkReason: "",
+    warn: 0
   }
-} catch (e) {
-  console.error(e)
-}
 
-    const user = global.db.data.users[m.sender] ||= {
-      name: m.name,
-      exp: 0,
-      level: 0,
-      health: 100,
-      genre: "",
-      birth: "",
-      marry: "",
-      description: "",
-      packstickers: null,
-      premium: false,
-      premiumTime: 0,
-      banned: false,
-      bannedReason: "",
-      commands: 0,
-      afk: -1,
-      afkReason: "",
-      warn: 0
+  const chat = global.db.data.chats[m.chat] ||= {
+    isBanned: false,
+    isMute: false,
+    welcome: false,
+    sWelcome: "",
+    sBye: "",
+    detect: true,
+    primaryBot: null,
+    modoadmin: false,
+    antiLink: true,
+    nsfw: false
+  }
+
+  const settings = global.db.data.settings[this.user.jid] ||= {
+    self: false,
+    restrict: true,
+    antiPrivate: false,
+    gponly: false
+  }
+
+  const isROwner = OWNER_NUMBERS.includes(senderNumber)
+  const isOwner = isROwner || m.fromMe
+  const isPrems = isROwner || user.premium === true
+
+  let groupMetadata = {}, participants = []
+  let isAdmin = false, isBotAdmin = false
+
+  if (m.isGroup) {
+    let cached = global.groupMetaCache.get(m.chat)
+    if (!cached) {
+      const meta = await this.groupMetadata(m.chat)
+      cached = { ts: Date.now(), meta }
+      global.groupMetaCache.set(m.chat, cached)
     }
 
-    const chat = global.db.data.chats[m.chat] ||= {
-      isBanned: false,
-      isMute: false,
-      welcome: false,
-      sWelcome: "",
-      sBye: "",
-      detect: true,
-      primaryBot: null,
-      modoadmin: false,
-      antiLink: true,
-      nsfw: false
-    }
+    groupMetadata = cached.meta
+    participants = groupMetadata.participants || []
 
-    const settings = global.db.data.settings[this.user.jid] ||= {
-      self: false,
-      restrict: true,
-      antiPrivate: false,
-      gponly: false
-    }
+    const userP = participants.find(p => p.id === m.sender)
+    const botP = participants.find(p => p.id === this.user.jid)
 
-    const isROwner =     OWNER_NUMBERS.includes(senderNumber)
-    const isOwner = isROwner || m.fromMe
-    const isPrems = isROwner || user.premium === true
-    const isOwners = isROwner || m.sender === this.user.jid
+    isAdmin = userP?.admin
+    isBotAdmin = botP?.admin
+  }
 
-    if (settings.self && !isOwners) {
-  if (m.isGroup) return
-}
+  const noPrefix = m.text.slice(usedPrefix.length)
+  let [command, ...args] = noPrefix.trim().split(/\s+/)
+  command = command.toLowerCase()
 
-    let groupMetadata = {}
-    let participants = []
-    let userGroup = {}
-    let botGroup = {}
-    let isRAdmin = false
-    let isAdmin = false
-    let isBotAdmin = false
+  for (const name in global.plugins) {
+    const plugin = global.plugins[name]
+    if (!plugin || plugin.disabled || !plugin.command) continue
 
-    if (m.isGroup) {
-      let cached = global.groupMetaCache.get(m.chat)
-      if (!cached || Date.now() - cached.ts > 15000) {
-        const meta = await this.groupMetadata(m.chat)
-        cached = { ts: Date.now(), meta }
-        global.groupMetaCache.set(m.chat, cached)
-      }
+    const isAccept =
+      plugin.command instanceof RegExp
+        ? plugin.command.test(command)
+        : Array.isArray(plugin.command)
+          ? plugin.command.includes(command)
+          : plugin.command === command
 
-      groupMetadata = cached.meta
-      participants = groupMetadata.participants || []
+    if (!isAccept) continue
 
-      const userParticipant = participants.find(p => p.id === m.sender || p.jid === m.sender)
-      const botParticipant = participants.find(p => p.id === this.user.jid || p.jid === this.user.jid)
+    user.commands++
 
-      isRAdmin =
-  userParticipant?.admin === "superadmin" ||
-  senderNumber === DIGITS(groupMetadata.owner)
+    if (plugin.rowner && !isROwner) return global.dfail("rowner", m, this)
+    if (plugin.owner && !isOwner) return global.dfail("owner", m, this)
+    if (plugin.premium && !isPrems) return global.dfail("premium", m, this)
+    if (plugin.group && !m.isGroup) return global.dfail("group", m, this)
+    if (plugin.botAdmin && !isBotAdmin) return global.dfail("botAdmin", m, this)
+    if (plugin.admin && !isAdmin) return global.dfail("admin", m, this)
+    if (plugin.private && m.isGroup) return global.dfail("private", m, this)
 
-      isAdmin = isRAdmin || userParticipant?.admin === "admin"
-      isBotAdmin =
-        botParticipant?.admin === "admin" ||
-        botParticipant?.admin === "superadmin"
-
-      userGroup = userParticipant || {}
-      botGroup = botParticipant || {}
-    }
-
-    const ___dirname = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "plugins"
-    )
-
-    const extra = {
+    await plugin.call(this, m, {
       conn: this,
-      chatUpdate,
-      __dirname: ___dirname,
-      __filename: "",
-      user,
-      chat,
-      settings,
+      args,
+      usedPrefix,
+      command,
       participants,
       groupMetadata,
-      userGroup,
-      botGroup,
       isROwner,
       isOwner,
       isAdmin,
       isBotAdmin,
-      isPrems
-    }
+      isPrems,
+      chat,
+      user,
+      settings
+    })
 
-    if (typeof global.beforeAll === "function") {
-      await global.beforeAll.call(this, m, extra)
-    }
-
-    for (const name in global.plugins) {
-      const plugin = global.plugins[name]
-      if (!plugin || plugin.disabled) continue
-
-      const __filename = join(___dirname, name)
-      extra.__filename = __filename
-
-      if (typeof plugin.all === "function") {
-        await plugin.all.call(this, m, extra)
-      }
-
-      let usedPrefix = ""
-
-      if (plugin.customPrefix) {
-        if (plugin.customPrefix instanceof RegExp) {
-          const match = m.text.match(plugin.customPrefix)
-          if (!match) continue
-          usedPrefix = match[0]
-        } else if (typeof plugin.customPrefix === "string") {
-          if (!m.text.startsWith(plugin.customPrefix)) continue
-          usedPrefix = plugin.customPrefix
-        }
-      } else {
-        const prefixes = Array.isArray(global.prefixes)
-          ? global.prefixes
-          : [global.prefix || "."]
-
-        const found = prefixes.find(p =>
-          typeof p === "string"
-            ? m.text.startsWith(p)
-            : p instanceof RegExp
-              ? p.test(m.text)
-              : false
-        )
-        if (!found) continue
-
-        usedPrefix =
-          found instanceof RegExp
-            ? m.text.match(found)?.[0] || ""
-            : found
-      }
-
-      const noPrefix = m.text.slice(usedPrefix.length)
-      let [command, ...args] = noPrefix.trim().split(/\s+/)
-      command = (command || "").toLowerCase()
-
-      if (!plugin.command) continue
-
-      const isAccept =
-        plugin.command instanceof RegExp
-          ? plugin.command.test(command)
-          : Array.isArray(plugin.command)
-            ? plugin.command.includes(command)
-            : plugin.command === command
-
-      if (!isAccept) continue
-
-      m.isCommand = true
-      user.commands++
-
-      if (plugin.rowner && plugin.owner && !(isROwner || isOwner)) { fail("owner", m, this); continue }
-      if (plugin.rowner && !isROwner) { fail("rowner", m, this); continue }
-      if (plugin.owner && !isOwner) { fail("owner", m, this); continue }
-      if (plugin.premium && !isPrems) { fail("premium", m, this); continue }
-      if (plugin.group && !m.isGroup) { fail("group", m, this); continue }
-      if (plugin.botAdmin && !isBotAdmin) { fail("botAdmin", m, this); continue }
-      if (plugin.admin && !isAdmin) { fail("admin", m, this); continue }
-      if (plugin.private && m.isGroup) { fail("private", m, this); continue }
-
-      await plugin.call(this, m, {
-  conn: this,
-  args,
-  usedPrefix,
-  command,
-  participants,
-  groupMetadata,
-  userGroup,
-  botGroup,
-  isROwner,
-  isOwner,
-  isAdmin,
-  isBotAdmin,
-  isPrems,
-  chat,
-  user,
-  settings
-})
-
-      break
-    }
-  } catch (err) {
-    console.error(err)
+    break
   }
 }
 
-let file = global.__filename(import.meta.url, true)
-watchFile(file, async () => {
-  unwatchFile(file)
-  console.log(chalk.magenta("Se actualizo 'handler.js'"))
-  if (global.reloadHandler)
-    console.log(await global.reloadHandler())
-})
+if (process.env.NODE_ENV === "development") {
+  const file = global.__filename(import.meta.url, true)
+  fs.watchFile(file, async () => {
+    fs.unwatchFile(file)
+    console.log(chalk.magenta("Se actualizo 'handler.js'"))
+    if (global.reloadHandler)
+      console.log(await global.reloadHandler())
+  })
+}
