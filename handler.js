@@ -169,25 +169,30 @@ if (m.isGroup) {
   const normalize = jid => jid?.split(':')[0]
 
 const userJid = normalize(m.sender)
-const botJid = normalize(this.user.id)
+const botJid = normalize(this.user.id || this.user.jid)
 
-const userParticipant = participants.find(
-  p => normalize(p.id || p.jid) === userJid
-)
+const getParticipant = jid =>
+  participants.find(p =>
+    normalize(p.id || p.jid) === jid
+  )
 
-const botParticipant = participants.find(
-  p => normalize(p.id || p.jid) === botJid
-)
+const userParticipant = getParticipant(userJid)
+const botParticipant = getParticipant(botJid)
 
 isAdmin =
   userParticipant?.admin === "admin" ||
   userParticipant?.admin === "superadmin" ||
+  userParticipant?.isAdmin === true ||
+  userParticipant?.isSuperAdmin === true ||
   DIGITS(groupMetadata.owner) === DIGITS(userJid)
 
 isBotAdmin =
   botParticipant?.admin === "admin" ||
-  botParticipant?.admin === "superadmin"
+  botParticipant?.admin === "superadmin" ||
+  botParticipant?.isAdmin === true ||
+  botParticipant?.isSuperAdmin === true
 
+// compat total
 m.isAdmin = isAdmin
 m.isBotAdmin = isBotAdmin
 this.isAdmin = isAdmin
