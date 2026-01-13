@@ -16,7 +16,7 @@ const OWNER_NUMBERS = (global.owner || []).map(v =>
 async function getIconBuffer() {
   if (ICON_BUFFER) return ICON_BUFFER
   try {
-    const res = await fetch("https://files.catbox.moe/izivd5.jpg")
+    const res = await fetch("https://files.catbox.moe/dkw6yn.jpg")
     ICON_BUFFER = Buffer.from(await res.arrayBuffer())
     return ICON_BUFFER
   } catch {
