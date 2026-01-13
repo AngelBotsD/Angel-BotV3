@@ -162,61 +162,60 @@ export async function handler(chatUpdate) {
   }
 
   for (const name in global.plugins) {
-    const plugin = global.plugins[name]
-    if (!plugin || plugin.disabled) continue
+  const plugin = global.plugins[name]
+  if (!plugin || plugin.disabled) continue
 
-    let isAccept = false
-
-if (plugin.command) {
   let isAccept = false
 
-if (plugin.customPrefix instanceof RegExp) {
-  isAccept = plugin.customPrefix.test(m.text)
-} else {
-  isAccept =
-    plugin.command instanceof RegExp
-      ? plugin.command.test(command)
-      : Array.isArray(plugin.command)
-        ? plugin.command.includes(command)
-        : plugin.command === command
-}
+  if (plugin.command) {
+    if (plugin.customPrefix instanceof RegExp) {
+      isAccept = plugin.customPrefix.test(m.text)
+    } else {
+      isAccept =
+        plugin.command instanceof RegExp
+          ? plugin.command.test(command)
+          : Array.isArray(plugin.command)
+            ? plugin.command.includes(command)
+            : plugin.command === command
+    }
 
-if (!isAccept) continue
-
-    if (plugin.rowner && !isROwner) return global.dfail("rowner", m, this)
-    if (plugin.owner && !isOwner) return global.dfail("owner", m, this)
-    if (plugin.group && !m.isGroup) return global.dfail("group", m, this)
-    if (plugin.botAdmin && !isBotAdmin) return global.dfail("botAdmin", m, this)
-    if (plugin.admin && !isAdmin) return global.dfail("admin", m, this)
-
-    const exec =
-      typeof plugin === "function"
-        ? plugin
-        : typeof plugin.default === "function"
-          ? plugin.default
-          : null
-
-    if (!exec) continue
-
-    Promise.race([
-      exec.call(this, m, {
-        conn: this,
-        args,
-        usedPrefix,
-        command,
-        participants,
-        groupMetadata,
-        isROwner,
-        isOwner,
-        isAdmin,
-        isBotAdmin,
-        chat: m.chat
-      }),
-      timeout(1500)
-    ]).catch(() => {})
-
-    break
+    if (!isAccept) continue
   }
+
+  if (plugin.rowner && !isROwner) return global.dfail("rowner", m, this)
+  if (plugin.owner && !isOwner) return global.dfail("owner", m, this)
+  if (plugin.group && !m.isGroup) return global.dfail("group", m, this)
+  if (plugin.botAdmin && !isBotAdmin) return global.dfail("botAdmin", m, this)
+  if (plugin.admin && !isAdmin) return global.dfail("admin", m, this)
+
+  const exec =
+    typeof plugin === "function"
+      ? plugin
+      : typeof plugin.default === "function"
+        ? plugin.default
+        : null
+
+  if (!exec) continue
+
+  Promise.race([
+    exec.call(this, m, {
+      conn: this,
+      args,
+      usedPrefix,
+      command,
+      participants,
+      groupMetadata,
+      isROwner,
+      isOwner,
+      isAdmin,
+      isBotAdmin,
+      chat: m.chat
+    }),
+    timeout(1500)
+  ]).catch(() => {})
+
+  break
+ }
 }
 
 if (process.env.NODE_ENV === "development") {
