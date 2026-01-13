@@ -178,13 +178,17 @@ const botP = participants.find(
 )
 
     isAdmin =
-      userP?.admin === "admin" ||
-      userP?.admin === "superadmin" ||
-      DIGITS(groupMetadata.owner) === senderNumber
+  userP?.admin === "admin" ||
+  userP?.admin === "superadmin" ||
+  DIGITS(groupMetadata.owner) === DIGITS(userJid)
 
-    isBotAdmin =
-      botP?.admin === "admin" ||
-      botP?.admin === "superadmin"
+isBotAdmin =
+  botP?.admin === "admin" ||
+  botP?.admin === "superadmin"
+
+handler.botAdmin = isBotAdmin
+m.isBotAdmin = isBotAdmin
+m.isAdmin = isAdmin
   }
 
   for (const name in global.plugins) {
