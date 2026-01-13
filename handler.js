@@ -276,10 +276,6 @@ global.beforeAll?.call(this, m).catch(() => {})
 
     if (!exec) continue
 
-// ⚡ RESPUESTA INSTANTÁNEA
-this.sendMessage(m.chat, { text: "⚡" }).catch(() => {})
-
-// 🚀 EJECUCIÓN EN BACKGROUND
 enqueue(async () => {
   await exec.call(this, m, {
     conn: this,
