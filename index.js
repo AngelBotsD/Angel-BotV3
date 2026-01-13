@@ -170,7 +170,6 @@ return ""
 msgRetryCounterCache: msgRetryCounterCache || new Map(),
 userDevicesCache: userDevicesCache || new Map(),
 defaultQueryTimeoutMs: undefined,
-cachedGroupMetadata: (jid) => globalThis.conn.chats[jid] ?? {},
 version: version, 
 keepAliveIntervalMs: 55000, 
 maxIdleTimeMs: 60000, 
