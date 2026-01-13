@@ -140,7 +140,7 @@ export async function handler(chatUpdate) {
   if (!isCommandLike && !Object.values(global.plugins).some(p => p.customPrefix))
     return
 
-global.beforeAll?.call(this, m).catch(() => {})
+  global.beforeAll?.call(this, m).catch(() => {})
 
   const senderNumber = DIGITS(m.sender)
 
@@ -149,9 +149,11 @@ global.beforeAll?.call(this, m).catch(() => {})
     restrict: true
   }
 
+  let user = null
+
   const isROwner = OWNER_NUMBERS.includes(senderNumber)
   const isOwner = isROwner || m.fromMe
-  const isPrems = isROwner || user.premium === true
+  const isPrems = isROwner
 
   let groupMetadata = {}
   let participants = []
@@ -237,8 +239,6 @@ global.beforeAll?.call(this, m).catch(() => {})
       }
     }
 
-    user.commands++
-
     if (plugin.rowner && !isROwner) return global.dfail("rowner", m, this)
     if (plugin.owner && !isOwner) return global.dfail("owner", m, this)
     if (plugin.premium && !isPrems) return global.dfail("premium", m, this)
@@ -256,26 +256,26 @@ global.beforeAll?.call(this, m).catch(() => {})
 
     if (!exec) continue
 
-enqueue(async () => {
-  await exec.call(this, m, {
-    conn: this,
-    args,
-    usedPrefix,
-    command,
-    participants,
-    groupMetadata,
-    isROwner,
-    isOwner,
-    isAdmin,
-    isBotAdmin,
-    isPrems,
-    chat,
-    user,
-    settings
-  })
-})
+    enqueue(async () => {
+      await exec.call(this, m, {
+        conn: this,
+        args,
+        usedPrefix,
+        command,
+        participants,
+        groupMetadata,
+        isROwner,
+        isOwner,
+        isAdmin,
+        isBotAdmin,
+        isPrems,
+        chat: null,
+        user: null,
+        settings
+      })
+    })
 
-break
+    break
   }
 }
 
