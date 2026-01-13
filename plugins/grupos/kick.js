@@ -23,6 +23,5 @@ handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
 handler.command = new RegExp()
 handler.group = true
 handler.admin = true
-handler.botAdmin = true
 
 export default handler
