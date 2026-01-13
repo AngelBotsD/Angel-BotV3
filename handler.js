@@ -165,14 +165,22 @@ export async function handler(chatUpdate) {
     const plugin = global.plugins[name]
     if (!plugin || plugin.disabled) continue
 
-    const isAccept =
-      plugin.command instanceof RegExp
-        ? plugin.command.test(command)
-        : Array.isArray(plugin.command)
-          ? plugin.command.includes(command)
-          : plugin.command === command
+    let isAccept = false
 
-    if (!isAccept) continue
+if (plugin.command) {
+  isAccept =
+    plugin.command instanceof RegExp
+      ? plugin.command.test(command)
+      : Array.isArray(plugin.command)
+        ? plugin.command.includes(command)
+        : plugin.command === command
+} else if (plugin.customPrefix) {
+  isAccept = plugin.customPrefix.test(m.text)
+} else {
+  isAccept = true
+}
+
+if (!isAccept) continue
 
     if (plugin.rowner && !isROwner) return global.dfail("rowner", m, this)
     if (plugin.owner && !isOwner) return global.dfail("owner", m, this)
