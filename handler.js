@@ -186,9 +186,11 @@ isBotAdmin =
   botP?.admin === "admin" ||
   botP?.admin === "superadmin"
 
-handler.botAdmin = isBotAdmin
 m.isBotAdmin = isBotAdmin
 m.isAdmin = isAdmin
+
+this.isBotAdmin = isBotAdmin
+this.isAdmin = isAdmin
   }
 
   for (const name in global.plugins) {
