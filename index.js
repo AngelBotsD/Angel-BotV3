@@ -21,7 +21,7 @@ import pino from 'pino'
 import Pino from 'pino'
 import path, { join, dirname } from 'path'
 import { Boom } from '@hapi/boom'
-import { makeWASocket, smsg as serialize } from './lib/simple.js'
+import { makeWASocket } from './lib/simple.js'
 import { Low, JSONFile } from 'lowdb'
 import MongoDB from './lib/mongoDB.js'
 import store from './lib/store.js'
@@ -62,7 +62,6 @@ font: 'console',
 align: 'center',
 colors: ['cyan', 'magenta', 'yellow']
 })
-serialize()
 
 if (!existsSync("./tmp")) {
   mkdirSync("./tmp");
