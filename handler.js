@@ -193,11 +193,26 @@ export async function handler(chatUpdate) {
     groupMetadata = cached.meta
     participants = groupMetadata.participants || []
 
-    const userP = participants.find(p => p.id === m.sender)
-    const botP = participants.find(p => p.id === this.user.jid)
+    const userP = participants.find(p =>
+  p.id === m.sender || p.jid === m.sender
+)
 
-    isAdmin = userP?.admin
-    isBotAdmin = botP?.admin
+const botP = participants.find(p =>
+  p.id === this.user.jid || p.jid === this.user.jid
+)
+
+const senderNumber = DIGITS(m.sender)
+
+const isRAdmin =
+  userP?.admin === "superadmin" ||
+  senderNumber === DIGITS(groupMetadata.owner)
+
+isAdmin =
+  isRAdmin || userP?.admin === "admin"
+
+isBotAdmin =
+  botP?.admin === "admin" ||
+  botP?.admin === "superadmin"
   }
 
   const noPrefix = m.text.slice(usedPrefix.length)
