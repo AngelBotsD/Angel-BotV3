@@ -144,26 +144,6 @@ global.beforeAll?.call(this, m).catch(() => {})
 
   const senderNumber = DIGITS(m.sender)
 
-  const user = global.db.data.users[m.sender] ||= {
-    name: m.name,
-    exp: 0,
-    level: 0,
-    health: 100,
-    premium: false,
-    premiumTime: 0,
-    banned: false,
-    commands: 0,
-    afk: -1,
-    afkReason: ""
-  }
-
-  const chat = global.db.data.chats[m.chat] ||= {
-    isBanned: false,
-    isMute: false,
-    welcome: false,
-    detect: true
-  }
-
   const settings = global.db.data.settings[this.user.jid] ||= {
     self: false,
     restrict: true
