@@ -180,11 +180,13 @@ const botP = participants.find(
 )
 
     isAdmin =
+  userP?.admin === true ||
   userP?.admin === "admin" ||
   userP?.admin === "superadmin" ||
   DIGITS(groupMetadata.owner) === DIGITS(userJid)
 
 isBotAdmin =
+  botP?.admin === true ||
   botP?.admin === "admin" ||
   botP?.admin === "superadmin"
 
