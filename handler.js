@@ -167,7 +167,7 @@ if (!isCommandLike && !Object.values(global.plugins).some(p => p.customPrefix))
     participants = groupMetadata.participants || []
 
     const userJid = m.sender.split(':')[0]
-const botJid = this.user.jid.split(':')[0]
+const botJid = (this.user.id || this.user.jid).split(':')[0]
 
 const getJid = p => (p.id || p.jid || "").split(":")[0]
 
