@@ -166,8 +166,12 @@ if (!isCommandLike && !Object.values(global.plugins).some(p => p.customPrefix))
     groupMetadata = cached.meta
     participants = groupMetadata.participants || []
 
-    const userP = participants.find(p => p.id === m.sender)
-    const botJid = this.user.jid.split(':')[0]
+    const userJid = m.sender.split(':')[0]
+const botJid = this.user.jid.split(':')[0]
+
+const userP = participants.find(
+  p => p.id?.split(':')[0] === userJid
+)
 
 const botP = participants.find(
   p => p.id?.split(':')[0] === botJid
