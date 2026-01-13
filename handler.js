@@ -276,7 +276,8 @@ export async function handler(chatUpdate) {
 
     if (!exec) continue
 
-    await exec.call(this, m, {
+    enqueue(async () => {
+  await exec.call(this, m, {
       conn: this,
       args,
       usedPrefix,
