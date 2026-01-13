@@ -1,6 +1,6 @@
 import { smsg } from "./lib/simple.js"
 import { fileURLToPath } from "url"
-import path, { join } from "path"
+import path from "path"
 import fs from "fs"
 import chalk from "chalk"
 import fetch from "node-fetch"
@@ -88,11 +88,6 @@ setInterval(() => {
     if (now - v.ts > 15000) global.groupMetaCache.delete(k)
 }, 30000)
 
-const __dirnamePlugins = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "plugins"
-)
-
 export async function handler(chatUpdate) {
   if (!chatUpdate) return
 
@@ -111,26 +106,6 @@ export async function handler(chatUpdate) {
   m = smsg(this, m)
   if (!m || !m.text) return
 
-  let usedPrefix = ""
-  const prefixes = Array.isArray(global.prefixes)
-    ? global.prefixes
-    : [global.prefix || "."]
-
-  const found = prefixes.find(p =>
-    typeof p === "string"
-      ? m.text.startsWith(p)
-      : p instanceof RegExp
-        ? p.test(m.text)
-        : false
-  )
-
-  if (!found) return
-
-  usedPrefix =
-    found instanceof RegExp
-      ? m.text.match(found)?.[0] || ""
-      : found
-
   await global.beforeAll?.call(this, m)
 
   const senderNumber = DIGITS(m.sender)
@@ -140,49 +115,34 @@ export async function handler(chatUpdate) {
     exp: 0,
     level: 0,
     health: 100,
-    genre: "",
-    birth: "",
-    marry: "",
-    description: "",
-    packstickers: null,
     premium: false,
     premiumTime: 0,
     banned: false,
-    bannedReason: "",
     commands: 0,
     afk: -1,
-    afkReason: "",
-    warn: 0
+    afkReason: ""
   }
 
   const chat = global.db.data.chats[m.chat] ||= {
     isBanned: false,
     isMute: false,
     welcome: false,
-    sWelcome: "",
-    sBye: "",
-    detect: true,
-    primaryBot: null,
-    modoadmin: false,
-    antiLink: true,
-    nsfw: false
+    detect: true
   }
 
   const settings = global.db.data.settings[this.user.jid] ||= {
     self: false,
-    restrict: true,
-    antiPrivate: false,
-    gponly: false
+    restrict: true
   }
 
   const isROwner = OWNER_NUMBERS.includes(senderNumber)
   const isOwner = isROwner || m.fromMe
   const isPrems = isROwner || user.premium === true
 
-  let groupMetadata = {}, participants = []
-  let isAdmin = false, isBotAdmin = false
-
-  if (!m.isGroup) isBotAdmin = true
+  let groupMetadata = {}
+  let participants = []
+  let isAdmin = false
+  let isBotAdmin = !m.isGroup
 
   if (m.isGroup) {
     let cached = global.groupMetaCache.get(m.chat)
@@ -195,44 +155,66 @@ export async function handler(chatUpdate) {
     groupMetadata = cached.meta
     participants = groupMetadata.participants || []
 
-    const userP = participants.find(p =>
-  p.id === m.sender || p.jid === m.sender
-)
+    const userP = participants.find(p => p.id === m.sender)
+    const botP = participants.find(p => p.id === this.user.jid)
 
-const botP = participants.find(p =>
-  p.id === this.user.jid || p.jid === this.user.jid
-)
+    isAdmin =
+      userP?.admin === "admin" ||
+      userP?.admin === "superadmin" ||
+      DIGITS(groupMetadata.owner) === senderNumber
 
-const senderNumber = DIGITS(m.sender)
-
-const isRAdmin =
-  userP?.admin === "superadmin" ||
-  senderNumber === DIGITS(groupMetadata.owner)
-
-isAdmin =
-  isRAdmin || userP?.admin === "admin"
-
-isBotAdmin =
-  botP?.admin === "admin" ||
-  botP?.admin === "superadmin"
+    isBotAdmin =
+      botP?.admin === "admin" ||
+      botP?.admin === "superadmin"
   }
-
-  const noPrefix = m.text.slice(usedPrefix.length)
-  let [command, ...args] = noPrefix.trim().split(/\s+/)
-  command = command.toLowerCase()
 
   for (const name in global.plugins) {
     const plugin = global.plugins[name]
-    if (!plugin || plugin.disabled || !plugin.command) continue
+    if (!plugin || plugin.disabled) continue
 
-    const isAccept =
-      plugin.command instanceof RegExp
-        ? plugin.command.test(command)
-        : Array.isArray(plugin.command)
-          ? plugin.command.includes(command)
-          : plugin.command === command
+    let usedPrefix = ""
+    let command = ""
+    let args = []
 
-    if (!isAccept) continue
+    if (plugin.customPrefix) {
+      const match = m.text.match(plugin.customPrefix)
+      if (!match) continue
+      usedPrefix = match[0]
+      const text = m.text.slice(usedPrefix.length)
+      args = text.trim().split(/\s+/)
+      command = (args.shift() || "").toLowerCase()
+    } else {
+      const prefixes = Array.isArray(global.prefixes)
+        ? global.prefixes
+        : [global.prefix || "."]
+
+      const found = prefixes.find(p =>
+        typeof p === "string"
+          ? m.text.startsWith(p)
+          : p instanceof RegExp && p.test(m.text)
+      )
+
+      if (!found) continue
+
+      usedPrefix = found instanceof RegExp
+        ? m.text.match(found)?.[0] || ""
+        : found
+
+      const text = m.text.slice(usedPrefix.length)
+      args = text.trim().split(/\s+/)
+      command = (args.shift() || "").toLowerCase()
+    }
+
+    if (plugin.command) {
+      const ok =
+        plugin.command instanceof RegExp
+          ? plugin.command.test(command)
+          : Array.isArray(plugin.command)
+            ? plugin.command.includes(command)
+            : plugin.command === command
+
+      if (!ok) continue
+    }
 
     user.commands++
 
@@ -266,11 +248,9 @@ isBotAdmin =
 }
 
 if (process.env.NODE_ENV === "development") {
-  const file = global.__filename(import.meta.url, true)
-  fs.watchFile(file, async () => {
+  const file = fileURLToPath(import.meta.url)
+  fs.watchFile(file, () => {
     fs.unwatchFile(file)
     console.log(chalk.magenta("Se actualizo 'handler.js'"))
-    if (global.reloadHandler)
-      console.log(await global.reloadHandler())
   })
 }
