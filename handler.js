@@ -169,12 +169,14 @@ if (!isCommandLike && !Object.values(global.plugins).some(p => p.customPrefix))
     const userJid = m.sender.split(':')[0]
 const botJid = this.user.jid.split(':')[0]
 
+const getJid = p => (p.id || p.jid || "").split(":")[0]
+
 const userP = participants.find(
-  p => p.id?.split(':')[0] === userJid
+  p => getJid(p) === userJid
 )
 
 const botP = participants.find(
-  p => p.id?.split(':')[0] === botJid
+  p => getJid(p) === botJid
 )
 
     isAdmin =
