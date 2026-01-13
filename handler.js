@@ -300,6 +300,8 @@ enqueue(async () => {
 })
 
 break
+  }
+}
 
 if (process.env.NODE_ENV === "development") {
   const file = fileURLToPath(import.meta.url)
