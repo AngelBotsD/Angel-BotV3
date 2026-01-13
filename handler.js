@@ -169,7 +169,7 @@ if (m.isGroup) {
   const normalize = jid => jid?.split(':')[0]
 
 const userJid = normalize(m.sender)
-const botJid = normalize(this.user.jid)
+const botJid = normalize(this.user.id)
 
 const userParticipant = participants.find(
   p => normalize(p.id || p.jid) === userJid
