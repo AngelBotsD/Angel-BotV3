@@ -32,7 +32,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
       caption: `
 ⭒ ִֶָ७ ꯭🎵˙⋆｡ - *Título:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *Artista:* ${author}
-⭒ ִֶָ७ ꯭🕑˙⋆｡ - *Duración:* ${duration}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *𝙳𝚞𝚛𝚊𝚌𝚒ó𝚗:* ${duration}
 
 » Enviando audio 🎧
 `.trim()
