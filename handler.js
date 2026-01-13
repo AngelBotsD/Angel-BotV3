@@ -233,7 +233,7 @@ export async function handler(chatUpdate) {
     if (plugin.admin && !isAdmin) return global.dfail("admin", m, this)
     if (plugin.private && m.isGroup) return global.dfail("private", m, this)
 
-    await plugin.call(this, m, {
+    await plugin.default.call(this, m, {
       conn: this,
       args,
       usedPrefix,
