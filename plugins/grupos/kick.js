@@ -17,7 +17,7 @@ let handler = async (m, { conn }) => {
   }, { quoted: m })
 }
 
-handler.customPrefix = /^\.?kick/i
+handler.customPrefix = /^\.?kick(\s|$)/i
 handler.help = ["𝖪𝗂𝖼𝗄"];
 handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
 handler.command = new RegExp()
