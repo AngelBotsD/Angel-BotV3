@@ -122,14 +122,23 @@ if (!m) return
 
 if (!usedPrefix && !hasCustomPrefixPlugin) return
 
-  const text = m.text.slice(
-    usedPrefix instanceof RegExp
-      ? m.text.match(usedPrefix)[0].length
-      : usedPrefix.length
-  )
+  let text = ""
+let command = ""
+let args = []
 
-  const args = text.trim().split(/\s+/)
-  const command = (args.shift() || "").toLowerCase()
+if (usedPrefix) {
+  const cut = usedPrefix instanceof RegExp
+    ? m.text.match(usedPrefix)[0].length
+    : usedPrefix.length
+
+  text = m.text.slice(cut)
+  args = text.trim().split(/\s+/)
+  command = (args.shift() || "").toLowerCase()
+} else {
+  text = m.text.trim()
+  args = text.split(/\s+/)
+  command = args[0]?.toLowerCase() || ""
+}
 
   global.beforeAll?.call(this, m).catch(() => {})
 
