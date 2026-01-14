@@ -42,7 +42,7 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     const res = await axios.get(`${API_BASE}/ytdl`, {
       params: {
         url: videoLink,
-        type: "Mp4",
+        type: "mp4",
         apikey: API_KEY
       },
       headers: {
