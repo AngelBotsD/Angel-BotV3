@@ -16,7 +16,7 @@ let ICON_BUFFER = null
 async function getIconBuffer() {
   if (ICON_BUFFER) return ICON_BUFFER
   try {
-    const res = await fetch("https://files.catbox.moe/dkw6yn.jpg")
+    const res = await fetch("https://files.catbox.moe/u1lwcu.jpg")
     ICON_BUFFER = Buffer.from(await res.arrayBuffer())
     return ICON_BUFFER
   } catch {
