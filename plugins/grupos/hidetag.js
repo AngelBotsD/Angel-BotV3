@@ -1,82 +1,185 @@
-import fetch from "node-fetch"
+import { generateWAMessageFromContent, downloadContentFromMessage } from '@whiskeysockets/baileys'
+import fetch from 'node-fetch'
 
 let thumb = null
-fetch("https://files.catbox.moe/mx6p6q.jpg")
+fetch('https://files.catbox.moe/js07dr.jpg')
   .then(r => r.arrayBuffer())
-  .then(b => (thumb = Buffer.from(b)))
+  .then(buf => thumb = Buffer.from(buf))
   .catch(() => null)
 
+function unwrapMessage(m = {}) {
+  let n = m;
+  while (
+    n?.viewOnceMessage?.message ||
+    n?.viewOnceMessageV2?.message ||
+    n?.viewOnceMessageV2Extension?.message ||
+    n?.ephemeralMessage?.message
+  ) {
+    n =
+      n.viewOnceMessage?.message ||
+      n.viewOnceMessageV2?.message ||
+      n.viewOnceMessageV2Extension?.message ||
+      n.ephemeralMessage?.message;
+  }
+  return n;
+}
+
+function getMessageText(m) {
+  const msg = unwrapMessage(m.message) || {};
+  return (
+    m.text ||
+    m.msg?.caption ||
+    msg?.extendedTextMessage?.text ||
+    msg?.conversation ||
+    ''
+  );
+}
+
+async function downloadMedia(msgContent, type) {
+  try {
+    const stream = await downloadContentFromMessage(msgContent, type);
+    let buffer = Buffer.alloc(0);
+    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+    return buffer;
+  } catch {
+    return null;
+  }
+}
+
 const handler = async (m, { conn, participants }) => {
-  if (!m.isGroup || m.fromMe) return
-
-  const quoted = m.quoted
-  const mtype = quoted?.mtype
-  const text = m.text.replace(/^[.]?n(\s|$)/i, "").trim()
-
-  const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
+  if (!m.isGroup || m.key.fromMe) return;
 
   const fkontak = {
-    key: { remoteJid: m.chat, fromMe: false, id: "notif" },
+    key: {
+  remoteJid: m.chat,
+  fromMe: false,
+  id: 'Angel'
+},
     message: {
       locationMessage: {
-        name: `Hola soy ${global.author}`,
+        name: '𝖧𝗈𝗅𝖺, 𝖲𝗈𝗒 SHADOW BOT',
         jpegThumbnail: thumb
       }
     },
-    participant: "0@s.whatsapp.net"
+    participant: '0@s.whatsapp.net'
+  };
+
+  const content = getMessageText(m);
+  if (!/^\.?n(\s|$)/i.test(content.trim())) return;
+
+  await conn.sendMessage(m.chat, { react: { text: '🗣️', key: m.key } });
+
+  const seen = new Set();
+  const users = [];
+  for (const p of participants) {
+    const jid = conn.decodeJid(p.id);
+    if (!seen.has(jid)) {
+      seen.add(jid);
+      users.push(jid);
+    }
   }
 
-  let mediaMessage = quoted || m
-  let mediaType = mediaMessage.mtype
+  const q = m.quoted ? unwrapMessage(m.quoted) : unwrapMessage(m);
+  const mtype = q.mtype || Object.keys(q.message || {})[0] || '';
 
-  if (!mediaType) return
+  const isMedia = [
+    'imageMessage',
+    'videoMessage',
+    'audioMessage',
+    'stickerMessage'
+  ].includes(mtype);
 
-  if (
-    (mediaType === "audioMessage" || mediaType === "stickerMessage") &&
-    !quoted
-  ) return
+  const userText = content.trim().replace(/^\.?n(\s|$)/i, '');
+  const originalCaption = (q.msg?.caption || q.text || '').trim();
+  const finalCaption = userText || originalCaption || '🔊 Notificación';
 
-  if (
-    ![
-      "imageMessage",
-      "videoMessage",
-      "audioMessage",
-      "stickerMessage"
-    ].includes(mediaType)
-  ) return
+  try {
 
-  const buffer = await mediaMessage.download?.()
-  if (!buffer) return
+    if (isMedia) {
+      let buffer = null;
 
-  let msg = { mentions: users }
+      if (q[mtype]) {
+        const detected = mtype.replace('Message', '').toLowerCase();
+        buffer = await downloadMedia(q[mtype], detected);
+      }
 
-  if (mediaType === "imageMessage") {
-    msg.image = buffer
-    msg.caption = text || ""
+      if (!buffer) buffer = await q.download();
+
+      const msg = { mentions: users };
+
+      if (mtype === 'audioMessage') {
+        msg.audio = buffer;
+        msg.mimetype = 'audio/mpeg';
+        msg.ptt = false;
+
+        await conn.sendMessage(m.chat, msg, { quoted: fkontak });
+
+        if (userText) {
+          await conn.sendMessage(m.chat, { text: userText, mentions: users }, { quoted: fkontak });
+        }
+        return;
+      }
+
+      if (mtype === 'imageMessage') {
+        msg.image = buffer;
+        msg.caption = finalCaption;
+
+      } else if (mtype === 'videoMessage') {
+        msg.video = buffer;
+        msg.caption = finalCaption;
+        msg.mimetype = 'video/mp4';
+
+      } else if (mtype === 'stickerMessage') {
+        msg.sticker = buffer;
+      }
+
+      return await conn.sendMessage(m.chat, msg, { quoted: fkontak });
+    }
+
+    if (m.quoted && !isMedia) {
+
+      const newMsg = conn.cMod(
+        m.chat,
+        generateWAMessageFromContent(
+          m.chat,
+          {
+            [mtype || 'extendedTextMessage']:
+              q?.message?.[mtype] || { text: finalCaption }
+          },
+          { quoted: fkontak, userJid: conn.user.id }
+        ),
+        finalCaption,
+        conn.user.jid,
+        { mentions: users }
+      );
+
+      return await conn.relayMessage(
+        m.chat,
+        newMsg.message,
+        { messageId: newMsg.key.id }
+      );
+    }
+
+    return await conn.sendMessage(
+      m.chat,
+      { text: finalCaption, mentions: users },
+      { quoted: fkontak }
+    );
+
+  } catch (err) {
+
+    return await conn.sendMessage(
+      m.chat,
+      { text: '🔊 Notificación', mentions: users },
+      { quoted: fkontak }
+    );
   }
+};
 
-  if (mediaType === "videoMessage") {
-    msg.video = buffer
-    msg.caption = text || ""
-    msg.mimetype = "video/mp4"
-  }
-
-  if (mediaType === "audioMessage") {
-    msg.audio = buffer
-    msg.mimetype = "audio/mpeg"
-    msg.ptt = false
-  }
-
-  if (mediaType === "stickerMessage") {
-    msg.sticker = buffer
-  }
-
-  await conn.sendMessage(m.chat, msg, { quoted: fkontak })
-}
-
-handler.customPrefix = /^[.]?n(\s|$)/i
-handler.command = new RegExp()
-handler.group = true
+handler.help = ["𝖭𝗈𝗍𝗂𝖿𝗒"];
+handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
+handler.customPrefix = /^\.?n(\s|$)/i;
+handler.command = new RegExp();
+handler.group = true;
 handler.admin = true
-
-export default handler
+export default handler;
