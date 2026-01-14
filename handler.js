@@ -64,7 +64,7 @@ if (typeof global.beforeAll !== "function")
     } catch {}
   }
 
-global.dfail = (type, m, conn) => {
+global.dfail = async (type, m, conn) => {
   const msg = {
     rowner: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋",
     owner: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋",
@@ -77,8 +77,13 @@ global.dfail = (type, m, conn) => {
     restrict: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖧𝖺 𝖲𝗂𝖽𝗈 𝖣𝖾𝗌𝖺𝖻𝗂𝗅𝗂𝗍𝖺𝖽𝗈"
   }[type]
 
-  if (msg)
-    conn.reply(m.chat, msg, m, global.rcanal || {})
+  if (!msg) return
+
+  await conn.sendMessage(
+    m.chat,
+    { text: msg },
+    { quoted: m, ...(global.rcanal || {}) }
+  )
 }
 
 global.handledMessages ||= new Map()
