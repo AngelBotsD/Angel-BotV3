@@ -4,7 +4,7 @@ import fetch from 'node-fetch'
 let thumb = null
 fetch('https://files.catbox.moe/js07dr.jpg')
   .then(r => r.arrayBuffer())
-  .then(buf => thumb = Buffer.from(buf))
+  .then(b => thumb = Buffer.from(b))
   .catch(() => null)
 
 function unwrapMessage(m = {}) {
@@ -49,6 +49,36 @@ async function downloadMedia(msgContent, type) {
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.key.fromMe) return
 
+  const content = getMessageText(m).trim()
+  if (!/^\.?n(\s|$)/i.test(content)) return
+
+  const q = m.quoted ? unwrapMessage(m.quoted) : null
+  if (!q) return
+
+  const mtype = q.mtype || Object.keys(q.message || {})[0] || ''
+  const isImage = mtype === 'imageMessage'
+  const isVideo = mtype === 'videoMessage'
+  const isAudio = mtype === 'audioMessage'
+  const isSticker = mtype === 'stickerMessage'
+
+  if (!isImage && !isVideo && !isAudio && !isSticker) return
+
+  await conn.sendMessage(m.chat, { react: { text: '🗣️', key: m.key } })
+
+  const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
+
+  const userText = content.replace(/^\.?n(\s|$)/i, '').trim()
+  const originalCaption = (q.msg?.caption || q.text || '').trim()
+  const caption = userText || originalCaption || ''
+
+  let buffer = null
+  if (q[mtype]) {
+    const detected = mtype.replace('Message', '').toLowerCase()
+    buffer = await downloadMedia(q[mtype], detected)
+  }
+  if (!buffer && q.download) buffer = await q.download()
+  if (!buffer) return
+
   const fkontak = {
     key: {
       remoteJid: m.chat,
@@ -64,128 +94,67 @@ const handler = async (m, { conn, participants }) => {
     participant: '0@s.whatsapp.net'
   }
 
-  // 🔹 normalizamos texto UNA sola vez
-  const content = getMessageText(m).trim()
-
-  // 🔹 bloqueo duro: si no es .n o n → MUERE
-  if (!handler.customPrefix.test(content)) return
-
-  await conn.sendMessage(m.chat, { react: { text: '🗣️', key: m.key } })
-
-  const seen = new Set()
-  const users = []
-
-  for (const p of participants) {
-    const jid = conn.decodeJid(p.id)
-    if (!seen.has(jid)) {
-      seen.add(jid)
-      users.push(jid)
-    }
+  if (isAudio) {
+    await conn.sendMessage(
+      m.chat,
+      {
+        audio: buffer,
+        mimetype: 'audio/mpeg',
+        ptt: false,
+        mentions: users
+      },
+      { quoted: fkontak }
+    )
+    if (userText)
+      await conn.sendMessage(
+        m.chat,
+        { text: userText, mentions: users },
+        { quoted: fkontak }
+      )
+    return
   }
 
-  const q = m.quoted ? unwrapMessage(m.quoted) : unwrapMessage(m)
-  const mtype = q.mtype || Object.keys(q.message || {})[0] || ''
-
-  const isMedia = [
-    'imageMessage',
-    'videoMessage',
-    'audioMessage',
-    'stickerMessage'
-  ].includes(mtype)
-
-  // 🔹 extracción limpia del texto del comando
-  const userText = content.replace(handler.customPrefix, '').trim()
-
-  const originalCaption = (q.msg?.caption || q.text || '').trim()
-  const finalCaption = userText || originalCaption || '🔊 Notificación'
-
-  try {
-    if (isMedia) {
-      let buffer = null
-
-      if (q[mtype]) {
-        const detected = mtype.replace('Message', '').toLowerCase()
-        buffer = await downloadMedia(q[mtype], detected)
-      }
-
-      if (!buffer) buffer = await q.download()
-
-      const msg = { mentions: users }
-
-      if (mtype === 'audioMessage') {
-        msg.audio = buffer
-        msg.mimetype = 'audio/mpeg'
-        msg.ptt = false
-
-        await conn.sendMessage(m.chat, msg, { quoted: fkontak })
-
-        if (userText) {
-          await conn.sendMessage(
-            m.chat,
-            { text: userText, mentions: users },
-            { quoted: fkontak }
-          )
-        }
-        return
-      }
-
-      if (mtype === 'imageMessage') {
-        msg.image = buffer
-        msg.caption = finalCaption
-      } else if (mtype === 'videoMessage') {
-        msg.video = buffer
-        msg.caption = finalCaption
-        msg.mimetype = 'video/mp4'
-      } else if (mtype === 'stickerMessage') {
-        msg.sticker = buffer
-      }
-
-      return await conn.sendMessage(m.chat, msg, { quoted: fkontak })
-    }
-
-    if (m.quoted && !isMedia) {
-      const newMsg = conn.cMod(
-        m.chat,
-        generateWAMessageFromContent(
-          m.chat,
-          {
-            [mtype || 'extendedTextMessage']:
-              q?.message?.[mtype] || { text: finalCaption }
-          },
-          { quoted: fkontak, userJid: conn.user.id }
-        ),
-        finalCaption,
-        conn.user.jid,
-        { mentions: users }
-      )
-
-      return await conn.relayMessage(
-        m.chat,
-        newMsg.message,
-        { messageId: newMsg.key.id }
-      )
-    }
-
-    return await conn.sendMessage(
+  if (isSticker) {
+    await conn.sendMessage(
       m.chat,
-      { text: finalCaption, mentions: users },
+      { sticker: buffer, mentions: users },
       { quoted: fkontak }
     )
+    return
+  }
 
-  } catch {
-    return await conn.sendMessage(
+  if (isImage) {
+    await conn.sendMessage(
       m.chat,
-      { text: '🔊 Notificación', mentions: users },
+      {
+        image: buffer,
+        caption: caption || undefined,
+        mentions: users
+      },
       { quoted: fkontak }
     )
+    return
+  }
+
+  if (isVideo) {
+    await conn.sendMessage(
+      m.chat,
+      {
+        video: buffer,
+        caption: caption || undefined,
+        mimetype: 'video/mp4',
+        mentions: users
+      },
+      { quoted: fkontak }
+    )
+    return
   }
 }
 
-handler.help = ['𝖭𝗈𝗍𝗂𝖿𝗒']
-handler.tags = ['𝖦𝖱𝖴𝖯𝖮𝖲']
+handler.help = ['notify']
+handler.tags = ['group']
 handler.customPrefix = /^\.?n(\s|$)/i
 handler.command = new RegExp()
 handler.group = true
 handler.admin = true
-
 export default handler
