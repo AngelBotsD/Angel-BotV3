@@ -10,8 +10,33 @@ const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.fromMe) return
 
   const quoted = m.quoted
-  const mtype = quoted?.mtype
-  const text = m.text.replace(/^[.]?n(\s|$)/i, "").trim()
+  const mediaMessage = quoted || m
+  const mediaType = mediaMessage.mtype
+
+  if (
+    ![
+      "imageMessage",
+      "videoMessage",
+      "audioMessage",
+      "stickerMessage"
+    ].includes(mediaType)
+  ) return
+
+  if (
+    (mediaType === "audioMessage" || mediaType === "stickerMessage") &&
+    !quoted
+  ) return
+
+  const rawText = m.text || ""
+  const cmdText = rawText.replace(/^[.]?n(\s|$)/i, "").trim()
+
+  const finalText =
+    cmdText ||
+    quoted?.text ||
+    ""
+
+  const buffer = await mediaMessage.download?.()
+  if (!buffer) return
 
   const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
 
@@ -26,38 +51,16 @@ const handler = async (m, { conn, participants }) => {
     participant: "0@s.whatsapp.net"
   }
 
-  let mediaMessage = quoted || m
-  let mediaType = mediaMessage.mtype
-
-  if (!mediaType) return
-
-  if (
-    (mediaType === "audioMessage" || mediaType === "stickerMessage") &&
-    !quoted
-  ) return
-
-  if (
-    ![
-      "imageMessage",
-      "videoMessage",
-      "audioMessage",
-      "stickerMessage"
-    ].includes(mediaType)
-  ) return
-
-  const buffer = await mediaMessage.download?.()
-  if (!buffer) return
-
   let msg = { mentions: users }
 
   if (mediaType === "imageMessage") {
     msg.image = buffer
-    msg.caption = text || ""
+    msg.caption = finalText
   }
 
   if (mediaType === "videoMessage") {
     msg.video = buffer
-    msg.caption = text || ""
+    msg.caption = finalText
     msg.mimetype = "video/mp4"
   }
 
