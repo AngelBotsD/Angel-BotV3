@@ -105,7 +105,7 @@ export async function handler(chatUpdate) {
   }
 
   m = smsg(this, m)
-  if (!m || !m.text) return
+if (!m) return
 
   const prefixes = Array.isArray(global.prefixes)
     ? global.prefixes
