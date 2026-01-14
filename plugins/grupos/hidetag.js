@@ -1,7 +1,7 @@
-import fetch from 'node-fetch'
+import fetch from "node-fetch"
 
 let thumb = null
-fetch('https://files.catbox.moe/mx6p6q.jpg')
+fetch("https://files.catbox.moe/mx6p6q.jpg")
   .then(r => r.arrayBuffer())
   .then(b => (thumb = Buffer.from(b)))
   .catch(() => null)
@@ -9,95 +9,72 @@ fetch('https://files.catbox.moe/mx6p6q.jpg')
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.fromMe) return
 
-  const content = (m.text || '').trim()
-  if (!/^\.?n(\s|$)/i.test(content)) return
+  const quoted = m.quoted
+  const mtype = quoted?.mtype
+  const text = m.text.replace(/^[.]?n(\s|$)/i, "").trim()
 
-  const userText = content.replace(/^\.?n(\s|$)/i, '').trim()
   const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
 
   const fkontak = {
-    key: {
-      remoteJid: m.chat,
-      fromMe: false,
-      id: 'Angel'
-    },
+    key: { remoteJid: m.chat, fromMe: false, id: "notif" },
     message: {
       locationMessage: {
-        name: `𝖧𝗈𝗅𝖺, 𝖲𝗈𝗒 ${global.author}`,
+        name: `Hola soy ${global.author}`,
         jpegThumbnail: thumb
       }
     },
-    participant: '0@s.whatsapp.net'
+    participant: "0@s.whatsapp.net"
   }
 
-  const quoted = m.quoted
-  const type = m.mtype
-  const qtype = quoted?.mtype
+  let mediaMessage = quoted || m
+  let mediaType = mediaMessage.mtype
 
-  if ((type === 'imageMessage' || type === 'videoMessage') && userText) {
-    const buffer = await m.download()
+  if (!mediaType) return
 
-    return conn.sendMessage(
-      m.chat,
-      {
-        ...(type === 'imageMessage'
-          ? { image: buffer }
-          : { video: buffer, mimetype: 'video/mp4' }),
-        caption: userText,
-        mentions: users
-      },
-      { quoted: fkontak }
-    )
+  if (
+    (mediaType === "audioMessage" || mediaType === "stickerMessage") &&
+    !quoted
+  ) return
+
+  if (
+    ![
+      "imageMessage",
+      "videoMessage",
+      "audioMessage",
+      "stickerMessage"
+    ].includes(mediaType)
+  ) return
+
+  const buffer = await mediaMessage.download?.()
+  if (!buffer) return
+
+  let msg = { mentions: users }
+
+  if (mediaType === "imageMessage") {
+    msg.image = buffer
+    msg.caption = text || ""
   }
 
-  if (quoted && (qtype === 'imageMessage' || qtype === 'videoMessage') && userText) {
-    const buffer = await quoted.download()
-
-    return conn.sendMessage(
-      m.chat,
-      {
-        ...(qtype === 'imageMessage'
-          ? { image: buffer }
-          : { video: buffer, mimetype: 'video/mp4' }),
-        caption: userText,
-        mentions: users
-      },
-      { quoted: fkontak }
-    )
+  if (mediaType === "videoMessage") {
+    msg.video = buffer
+    msg.caption = text || ""
+    msg.mimetype = "video/mp4"
   }
 
-  if (quoted && qtype === 'audioMessage') {
-    const buffer = await quoted.download()
-
-    return conn.sendMessage(
-      m.chat,
-      {
-        audio: buffer,
-        mimetype: 'audio/mpeg',
-        ptt: false,
-        mentions: users
-      },
-      { quoted: fkontak }
-    )
+  if (mediaType === "audioMessage") {
+    msg.audio = buffer
+    msg.mimetype = "audio/mpeg"
+    msg.ptt = false
   }
 
-  if (quoted && qtype === 'stickerMessage') {
-    const buffer = await quoted.download()
-
-    return conn.sendMessage(
-      m.chat,
-      {
-        sticker: buffer,
-        mentions: users
-      },
-      { quoted: fkontak }
-    )
+  if (mediaType === "stickerMessage") {
+    msg.sticker = buffer
   }
+
+  await conn.sendMessage(m.chat, msg, { quoted: fkontak })
 }
 
-handler.help = ['𝖭𝗈𝗍𝗂𝖿𝗒']
-handler.tags = ['𝖦𝖱𝖴𝖯𝖮𝖲']
-handler.customPrefix = /^\.?n(\s|$)/i
+handler.customPrefix = /^[.]?n(\s|$)/i
 handler.command = new RegExp()
 handler.group = true
 handler.admin = true
