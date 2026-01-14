@@ -167,20 +167,18 @@ if (!m) return
 
   let isAccept = false
 
-  if (plugin.command) {
-    if (plugin.customPrefix instanceof RegExp) {
-      isAccept = plugin.customPrefix.test(m.text)
-    } else {
-      isAccept =
-        plugin.command instanceof RegExp
-          ? plugin.command.test(command)
-          : Array.isArray(plugin.command)
-            ? plugin.command.includes(command)
-            : plugin.command === command
-    }
+if (plugin.customPrefix instanceof RegExp) {
+  isAccept = plugin.customPrefix.test(m.text)
+} else if (plugin.command) {
+  isAccept =
+    plugin.command instanceof RegExp
+      ? plugin.command.test(command)
+      : Array.isArray(plugin.command)
+        ? plugin.command.includes(command)
+        : plugin.command === command
+}
 
-    if (!isAccept) continue
-  }
+if (!isAccept) continue
 
   if (plugin.rowner && !isROwner) return global.dfail("rowner", m, this)
   if (plugin.owner && !isOwner) return global.dfail("owner", m, this)
