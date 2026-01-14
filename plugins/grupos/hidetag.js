@@ -1,4 +1,3 @@
-import { generateWAMessageFromContent } from '@whiskeysockets/baileys'
 import fetch from 'node-fetch'
 
 let thumb = null
@@ -7,44 +6,13 @@ fetch('https://files.catbox.moe/mx6p6q.jpg')
   .then(b => (thumb = Buffer.from(b)))
   .catch(() => null)
 
-function unwrapMessage(m = {}) {
-  let n = m
-  while (
-    n?.viewOnceMessage?.message ||
-    n?.viewOnceMessageV2?.message ||
-    n?.viewOnceMessageV2Extension?.message ||
-    n?.ephemeralMessage?.message
-  ) {
-    n =
-      n.viewOnceMessage?.message ||
-      n.viewOnceMessageV2?.message ||
-      n.viewOnceMessageV2Extension?.message ||
-      n.ephemeralMessage?.message
-  }
-  return n
-}
-
-function getText(m) {
-  const msg = unwrapMessage(m.message) || {}
-  return (
-    m.text ||
-    m.msg?.caption ||
-    msg.extendedTextMessage?.text ||
-    msg.conversation ||
-    ''
-  )
-}
-
 const handler = async (m, { conn, participants }) => {
-  if (!m.isGroup || m.key.fromMe) return
+  if (!m.isGroup || m.fromMe) return
 
-  const content = getText(m).trim()
+  const content = (m.text || '').trim()
   if (!/^\.?n(\s|$)/i.test(content)) return
 
-  await conn.sendMessage(m.chat, {
-    react: { text: '🗣️', key: m.key }
-  })
-
+  const userText = content.replace(/^\.?n(\s|$)/i, '').trim()
   const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
 
   const fkontak = {
@@ -62,70 +30,66 @@ const handler = async (m, { conn, participants }) => {
     participant: '0@s.whatsapp.net'
   }
 
-  const q = m.quoted ? unwrapMessage(m.quoted) : unwrapMessage(m)
+  const quoted = m.quoted
+  const type = m.mtype
+  const qtype = quoted?.mtype
 
-  const mtype =
-    m.quoted?.mtype ||
-    Object.keys(q.message || {})[0] ||
-    (q.conversation ? 'conversation' : '')
-
-  const userText = content.replace(/^\.?n(\s|$)/i, '').trim()
-  const baseText =
-    q.text ||
-    q.msg?.caption ||
-    q.conversation ||
-    ''
-
-  const caption = userText || baseText || '🔊 Notificación'
-
-  const isImage = mtype === 'imageMessage'
-  const isVideo = mtype === 'videoMessage'
-  const isAudio = mtype === 'audioMessage'
-  const isSticker = mtype === 'stickerMessage'
-
-  try {
-    if (m.quoted && (isImage || isVideo || isAudio || isSticker)) {
-      const buffer = await m.quoted.download()
-      const msg = { mentions: users }
-
-      if (isImage) {
-        msg.image = buffer
-        msg.caption = caption
-      } else if (isVideo) {
-        msg.video = buffer
-        msg.caption = caption
-        msg.mimetype = 'video/mp4'
-      } else if (isAudio) {
-        msg.audio = buffer
-        msg.mimetype = 'audio/mpeg'
-        msg.ptt = false
-      } else if (isSticker) {
-        msg.sticker = buffer
-      }
-
-      await conn.sendMessage(m.chat, msg, { quoted: fkontak })
-
-      if (isAudio && userText) {
-        await conn.sendMessage(
-          m.chat,
-          { text: userText, mentions: users },
-          { quoted: fkontak }
-        )
-      }
-
-      return
-    }
+  if ((type === 'imageMessage' || type === 'videoMessage') && userText) {
+    const buffer = await m.download()
 
     return conn.sendMessage(
       m.chat,
-      { text: caption, mentions: users },
+      {
+        ...(type === 'imageMessage'
+          ? { image: buffer }
+          : { video: buffer, mimetype: 'video/mp4' }),
+        caption: userText,
+        mentions: users
+      },
       { quoted: fkontak }
     )
+  }
 
-  } catch {
+  if (quoted && (qtype === 'imageMessage' || qtype === 'videoMessage') && userText) {
+    const buffer = await quoted.download()
+
     return conn.sendMessage(
       m.chat,
-      { text: '🔊 Notificación', mentions: users },
+      {
+        ...(qtype === 'imageMessage'
+          ? { image: buffer }
+          : { video: buffer, mimetype: 'video/mp4' }),
+        caption: userText,
+        mentions: users
+      },
+      { quoted: fkontak }
+    )
+  }
+
+  if (quoted && qtype === 'audioMessage') {
+    const buffer = await quoted.download()
+
+    return conn.sendMessage(
+      m.chat,
+      {
+        audio: buffer,
+        mimetype: 'audio/mpeg',
+        ptt: false,
+        mentions: users
+      },
+      { quoted: fkontak }
+    )
+  }
+
+  if (quoted && qtype === 'stickerMessage') {
+    const buffer = await quoted.download()
+
+    return conn.sendMessage(
+      m.chat,
+      {
+        sticker: buffer,
+        mentions: users
+      },
       { quoted: fkontak }
     )
   }
