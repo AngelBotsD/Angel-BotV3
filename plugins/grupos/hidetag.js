@@ -83,7 +83,7 @@ const handler = async (m, { conn, participants }) => {
     q.conversation ||
     ''
 
-  const caption = userText || baseText || '🔊 Notificación'
+  const caption = userText || baseText || null
 
   try {
     if (isMedia) {
@@ -109,10 +109,10 @@ const handler = async (m, { conn, participants }) => {
 
       if (mtype === 'imageMessage') {
         msg.image = buffer
-        msg.caption = caption
+        if (caption) msg.caption = caption
       } else if (mtype === 'videoMessage') {
         msg.video = buffer
-        msg.caption = caption
+        if (caption) msg.caption = caption
         msg.mimetype = 'video/mp4'
       } else if (mtype === 'stickerMessage') {
         msg.sticker = buffer
