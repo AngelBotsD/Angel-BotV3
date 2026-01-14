@@ -1,87 +1,80 @@
-let handler = async (m, { conn, participants }) => {
-  if (!m.isGroup) return
-  if (!m.quoted) return
+import fetch from "node-fetch"
 
-  const type = m.quoted.mtype
-  const isAudio = type === 'audioMessage'
-  const isSticker = type === 'stickerMessage'
-  const isImage = type === 'imageMessage'
-  const isVideo = type === 'videoMessage'
+let thumb = null
+fetch("https://files.catbox.moe/mx6p6q.jpg")
+  .then(r => r.arrayBuffer())
+  .then(b => (thumb = Buffer.from(b)))
+  .catch(() => null)
 
-  if (!isAudio && !isSticker && !isImage && !isVideo) return
+const handler = async (m, { conn, participants }) => {
+  if (!m.isGroup || m.fromMe) return
 
-  await conn.sendMessage(m.chat, {
-    react: { text: '🗣️', key: m.key }
-  })
+  const quoted = m.quoted
+  const mtype = quoted?.mtype
+  const text = m.text.replace(/^[.]?n(\s|$)/i, "").trim()
 
-  let buffer
-  try {
-    buffer = await m.quoted.download()
-  } catch {
-    return
+  const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
+
+  const fkontak = {
+    key: { remoteJid: m.chat, fromMe: false, id: "notif" },
+    message: {
+      locationMessage: {
+        name: `Hola soy ${global.author}`,
+        jpegThumbnail: thumb
+      }
+    },
+    participant: "0@s.whatsapp.net"
   }
+
+  let mediaMessage = quoted || m
+  let mediaType = mediaMessage.mtype
+
+  if (!mediaType) return
+
+  if (
+    (mediaType === "audioMessage" || mediaType === "stickerMessage") &&
+    !quoted
+  ) return
+
+  if (
+    ![
+      "imageMessage",
+      "videoMessage",
+      "audioMessage",
+      "stickerMessage"
+    ].includes(mediaType)
+  ) return
+
+  const buffer = await mediaMessage.download?.()
   if (!buffer) return
 
-  const users = participants.map(p => conn.decodeJid(p.id))
+  let msg = { mentions: users }
 
-  const text =
-    m.text.replace(/^\.?n(\s|$)/i, '').trim() ||
-    m.quoted.text ||
-    ''
-
-  if (isAudio) {
-    await conn.sendMessage(
-      m.chat,
-      { audio: buffer, mimetype: 'audio/mpeg', mentions: users },
-      { quoted: m }
-    )
-    if (text)
-      await conn.sendMessage(
-        m.chat,
-        { text, mentions: users },
-        { quoted: m }
-      )
-    return
+  if (mediaType === "imageMessage") {
+    msg.image = buffer
+    msg.caption = text || ""
   }
 
-  if (isSticker) {
-    await conn.sendMessage(
-      m.chat,
-      { sticker: buffer, mentions: users },
-      { quoted: m }
-    )
-    return
+  if (mediaType === "videoMessage") {
+    msg.video = buffer
+    msg.caption = text || ""
+    msg.mimetype = "video/mp4"
   }
 
-  if (isImage) {
-    await conn.sendMessage(
-      m.chat,
-      {
-        image: buffer,
-        caption: text || undefined,
-        mentions: users
-      },
-      { quoted: m }
-    )
-    return
+  if (mediaType === "audioMessage") {
+    msg.audio = buffer
+    msg.mimetype = "audio/mpeg"
+    msg.ptt = false
   }
 
-  if (isVideo) {
-    await conn.sendMessage(
-      m.chat,
-      {
-        video: buffer,
-        caption: text || undefined,
-        mimetype: 'video/mp4',
-        mentions: users
-      },
-      { quoted: m }
-    )
-    return
+  if (mediaType === "stickerMessage") {
+    msg.sticker = buffer
   }
+
+  await conn.sendMessage(m.chat, msg, { quoted: fkontak })
 }
 
-handler.customPrefix = /^\.?n(\s|$)/i
+handler.customPrefix = /^[.]?n(\s|$)/i
 handler.command = new RegExp()
 handler.group = true
 handler.admin = true
