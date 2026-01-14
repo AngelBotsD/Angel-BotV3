@@ -211,7 +211,7 @@ if (!m) return
       isBotAdmin,
       chat: m.chat
     }),
-    timeout(1000)
+    timeout(3000)
   ]).catch(() => {})
 
   break
