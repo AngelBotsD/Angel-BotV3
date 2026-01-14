@@ -116,7 +116,11 @@ if (!m) return
       ? m.text.startsWith(p)
       : p instanceof RegExp && p.test(m.text)
   )
-  if (!usedPrefix) return
+  const hasCustomPrefixPlugin = Object.values(global.plugins).some(
+  p => p?.customPrefix instanceof RegExp && p.customPrefix.test(m.text)
+)
+
+if (!usedPrefix && !hasCustomPrefixPlugin) return
 
   const text = m.text.slice(
     usedPrefix instanceof RegExp
