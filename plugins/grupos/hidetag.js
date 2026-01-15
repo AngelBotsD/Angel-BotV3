@@ -51,11 +51,13 @@ const handler = async (m, { conn, participants }) => {
 
   if (!isMedia) {
     const textOnly =
-      (m.text || "")
-        .replace(/^[.]?n(\s|$)/i, "")
-        .trim() ||
-      quoted?.text ||
-      ""
+  (m.text || "")
+    .replace(/^[.]?n(\s|$)/i, "")
+    .trim() ||
+  quoted?.text ||
+  quoted?.msg?.text ||
+  quoted?.msg?.conversation ||
+  ""
 
     if (!textOnly) return
 
