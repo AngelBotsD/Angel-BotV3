@@ -24,9 +24,10 @@ function unwrapMessage(m = {}) {
 }
 
 function getText(m) {
-  const msg = unwrapMessage(m)
+  const msg = unwrapMessage(m)?.message || unwrapMessage(m)
+
   return (
-    m.text ||
+    m?.text ||
     msg?.extendedTextMessage?.text ||
     msg?.conversation ||
     msg?.imageMessage?.caption ||
