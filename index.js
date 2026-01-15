@@ -179,6 +179,15 @@ console.info = () => { }
 console.debug = () => { }
 ;['log', 'warn', 'error'].forEach(methodName => redefineConsoleMethod(methodName, filterStrings))
 
+const redefineConsoleMethod = (methodName, filterStrings) => {
+  const original = console[methodName]
+  console[methodName] = (...args) => {
+    const text = args.join(' ')
+    if (filterStrings.some(s => text.includes(s))) return
+    original.apply(console, args)
+  }
+}
+
 const connectionOptions = {
   logger: pino({ level: 'silent' }),
   printQRInTerminal: opcion == '1' ? true : methodCodeQR ? true : false,
