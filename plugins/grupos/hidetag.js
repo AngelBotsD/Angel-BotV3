@@ -6,39 +6,19 @@ fetch("https://files.catbox.moe/mx6p6q.jpg")
   .then(b => thumb = Buffer.from(b))
   .catch(() => null)
 
-function unwrapMessage(m = {}) {
-  let n = m
-  while (
-    n?.viewOnceMessage?.message ||
-    n?.viewOnceMessageV2?.message ||
-    n?.viewOnceMessageV2Extension?.message ||
-    n?.ephemeralMessage?.message
-  ) {
-    n =
-      n.viewOnceMessage?.message ||
-      n.viewOnceMessageV2?.message ||
-      n.viewOnceMessageV2Extension?.message ||
-      n.ephemeralMessage?.message
-  }
-  return n
-}
-
 function getText(m) {
-  const msg = unwrapMessage(m)?.message || unwrapMessage(m)
-
   return (
     m?.text ||
-    msg?.extendedTextMessage?.text ||
-    msg?.conversation ||
-    msg?.imageMessage?.caption ||
-    msg?.videoMessage?.caption ||
+    m?.msg?.caption ||
+    m?.msg?.text ||
+    m?.msg?.conversation ||
     ""
   )
 }
 
-async function getBuffer(media) {
-  if (!media?.download) return null
-  const stream = await media.download()
+async function getBuffer(m) {
+  if (!m?.download) return null
+  const stream = await m.download()
   let buffer = Buffer.alloc(0)
   for await (const chunk of stream)
     buffer = Buffer.concat([buffer, chunk])
@@ -47,6 +27,9 @@ async function getBuffer(media) {
 
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup) return
+
+  const content = getText(m)
+  if (!/^\.?n(\s|$)/i.test(content.trim())) return
 
   await conn.sendMessage(m.chat, {
     react: { text: "📢", key: m.key }
@@ -65,14 +48,11 @@ const handler = async (m, { conn, participants }) => {
     participant: "0@s.whatsapp.net"
   }
 
-  const content = getText(m)
-  if (!/^\.?n(\s|$)/i.test(content.trim())) return
-
-  const quotedRaw = m.quoted || m
-  const mtype = quotedRaw.mtype || Object.keys(quotedRaw || {})[0] || ""
+  const target = m.quoted || m
+  const mtype = target.mtype
 
   const cmdText = content.replace(/^\.?n(\s|$)/i, "").trim()
-  const quotedText = getText(quotedRaw).trim()
+  const quotedText = getText(target).trim()
   const finalText = cmdText || quotedText
 
   const isMedia = ["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(mtype)
@@ -89,7 +69,7 @@ const handler = async (m, { conn, participants }) => {
   if ((mtype === "audioMessage" || mtype === "stickerMessage") && !m.quoted)
     return
 
-  const buffer = await getBuffer(quotedRaw)
+  const buffer = await getBuffer(target)
   if (!buffer) return
 
   const msg = { mentions: users }
