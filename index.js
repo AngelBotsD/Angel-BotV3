@@ -302,7 +302,8 @@ if (opcion === '2') {
   console.log(chalk.cyanBright('\nIngresa el número con código país (ej: +52XXXXXXXXXX)\n'))
   phoneNumber = await question('--> ')
 
-  const code = await conn.requestPairingCode(phoneNumber)
+  const cleanNumber = phoneNumber.replace(/\D/g, '')
+const code = await conn.requestPairingCode(cleanNumber)
 
   console.log(chalk.greenBright('\nIngresa este código en WhatsApp\n'))
   console.log(chalk.bold(code.match(/.{1,4}/g).join(' ')))
