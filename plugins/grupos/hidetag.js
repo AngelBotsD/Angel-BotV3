@@ -16,6 +16,7 @@ async function getBuffer(media) {
     let buffer = Buffer.alloc(0)
     for await (const chunk of stream)
       buffer = Buffer.concat([buffer, chunk])
+
     return buffer
   }
 
@@ -26,12 +27,8 @@ const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.fromMe) return
 
   await conn.sendMessage(m.chat, {
-    react: { text: "🥵", key: m.key }
+    react: { text: "📢", key: m.key }
   })
-
-  const quoted = m.quoted
-  const media = quoted || m
-  const type = media.mtype
 
   const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
 
@@ -46,25 +43,27 @@ const handler = async (m, { conn, participants }) => {
     participant: "0@s.whatsapp.net"
   }
 
-  if (!["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(type)) {
-    let text = ""
+  const quoted = m.quoted
+  let media = quoted || m
+  let type = media.mtype
 
-    if (quoted?.text) {
-      text = quoted.text
-    } else {
-      text = (m.text || "")
+  const isMedia = ["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(type)
+
+  if (!isMedia) {
+    const textOnly =
+      (m.text || "")
         .replace(/^[.]?n(\s|$)/i, "")
-        .trim()
-    }
+        .trim() ||
+      quoted?.text ||
+      ""
 
-    if (!text) return
+    if (!textOnly) return
 
-    await conn.sendMessage(
+    return conn.sendMessage(
       m.chat,
-      { text, mentions: users },
+      { text: textOnly, mentions: users },
       { quoted: fkontak }
     )
-    return
   }
 
   if ((type === "audioMessage" || type === "stickerMessage") && !quoted)
@@ -79,11 +78,15 @@ const handler = async (m, { conn, participants }) => {
       .replace(/^[.]?n(\s|$)/i, "")
       .trim()
   } else {
-    finalText =
-      (m.text || "")
-        .replace(/^[.]?n(\s|$)/i, "")
-        .trim() ||
-      ""
+    const cmdText = (m.text || "")
+      .replace(/^[.]?n(\s|$)/i, "")
+      .trim()
+
+    if (cmdText) {
+      finalText = cmdText
+    } else if (["imageMessage", "videoMessage"].includes(type)) {
+      finalText = quoted?.msg?.caption || quoted?.text || ""
+    }
   }
 
   const buffer = await getBuffer(media)
