@@ -336,6 +336,10 @@ async function connectionUpdate(update) {
     }
   }
 
+if (opcion === '2' && update.qr === undefined) {
+  console.log(chalk.greenBright('\nIngresa este código en WhatsApp\n'))
+}
+
   if (connection === 'open') {
     const userName = conn.user.name || conn.user.verifiedName || 'Desconocido'
     console.log(chalk.green.bold(`[ ✿ ]  Conectado a: ${userName}`))
