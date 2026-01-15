@@ -200,22 +200,19 @@ export async function handler(chatUpdate) {
 
     if (!exec) continue
 
-    Promise.race([
-      exec.call(this, m, {
-        conn: this,
-        args,
-        usedPrefix,
-        command,
-        participants,
-        groupMetadata,
-        isROwner,
-        isOwner,
-        isAdmin,
-        isBotAdmin,
-        chat: m.chat
-      }),
-      timeout(2000)
-    ]).catch(() => {})
+    await exec.call(this, m, {
+  conn: this,
+  args,
+  usedPrefix,
+  command,
+  participants,
+  groupMetadata,
+  isROwner,
+  isOwner,
+  isAdmin,
+  isBotAdmin,
+  chat: m.chat
+})
 
     break
   }
