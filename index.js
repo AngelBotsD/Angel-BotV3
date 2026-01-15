@@ -26,7 +26,6 @@ import pino from 'pino'
 import Pino from 'pino'
 
 import { Boom } from '@hapi/boom'
-import { Low, JSONFile } from 'lowdb'
 
 import { makeWASocket } from './lib/simple.js'
 import MongoDB from './lib/mongoDB.js'
