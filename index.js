@@ -1,36 +1,21 @@
 import './config.js'
 
-import fs, {
-  readdirSync,
-  statSync,
-  unlinkSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  watch
-} from 'fs'
-
-import path, { join } from 'path'
-import { platform } from 'process'
-import { spawn } from 'child_process'
-import { tmpdir } from 'os'
-import { format } from 'util'
-import { fileURLToPath, pathToFileURL } from 'url'
-import { createRequire } from 'module'
-
+import fs from 'fs'
+import path from 'path'
+import os from 'os'
+import readline from 'readline'
 import chalk from 'chalk'
 import lodash from 'lodash'
 import yargs from 'yargs'
 import cfonts from 'cfonts'
 import syntaxerror from 'syntax-error'
-import readline from 'readline'
 import NodeCache from 'node-cache'
-import * as ws from 'ws'
-
 import pino from 'pino'
-import Pino from 'pino'
 
-import { Boom } from '@hapi/boom'
+import { spawn } from 'child_process'
+import { fileURLToPath, pathToFileURL } from 'url'
+import { createRequire } from 'module'
+
 import { makeWASocket } from './lib/simple.js'
 import store from './lib/store.js'
 
@@ -54,6 +39,21 @@ import {
   generateWAMessageContent
 } from '@whiskeysockets/baileys'
 
+const __filename = (url = import.meta.url) =>
+  /file:\/\//.test(url) ? fileURLToPath(url) : url
+
+const __dirname = (url) => path.dirname(__filename(url))
+
+global.__filename = __filename
+global.__dirname = __dirname
+global.__require = (url = import.meta.url) => createRequire(url)
+
+global.timestamp = { start: new Date() }
+
+global.opts = yargs(process.argv.slice(2)).exitProcess(false).parse()
+global.prefix = '.'
+global.prefixes = ['.', '!', '#', '/']
+
 global.wa = {
   downloadContentFromMessage,
   generateWAMessageFromContent,
@@ -61,201 +61,152 @@ global.wa = {
   generateWAMessageContent
 }
 
-const { CONNECTING } = ws
-const { say } = cfonts
-const { chain } = lodash
+if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp')
 
-console.log(chalk.magentaBright('\nInicializando Angel Bot...\n'))
-
-say('ANGEL BOT', {
+cfonts.say('Angel Bot', {
   font: 'block',
   align: 'center',
   gradient: ['cyan', 'white']
 })
 
-say('Ultra Clean Runtime', {
+cfonts.say('Optimized Core', {
   font: 'console',
   align: 'center',
-  colors: ['magenta', 'cyan']
+  colors: ['magenta']
 })
 
-if (!existsSync('./tmp')) mkdirSync('./tmp')
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+const ask = (q) => new Promise(r => rl.question(q, r))
 
-global.__filename = function (pathURL = import.meta.url, rm = platform !== 'win32') {
-  return rm ? fileURLToPath(pathURL) : pathToFileURL(pathURL).toString()
+let opcion
+const methodQR = process.argv.includes('qr')
+const methodMobile = process.argv.includes('mobile')
+
+if (methodQR) opcion = '1'
+
+if (!methodQR && !fs.existsSync(`./${sessions}/creds.json`)) {
+  do {
+    opcion = await ask(
+      chalk.white('Selecciona método:\n') +
+      chalk.cyan('1. Código QR\n') +
+      chalk.magenta('2. Código de 8 dígitos\n> ')
+    )
+  } while (!/^[12]$/.test(opcion))
 }
-
-global.__dirname = function (pathURL) {
-  return path.dirname(global.__filename(pathURL))
-}
-
-global.__require = function (dir = import.meta.url) {
-  return createRequire(dir)
-}
-
-global.timestamp = { start: Date.now() }
-const __dirname = global.__dirname(import.meta.url)
-
-global.opts = new Object(
-  yargs(process.argv.slice(2)).exitProcess(false).parse()
-)
-
-global.prefix = '.'
-global.prefixes = ['.', '!', '#', '/']
 
 const { state, saveCreds } = await useMultiFileAuthState(global.sessions)
-
-const msgRetryCounterCache = new NodeCache({ stdTTL: 0 })
-const userDevicesCache = new NodeCache({ stdTTL: 0 })
-
 const { version } = await fetchLatestBaileysVersion()
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-})
+const msgRetryCache = new NodeCache({ stdTTL: 0 })
+const deviceCache = new NodeCache({ stdTTL: 0 })
 
-const question = q => new Promise(r => rl.question(q, r))
-
-let opcion = process.argv.includes('qr') ? '1' : null
-
-if (!opcion && !existsSync(`./${sessions}/creds.json`)) {
-  do {
-    opcion = await question(
-      chalk.bold.white('Selecciona método:\n') +
-      chalk.cyan('1. QR\n') +
-      chalk.magenta('2. Código\n> ')
-    )
-  } while (!['1', '2'].includes(opcion))
-}
-
-const redefineConsoleMethod = (method, filters) => {
-  const original = console[method]
-  console[method] = (...args) => {
-    const text = args.join(' ')
-    if (filters.some(f => text.includes(Buffer.from(f, 'base64').toString()))) return
-    original.apply(console, args)
-  }
-}
-
-const filterStrings = [
-  'Q2xvc2luZyBzdGFsZSBvcGVu',
-  'RmFpbGVkIHRvIGRlY3J5cHQ='
-]
-
-console.info = () => {}
-console.debug = () => {}
-;['log', 'warn', 'error'].forEach(m => redefineConsoleMethod(m, filterStrings))
-
-const connectionOptions = {
+const socketConfig = {
   logger: pino({ level: 'silent' }),
   printQRInTerminal: opcion === '1',
+  mobile: methodMobile,
   browser: Browsers.macOS('Desktop'),
   auth: {
     creds: state.creds,
     keys: makeCacheableSignalKeyStore(
       state.keys,
-      Pino({ level: 'fatal' })
+      pino({ level: 'fatal' })
     )
   },
-  markOnlineOnConnect: false,
+  generateHighQualityLinkPreview: true,
   syncFullHistory: false,
-  getMessage: async key => {
-    try {
-      const jid = jidNormalizedUser(key.remoteJid)
-      const msg = await store.loadMessage(jid, key.id)
-      return msg?.message || ''
-    } catch {
-      return ''
-    }
-  },
-  msgRetryCounterCache,
-  userDevicesCache,
-  version
+  msgRetryCounterCache: msgRetryCache,
+  userDevicesCache: deviceCache,
+  version,
+  keepAliveIntervalMs: 55000
 }
 
-global.conn = makeWASocket(connectionOptions)
+global.conn = makeWASocket(socketConfig)
+
+conn.isInit = false
+
+async function connectionUpdate(update) {
+  const { connection, lastDisconnect, isNewLogin } = update
+
+  if (isNewLogin) conn.isInit = true
+
+  if (connection === 'open') {
+    const jid = jidNormalizedUser(conn.user.id)
+    console.log(chalk.greenBright(`✔ Conectado como ${conn.user.name || jid}`))
+  }
+
+  if (connection === 'close') {
+    const reason = lastDisconnect?.error?.output?.statusCode
+    if (reason !== DisconnectReason.loggedOut) {
+      await reloadHandler(true)
+    }
+  }
+}
 
 let handler = await import('./handler.js')
 let isInit = true
 
-global.reloadHandler = async restart => {
-  const newHandler = await import(`./handler.js?${Date.now()}`)
+global.reloadHandler = async (restart) => {
+  const newHandler = await import(`./handler.js?update=${Date.now()}`)
   handler = newHandler
 
   if (restart) {
     try { conn.ws.close() } catch {}
-    conn.ev.removeAllListeners()
-    global.conn = makeWASocket(connectionOptions)
+    global.conn = makeWASocket(socketConfig)
     isInit = true
   }
 
   if (!isInit) {
-    conn.ev.off('messages.upsert', conn.handler)
-    conn.ev.off('connection.update', conn.connectionUpdate)
-    conn.ev.off('creds.update', conn.credsUpdate)
+    conn.ev.removeAllListeners()
   }
 
-  conn.handler = handler.handler.bind(global.conn)
-  conn.connectionUpdate = connectionUpdate.bind(global.conn)
-  conn.credsUpdate = saveCreds.bind(global.conn)
-
+  conn.handler = handler.handler.bind(conn)
   conn.ev.on('messages.upsert', conn.handler)
-  conn.ev.on('connection.update', conn.connectionUpdate)
-  conn.ev.on('creds.update', conn.credsUpdate)
+  conn.ev.on('connection.update', connectionUpdate)
+  conn.ev.on('creds.update', saveCreds)
 
   isInit = false
 }
 
-async function connectionUpdate(update) {
-  const { connection, lastDisconnect } = update
-  global.stopped = connection
+await reloadHandler()
 
-  if (connection === 'open') {
-    console.log(chalk.green.bold('\nConectado correctamente\n'))
-  }
-
-  if (connection === 'close') {
-    const reason = new Boom(lastDisconnect?.error)?.output?.statusCode
-    if (reason !== DisconnectReason.loggedOut) {
-      await global.reloadHandler(true)
-    }
-  }
-}
-
-const pluginRoot = join(__dirname, 'plugins')
+const pluginRoot = path.join(__dirname(import.meta.url), 'plugins')
 global.plugins = {}
 
 const loadPlugins = async () => {
-  const files = readdirSync(pluginRoot, { recursive: true })
-    .filter(f => f.endsWith('.js'))
-
+  const files = fs.readdirSync(pluginRoot).filter(f => f.endsWith('.js'))
   for (const file of files) {
-    const full = join(pluginRoot, file)
-    const mod = await import(`${full}?${Date.now()}`)
-    global.plugins[file] = mod.default || mod
+    const full = path.join(pluginRoot, file)
+    try {
+      const plugin = await import(`${full}?update=${Date.now()}`)
+      global.plugins[file] = plugin.default || plugin
+    } catch {}
   }
 }
 
 await loadPlugins()
-watch(pluginRoot, loadPlugins)
-await global.reloadHandler()
+
+fs.watch(pluginRoot, async (_, file) => {
+  if (!file.endsWith('.js')) return
+  const full = path.join(pluginRoot, file)
+  if (!fs.existsSync(full)) {
+    delete global.plugins[file]
+    return
+  }
+  const err = syntaxerror(fs.readFileSync(full), file)
+  if (err) return
+  const plugin = await import(`${full}?update=${Date.now()}`)
+  global.plugins[file] = plugin.default || plugin
+})
 
 setInterval(() => {
-  if (!conn?.user) return
-  readdirSync('./tmp').forEach(f => unlinkSync(join('./tmp', f)))
+  fs.readdirSync('./tmp').forEach(f => fs.unlinkSync(`./tmp/${f}`))
 }, 1000 * 60 * 4)
 
-setInterval(() => {
-  if (!conn?.user) return
-  readdirSync(`./${sessions}`)
-    .filter(f => f.startsWith('pre-key-'))
-    .forEach(f => unlinkSync(`./${sessions}/${f}`))
-}, 1000 * 60 * 10)
-
-async function isValidPhoneNumber(n) {
+async function isValidPhoneNumber(num) {
   try {
-    const parsed = phoneUtil.parseAndKeepRawInput(n.replace(/\s+/g, ''))
+    num = num.replace(/\s+/g, '')
+    if (num.startsWith('+521')) num = num.replace('+521', '+52')
+    const parsed = phoneUtil.parseAndKeepRawInput(num)
     return phoneUtil.isValidNumber(parsed)
   } catch {
     return false
