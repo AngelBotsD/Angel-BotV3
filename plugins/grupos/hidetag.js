@@ -16,7 +16,6 @@ async function getBuffer(media) {
     let buffer = Buffer.alloc(0)
     for await (const chunk of stream)
       buffer = Buffer.concat([buffer, chunk])
-
     return buffer
   }
 
@@ -31,8 +30,8 @@ const handler = async (m, { conn, participants }) => {
   })
 
   const quoted = m.quoted
-  let media = quoted || m
-  let type = media.mtype
+  const media = quoted || m
+  const type = media.mtype
 
   const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
 
@@ -60,11 +59,12 @@ const handler = async (m, { conn, participants }) => {
 
     if (!text) return
 
-    return await conn.sendMessage(
+    await conn.sendMessage(
       m.chat,
       { text, mentions: users },
       { quoted: fkontak }
     )
+    return
   }
 
   if ((type === "audioMessage" || type === "stickerMessage") && !quoted)
@@ -83,7 +83,6 @@ const handler = async (m, { conn, participants }) => {
       (m.text || "")
         .replace(/^[.]?n(\s|$)/i, "")
         .trim() ||
-      quoted?.text ||
       ""
   }
 
