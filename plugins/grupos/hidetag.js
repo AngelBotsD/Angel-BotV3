@@ -36,11 +36,9 @@ const handler = async (m, { conn, participants }) => {
 
   if (mediaMessage === m) {
     rawText = m.msg?.caption || ""
-    if (!/^[.]?n(\s|$)/i.test(rawText)) return
     finalText = rawText.replace(/^[.]?n(\s|$)/i, "").trim()
   } else {
     rawText = m.text || ""
-    if (!/^[.]?n(\s|$)/i.test(rawText)) return
     finalText =
       rawText.replace(/^[.]?n(\s|$)/i, "").trim() ||
       quoted?.msg?.caption ||
