@@ -171,7 +171,7 @@ const { version } = await fetchLatestBaileysVersion()
 let phoneNumber = global.botNumber
 const methodCodeQR = process.argv.includes('qr')
 const methodCode = !!phoneNumber || process.argv.includes('code')
-const MethodMobile = process.argv.includes('mobile')
+const MethodMobile = opcion === '2' ? true : process.argv.includes('mobile')
 
 
 
@@ -249,11 +249,9 @@ const connectionOptions = {
   mobile: MethodMobile,
 
   browser:
-    opcion == '1'
-      ? Browsers.macOS('Desktop')
-      : methodCodeQR
-        ? Browsers.macOS('Desktop')
-        : Browsers.macOS('Chrome'),
+  opcion === '2'
+    ? Browsers.android('Chrome')
+    : Browsers.macOS('Desktop'),
 
   auth: {
     creds: state.creds,
