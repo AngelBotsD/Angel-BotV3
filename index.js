@@ -47,7 +47,6 @@ import { Boom } from '@hapi/boom'
 
 
 import { makeWASocket } from './lib/simple.js'
-import MongoDB from './lib/mongoDB.js'
 import store from './lib/store.js'
 
 
