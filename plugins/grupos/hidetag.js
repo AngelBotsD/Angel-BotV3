@@ -1,5 +1,4 @@
 import fetch from "node-fetch"
-import { downloadContentFromMessage } from "@whiskeysockets/baileys"
 
 let thumb = null
 fetch("https://files.catbox.moe/mx6p6q.jpg")
@@ -8,16 +7,20 @@ fetch("https://files.catbox.moe/mx6p6q.jpg")
   .catch(() => null)
 
 async function getBuffer(media) {
-  const stream = await downloadContentFromMessage(
-    media.msg || media,
-    media.mtype.replace("Message", "")
-  )
+  if (!media) return null
 
-  let buffer = Buffer.alloc(0)
-  for await (const chunk of stream)
-    buffer = Buffer.concat([buffer, chunk])
+  if (typeof media.download === "function") {
+    const stream = await media.download()
+    if (Buffer.isBuffer(stream)) return stream
 
-  return buffer
+    let buffer = Buffer.alloc(0)
+    for await (const chunk of stream)
+      buffer = Buffer.concat([buffer, chunk])
+
+    return buffer
+  }
+
+  return null
 }
 
 const handler = async (m, { conn, participants }) => {
@@ -28,8 +31,8 @@ const handler = async (m, { conn, participants }) => {
   })
 
   const quoted = m.quoted
-  const media = quoted || m
-  const type = media.mtype
+  let media = quoted || m
+  let type = media.mtype
 
   if (!["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(type))
     return
@@ -39,18 +42,17 @@ const handler = async (m, { conn, participants }) => {
 
   let finalText = ""
 
-  if (!quoted) {
-    const caption = m.msg?.caption || ""
-    if (!/^[.]?n(\s|$)/i.test(caption)) return
+  if (media === m) {
+    if (!["imageMessage", "videoMessage"].includes(type)) return
 
-    finalText = caption.replace(/^[.]?n(\s|$)/i, "").trim()
+    finalText = (m.msg?.caption || "")
+      .replace(/^[.]?n(\s|$)/i, "")
+      .trim()
   } else {
-    const body = m.text || ""
-    if (!/^[.]?n(\s|$)/i.test(body)) return
-
     finalText =
-      body.replace(/^[.]?n(\s|$)/i, "").trim() ||
-      quoted?.msg?.caption ||
+      (m.text || "")
+        .replace(/^[.]?n(\s|$)/i, "")
+        .trim() ||
       quoted?.text ||
       ""
   }
