@@ -86,7 +86,6 @@ global.dfail = async (type, m, conn) => {
   )
 }
 
-global.handledMessages ||= new Map()
 global.groupMetaCache ||= new Map()
 
 setInterval(() => {
@@ -102,12 +101,6 @@ export async function handler(chatUpdate) {
 
   let m = chatUpdate.messages?.slice(-1)[0]
   if (!m) return
-
-  if (m.key?.id) {
-    const prev = global.handledMessages.get(m.key.id)
-    if (prev && Date.now() - prev < 8000) return
-    global.handledMessages.set(m.key.id, Date.now())
-  }
 
   m = smsg(this, m)
   if (!m) return
@@ -225,7 +218,7 @@ export async function handler(chatUpdate) {
         isBotAdmin,
         chat: m.chat
       }),
-      timeout(9000)
+      timeout(2000)
     ]).catch(() => {})
 
     break
