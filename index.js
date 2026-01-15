@@ -213,6 +213,11 @@ if (opcion === '2') {
   console.log(chalk.cyanBright('\nIngresa el número con código país (ej: +52XXXXXXXXXX)\n'))
 }
 
+if (opcion === '2') {
+  console.log(chalk.cyanBright('\nIngresa el número con código país (ej: +52XXXXXXXXXX)\n'))
+  phoneNumber = await question('--> ')
+}
+
 
 const filterStrings = [
   'Q2xvc2luZyBzdGFsZSBvcGVu',
