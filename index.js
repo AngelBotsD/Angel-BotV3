@@ -204,10 +204,9 @@ conn.well = false
 conn.logger.info(`[♠] Hecho exitosamente...\n`)
 
 if (!opts['test']) {
-  if (global.db) setInterval(async () => {
-    if (global.db.data) await global.db.write()
-    if (opts['autocleartmp'] && (global.support || {}).find) {
-      ;([os.tmpdir(), 'tmp', `${jadi}`]).forEach((filename) =>
+  setInterval(async () => {
+    if (opts['autocleartmp']) {
+      ;([os.tmpdir(), 'tmp']).forEach((filename) =>
         spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'])
       )
     }
