@@ -125,7 +125,16 @@ if (!m) return
   p => p?.customPrefix instanceof RegExp && p.customPrefix.test(m.text)
 )
 
-if (!usedPrefix && !hasCustomPrefixPlugin) return
+const pluginMatch = Object.values(global.plugins).some(
+  p =>
+    p?.customPrefix instanceof RegExp &&
+    (
+      p.customPrefix.test(m.text) ||
+      p.customPrefix.test(m.msg?.caption || "")
+    )
+)
+
+if (!usedPrefix && !pluginMatch) return
 
   let text = ""
 let command = ""
