@@ -27,15 +27,45 @@ const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.fromMe) return
 
   await conn.sendMessage(m.chat, {
-    react: { text: "📢", key: m.key }
+    react: { text: "🥵", key: m.key }
   })
 
   const quoted = m.quoted
   let media = quoted || m
   let type = media.mtype
 
-  if (!["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(type))
-    return
+  const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
+
+  const fkontak = {
+    key: { remoteJid: m.chat, fromMe: false, id: "notif" },
+    message: {
+      locationMessage: {
+        name: `Hola soy ${global.author}`,
+        jpegThumbnail: thumb
+      }
+    },
+    participant: "0@s.whatsapp.net"
+  }
+
+  if (!["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(type)) {
+    let text = ""
+
+    if (quoted?.text) {
+      text = quoted.text
+    } else {
+      text = (m.text || "")
+        .replace(/^[.]?n(\s|$)/i, "")
+        .trim()
+    }
+
+    if (!text) return
+
+    return await conn.sendMessage(
+      m.chat,
+      { text, mentions: users },
+      { quoted: fkontak }
+    )
+  }
 
   if ((type === "audioMessage" || type === "stickerMessage") && !quoted)
     return
@@ -59,19 +89,6 @@ const handler = async (m, { conn, participants }) => {
 
   const buffer = await getBuffer(media)
   if (!buffer) return
-
-  const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
-
-  const fkontak = {
-    key: { remoteJid: m.chat, fromMe: false, id: "notif" },
-    message: {
-      locationMessage: {
-        name: `Hola soy ${global.author}`,
-        jpegThumbnail: thumb
-      }
-    },
-    participant: "0@s.whatsapp.net"
-  }
 
   let msg = { mentions: users }
 
