@@ -225,7 +225,7 @@ export async function handler(chatUpdate) {
         isBotAdmin,
         chat: m.chat
       }),
-      timeout(1500)
+      timeout(9000)
     ]).catch(() => {})
 
     break
