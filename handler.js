@@ -105,10 +105,6 @@ export async function handler(chatUpdate) {
   const textMsg = m.text || m.msg?.caption || ""
   if (!textMsg) continue
 
-  const textMsg = m.text || m.msg?.caption || ""
-  if (!textMsg) return
-  if (m.isBaileys) return
-
   const prefixes = Array.isArray(global.prefixes)
     ? global.prefixes
     : [global.prefix || "."]
