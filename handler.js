@@ -90,8 +90,6 @@ global.groupMetaCache ||= new Map()
 
 setInterval(() => {
   const now = Date.now()
-  for (const [k, v] of global.handledMessages)
-    if (now - v > 120000) global.handledMessages.delete(k)
   for (const [k, v] of global.groupMetaCache)
     if (now - v.ts > 15000) global.groupMetaCache.delete(k)
 }, 30000)
