@@ -209,17 +209,6 @@ if (!methodCodeQR && !methodCode && !fs.existsSync(`./${sessions}/creds.json`)) 
   } while (opcion !== '1' && opcion !== '2' || fs.existsSync(`./${sessions}/creds.json`))
 }
 
-if (opcion === '2') {
-  console.log(chalk.cyanBright('\nIngresa el número con código país (ej: +52XXXXXXXXXX)\n'))
-  phoneNumber = await question('--> ')
-
-  const code = await conn.requestPairingCode(phoneNumber)
-
-  console.log(chalk.greenBright('\nIngresa este código en WhatsApp\n'))
-  console.log(chalk.bold(code.match(/.{1,4}/g).join(' ')))
-}
-
-
 const filterStrings = [
   'Q2xvc2luZyBzdGFsZSBvcGVu',
   'Q2xvc2luZyBvcGVuIHNlc3Npb24=',
@@ -300,6 +289,16 @@ const connectionOptions = {
 
 
 global.conn = makeWASocket(connectionOptions)
+
+if (opcion === '2') {
+  console.log(chalk.cyanBright('\nIngresa el número con código país (ej: +52XXXXXXXXXX)\n'))
+  phoneNumber = await question('--> ')
+
+  const code = await conn.requestPairingCode(phoneNumber)
+
+  console.log(chalk.greenBright('\nIngresa este código en WhatsApp\n'))
+  console.log(chalk.bold(code.match(/.{1,4}/g).join(' ')))
+}
 
 
 
