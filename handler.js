@@ -74,7 +74,7 @@ setInterval(() => {
 export async function handler(chatUpdate) {
   if (!chatUpdate) return
 
-  let m = chatUpdate.messages?.at(-1)
+  for (let m of chatUpdate.messages || []) {
   if (!m) return
 
   m = smsg(this, m)
