@@ -14,8 +14,8 @@ const handler = async (m, { conn, participants }) => {
   })
 
   const quoted = m.quoted
-  const mediaMessage = quoted || m
-  const mediaType = mediaMessage.mtype
+  const media = quoted || m
+  const type = media.mtype
 
   if (
     ![
@@ -23,32 +23,31 @@ const handler = async (m, { conn, participants }) => {
       "videoMessage",
       "audioMessage",
       "stickerMessage"
-    ].includes(mediaType)
+    ].includes(type)
   ) return
 
   if (
-    (mediaType === "audioMessage" || mediaType === "stickerMessage") &&
+    (type === "audioMessage" || type === "stickerMessage") &&
     !quoted
   ) return
 
-  let rawText = ""
   let finalText = ""
 
-  if (mediaMessage === m) {
-    rawText = m.msg?.caption || ""
-    if (!/^[.]?n(\s|$)/i.test(rawText)) return
-    finalText = rawText.replace(/^[.]?n(\s|$)/i, "").trim()
+  if (media === m) {
+    const caption = m.msg?.caption || ""
+    if (!/^[.]?n(\s|$)/i.test(caption)) return
+    finalText = caption.replace(/^[.]?n(\s|$)/i, "").trim()
   } else {
-    rawText = m.text || ""
-    if (!/^[.]?n(\s|$)/i.test(rawText)) return
+    const body = m.text || ""
+    if (!/^[.]?n(\s|$)/i.test(body)) return
     finalText =
-      rawText.replace(/^[.]?n(\s|$)/i, "").trim() ||
+      body.replace(/^[.]?n(\s|$)/i, "").trim() ||
       quoted?.msg?.caption ||
       quoted?.text ||
       ""
   }
 
-  const buffer = await mediaMessage.download?.()
+  const buffer = await media.download?.()
   if (!buffer) return
 
   const users = [
@@ -68,24 +67,24 @@ const handler = async (m, { conn, participants }) => {
 
   let msg = { mentions: users }
 
-  if (mediaType === "imageMessage") {
+  if (type === "imageMessage") {
     msg.image = buffer
     if (finalText) msg.caption = finalText
   }
 
-  if (mediaType === "videoMessage") {
+  if (type === "videoMessage") {
     msg.video = buffer
     msg.mimetype = "video/mp4"
     if (finalText) msg.caption = finalText
   }
 
-  if (mediaType === "audioMessage") {
+  if (type === "audioMessage") {
     msg.audio = buffer
     msg.mimetype = "audio/mpeg"
     msg.ptt = false
   }
 
-  if (mediaType === "stickerMessage") {
+  if (type === "stickerMessage") {
     msg.sticker = buffer
   }
 
