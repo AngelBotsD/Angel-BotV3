@@ -1,10 +1,26 @@
 import fetch from "node-fetch"
+import { downloadContentFromMessage } from "@whiskeysockets/baileys"
 
 let thumb = null
 fetch("https://files.catbox.moe/mx6p6q.jpg")
   .then(r => r.arrayBuffer())
   .then(b => (thumb = Buffer.from(b)))
   .catch(() => null)
+
+async function getBuffer(media) {
+  if (!media) return null
+
+  const stream = await downloadContentFromMessage(
+    media.msg || media,
+    media.mtype.replace("Message", "")
+  )
+
+  let buffer = Buffer.alloc(0)
+  for await (const chunk of stream)
+    buffer = Buffer.concat([buffer, chunk])
+
+  return buffer
+}
 
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.fromMe) return
@@ -14,45 +30,46 @@ const handler = async (m, { conn, participants }) => {
   })
 
   const quoted = m.quoted
-  let media = quoted || m
-  let type = media.mtype
+  let media, type
 
-  if (
-    ![
-      "imageMessage",
-      "videoMessage",
-      "audioMessage",
-      "stickerMessage"
-    ].includes(type)
-  ) return
+  if (quoted) {
+    media = quoted
+    type = quoted.mtype
+  } else {
+    media = m
+    type = m.mtype
+  }
 
-  if (
-    (type === "audioMessage" || type === "stickerMessage") &&
-    !quoted
-  ) return
+  if (!["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(type))
+    return
+
+  if ((type === "audioMessage" || type === "stickerMessage") && !quoted)
+    return
 
   let finalText = ""
 
   if (media === m) {
     if (!["imageMessage", "videoMessage"].includes(type)) return
-    finalText = (m.msg?.caption || "")
-      .replace(/^[.]?n(\s|$)/i, "")
-      .trim()
+
+    const caption = m.msg?.caption || ""
+    if (!/^[.]?n(\s|$)/i.test(caption)) return
+
+    finalText = caption.replace(/^[.]?n(\s|$)/i, "").trim()
   } else {
+    const body = m.text || ""
+    if (!/^[.]?n(\s|$)/i.test(body)) return
+
     finalText =
-      (m.text || "")
-        .replace(/^[.]?n(\s|$)/i, "")
-        .trim() ||
+      body.replace(/^[.]?n(\s|$)/i, "").trim() ||
       quoted?.text ||
+      quoted?.msg?.caption ||
       ""
   }
 
-  const buffer = await media.download?.()
+  const buffer = await getBuffer(media)
   if (!buffer) return
 
-  const users = [
-    ...new Set(participants.map(p => conn.decodeJid(p.id)))
-  ]
+  const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
 
   const fkontak = {
     key: { remoteJid: m.chat, fromMe: false, id: "notif" },
