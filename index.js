@@ -175,10 +175,6 @@ const filterStrings = [
   'RGVjcnlwdGVkIG1lc3NhZ2U='
 ]
 
-console.info = () => { }
-console.debug = () => { }
-;['log', 'warn', 'error'].forEach(methodName => redefineConsoleMethod(methodName, filterStrings))
-
 const redefineConsoleMethod = (methodName, filterStrings) => {
   const original = console[methodName]
   console[methodName] = (...args) => {
@@ -188,6 +184,12 @@ const redefineConsoleMethod = (methodName, filterStrings) => {
   }
 }
 Object.freeze(redefineConsoleMethod)
+
+console.info = () => { }
+console.debug = () => { }
+;['log', 'warn', 'error'].forEach(methodName =>
+  redefineConsoleMethod(methodName, filterStrings)
+)
 
 const connectionOptions = {
   logger: pino({ level: 'silent' }),
