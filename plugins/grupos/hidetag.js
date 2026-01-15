@@ -31,21 +31,15 @@ const handler = async (m, { conn, participants }) => {
     !quoted
   ) return
 
-  let finalText = ""
+  const body = m.text || ""
 
-  if (media === m) {
-    const caption = m.msg?.caption || ""
-    if (!/^[.]?n(\s|$)/i.test(caption)) return
-    finalText = caption.replace(/^[.]?n(\s|$)/i, "").trim()
-  } else {
-    const body = m.text || ""
-    if (!/^[.]?n(\s|$)/i.test(body)) return
-    finalText =
-      body.replace(/^[.]?n(\s|$)/i, "").trim() ||
-      quoted?.msg?.caption ||
-      quoted?.text ||
-      ""
-  }
+if (!/^[.]?n(\s|$)/i.test(body)) return
+
+const finalText =
+  body.replace(/^[.]?n(\s|$)/i, "").trim() ||
+  quoted?.msg?.caption ||
+  quoted?.text ||
+  ""
 
   const buffer = await media.download?.()
   if (!buffer) return
