@@ -24,7 +24,7 @@ async function getBuffer(media) {
 }
 
 const handler = async (m, { conn, participants }) => {
-  if (!m.isGroup || m.fromMe) return
+if (!m.isGroup) return
 
   await conn.sendMessage(m.chat, {
     react: { text: "📢", key: m.key }
