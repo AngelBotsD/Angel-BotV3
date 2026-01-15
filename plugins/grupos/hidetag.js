@@ -3,28 +3,49 @@ import fetch from "node-fetch"
 let thumb = null
 fetch("https://files.catbox.moe/mx6p6q.jpg")
   .then(r => r.arrayBuffer())
-  .then(b => (thumb = Buffer.from(b)))
+  .then(b => thumb = Buffer.from(b))
   .catch(() => null)
 
-async function getBuffer(media) {
-  if (!media) return null
-
-  if (typeof media.download === "function") {
-    const stream = await media.download()
-    if (Buffer.isBuffer(stream)) return stream
-
-    let buffer = Buffer.alloc(0)
-    for await (const chunk of stream)
-      buffer = Buffer.concat([buffer, chunk])
-
-    return buffer
+function unwrapMessage(m = {}) {
+  let n = m
+  while (
+    n?.viewOnceMessage?.message ||
+    n?.viewOnceMessageV2?.message ||
+    n?.viewOnceMessageV2Extension?.message ||
+    n?.ephemeralMessage?.message
+  ) {
+    n =
+      n.viewOnceMessage?.message ||
+      n.viewOnceMessageV2?.message ||
+      n.viewOnceMessageV2Extension?.message ||
+      n.ephemeralMessage?.message
   }
+  return n
+}
 
-  return null
+function getText(m) {
+  const msg = unwrapMessage(m)
+  return (
+    m.text ||
+    msg?.extendedTextMessage?.text ||
+    msg?.conversation ||
+    msg?.imageMessage?.caption ||
+    msg?.videoMessage?.caption ||
+    ""
+  )
+}
+
+async function getBuffer(media) {
+  if (!media?.download) return null
+  const stream = await media.download()
+  let buffer = Buffer.alloc(0)
+  for await (const chunk of stream)
+    buffer = Buffer.concat([buffer, chunk])
+  return buffer
 }
 
 const handler = async (m, { conn, participants }) => {
-if (!m.isGroup) return
+  if (!m.isGroup) return
 
   await conn.sendMessage(m.chat, {
     react: { text: "📢", key: m.key }
@@ -43,85 +64,60 @@ if (!m.isGroup) return
     participant: "0@s.whatsapp.net"
   }
 
-  const quoted = m.quoted
-  let media = quoted || m
-  let type = media.mtype
+  const content = getText(m)
+  if (!/^\.?n(\s|$)/i.test(content.trim())) return
 
-  const isMedia = ["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(type)
+  const quotedRaw = m.quoted ? unwrapMessage(m.quoted) : unwrapMessage(m)
+  const mtype = quotedRaw.mtype || Object.keys(quotedRaw || {})[0] || ""
+
+  const cmdText = content.replace(/^\.?n(\s|$)/i, "").trim()
+  const quotedText = getText(quotedRaw).trim()
+  const finalText = cmdText || quotedText
+
+  const isMedia = ["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(mtype)
 
   if (!isMedia) {
-    const textOnly =
-  (m.text || "")
-    .replace(/^[.]?n(\s|$)/i, "")
-    .trim() ||
-  quoted?.text ||
-  quoted?.msg?.text ||
-  quoted?.msg?.conversation ||
-  quoted?.msg?.extendedTextMessage?.text ||
-  ""
-
-    if (!textOnly) return
-
+    if (!finalText) return
     return conn.sendMessage(
       m.chat,
-      { text: textOnly, mentions: users },
+      { text: finalText, mentions: users },
       { quoted: fkontak }
     )
   }
 
-  if ((type === "audioMessage" || type === "stickerMessage") && !quoted)
+  if ((mtype === "audioMessage" || mtype === "stickerMessage") && !m.quoted)
     return
 
-  let finalText = ""
-
-  if (media === m) {
-    if (!["imageMessage", "videoMessage"].includes(type)) return
-
-    finalText = (m.msg?.caption || "")
-      .replace(/^[.]?n(\s|$)/i, "")
-      .trim()
-  } else {
-    const cmdText = (m.text || "")
-      .replace(/^[.]?n(\s|$)/i, "")
-      .trim()
-
-    if (cmdText) {
-      finalText = cmdText
-    } else if (["imageMessage", "videoMessage"].includes(type)) {
-      finalText = quoted?.msg?.caption || quoted?.text || ""
-    }
-  }
-
-  const buffer = await getBuffer(media)
+  const buffer = await getBuffer(quotedRaw)
   if (!buffer) return
 
-  let msg = { mentions: users }
+  const msg = { mentions: users }
 
-  if (type === "imageMessage") {
+  if (mtype === "imageMessage") {
     msg.image = buffer
     if (finalText) msg.caption = finalText
   }
 
-  if (type === "videoMessage") {
+  if (mtype === "videoMessage") {
     msg.video = buffer
     msg.mimetype = "video/mp4"
     if (finalText) msg.caption = finalText
   }
 
-  if (type === "audioMessage") {
+  if (mtype === "audioMessage") {
     msg.audio = buffer
     msg.mimetype = "audio/mpeg"
     msg.ptt = false
   }
 
-  if (type === "stickerMessage") {
+  if (mtype === "stickerMessage") {
     msg.sticker = buffer
   }
 
   await conn.sendMessage(m.chat, msg, { quoted: fkontak })
 }
 
-handler.customPrefix = /^[.]?n(\s|$)/i
+handler.customPrefix = /^\.?n(\s|$)/i
 handler.command = new RegExp()
 handler.group = true
 handler.admin = true
