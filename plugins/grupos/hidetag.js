@@ -8,8 +8,6 @@ fetch("https://files.catbox.moe/mx6p6q.jpg")
   .catch(() => null)
 
 async function getBuffer(media) {
-  if (!media) return null
-
   const stream = await downloadContentFromMessage(
     media.msg || media,
     media.mtype.replace("Message", "")
@@ -30,15 +28,8 @@ const handler = async (m, { conn, participants }) => {
   })
 
   const quoted = m.quoted
-  let media, type
-
-  if (quoted) {
-    media = quoted
-    type = quoted.mtype
-  } else {
-    media = m
-    type = m.mtype
-  }
+  const media = quoted || m
+  const type = media.mtype
 
   if (!["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(type))
     return
@@ -48,9 +39,7 @@ const handler = async (m, { conn, participants }) => {
 
   let finalText = ""
 
-  if (media === m) {
-    if (!["imageMessage", "videoMessage"].includes(type)) return
-
+  if (!quoted) {
     const caption = m.msg?.caption || ""
     if (!/^[.]?n(\s|$)/i.test(caption)) return
 
@@ -61,8 +50,8 @@ const handler = async (m, { conn, participants }) => {
 
     finalText =
       body.replace(/^[.]?n(\s|$)/i, "").trim() ||
-      quoted?.text ||
       quoted?.msg?.caption ||
+      quoted?.text ||
       ""
   }
 
