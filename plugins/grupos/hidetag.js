@@ -57,6 +57,7 @@ if (!m.isGroup) return
   quoted?.text ||
   quoted?.msg?.text ||
   quoted?.msg?.conversation ||
+  quoted?.msg?.extendedTextMessage?.text ||
   ""
 
     if (!textOnly) return
