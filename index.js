@@ -249,9 +249,9 @@ const connectionOptions = {
   printQRInTerminal: opcion == '1' ? true : methodCodeQR ? true : false,
   mobile: MethodMobile,
 
-    browser:
+ browser:
 opcion === '2'
-  ? Browsers.android
+  ? ['Android', 'Chrome', '13']
   : Browsers.macOS('Desktop'),
 
   auth: {
