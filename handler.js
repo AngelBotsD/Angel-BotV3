@@ -220,6 +220,7 @@ export async function handler(chatUpdate) {
     break
   }
 }
+}
 
 if (process.env.NODE_ENV === "development") {
   const file = fileURLToPath(import.meta.url)
