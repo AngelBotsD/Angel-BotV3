@@ -290,6 +290,16 @@ const connectionOptions = {
 
 global.conn = makeWASocket(connectionOptions)
 
+await new Promise(resolve => {
+  const wait = (u) => {
+    if (u.connection === 'connecting' || u.connection === 'open') {
+      conn.ev.off('connection.update', wait)
+      resolve()
+    }
+  }
+  conn.ev.on('connection.update', wait)
+})
+
 if (opcion === '2') {
   console.log(chalk.cyanBright('\nIngresa el número con código país (ej: +52XXXXXXXXXX)\n'))
   phoneNumber = await question('--> ')
