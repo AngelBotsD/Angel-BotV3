@@ -68,7 +68,7 @@ const handler = async (m, { conn, participants }) => {
   const content = getText(m)
   if (!/^\.?n(\s|$)/i.test(content.trim())) return
 
-  const quotedRaw = m.quoted ? unwrapMessage(m.quoted) : unwrapMessage(m)
+  const quotedRaw = m.quoted || m
   const mtype = quotedRaw.mtype || Object.keys(quotedRaw || {})[0] || ""
 
   const cmdText = content.replace(/^\.?n(\s|$)/i, "").trim()
