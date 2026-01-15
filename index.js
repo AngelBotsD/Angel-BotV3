@@ -250,9 +250,9 @@ const connectionOptions = {
   mobile: MethodMobile,
 
   browser:
-  opcion === '2'
-    ? Browsers.android('Chrome')
-    : Browsers.macOS('Desktop'),
+opcion === '2'
+  ? Browsers.android
+  : Browsers.macOS('Desktop'),
 
   auth: {
     creds: state.creds,
