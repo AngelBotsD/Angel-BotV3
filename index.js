@@ -171,7 +171,6 @@ const { version } = await fetchLatestBaileysVersion()
 let phoneNumber = global.botNumber
 const methodCodeQR = process.argv.includes('qr')
 const methodCode = !!phoneNumber || process.argv.includes('code')
-const MethodMobile = opcion === '2' ? true : process.argv.includes('mobile')
 
 
 
@@ -188,6 +187,8 @@ const question = (texto) => new Promise((resolver) => rl.question(texto, resolve
 
 let opcion
 if (methodCodeQR) opcion = '1'
+
+const MethodMobile = opcion === '2' ? true : process.argv.includes('mobile')
 
 
 
