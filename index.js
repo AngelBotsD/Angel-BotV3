@@ -187,6 +187,7 @@ const redefineConsoleMethod = (methodName, filterStrings) => {
     original.apply(console, args)
   }
 }
+Object.freeze(redefineConsoleMethod)
 
 const connectionOptions = {
   logger: pino({ level: 'silent' }),
