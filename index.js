@@ -249,7 +249,7 @@ const connectionOptions = {
   printQRInTerminal: opcion == '1' ? true : methodCodeQR ? true : false,
   mobile: MethodMobile,
 
-  browser:
+    browser:
 opcion === '2'
   ? Browsers.android
   : Browsers.macOS('Desktop'),
