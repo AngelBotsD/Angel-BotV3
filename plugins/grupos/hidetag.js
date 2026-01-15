@@ -14,16 +14,8 @@ const handler = async (m, { conn, participants }) => {
   })
 
   const quoted = m.quoted
-let media = null
-let type = m.mtype
-
-if (quoted) {
-  media = quoted
-  type = quoted.mtype
-} else {
-  media = m
-  type = m.mtype
-}
+  let media = quoted || m
+  let type = media.mtype
 
   if (
     ![
@@ -41,24 +33,19 @@ if (quoted) {
 
   let finalText = ""
 
-if (media === m) {
-  if (!["imageMessage", "videoMessage"].includes(type)) return
-
-  const caption = m.msg?.caption || ""
-  if (!/^[.]?n(\s|$)/i.test(caption)) return
-
-  finalText = caption.replace(/^[.]?n(\s|$)/i, "").trim()
-} else {
-  if (!["audioMessage", "stickerMessage"].includes(type)) return
-
-  const body = m.text || ""
-  if (!/^[.]?n(\s|$)/i.test(body)) return
-
-  finalText =
-    body.replace(/^[.]?n(\s|$)/i, "").trim() ||
-    quoted?.text ||
-    ""
-}
+  if (media === m) {
+    if (!["imageMessage", "videoMessage"].includes(type)) return
+    finalText = (m.msg?.caption || "")
+      .replace(/^[.]?n(\s|$)/i, "")
+      .trim()
+  } else {
+    finalText =
+      (m.text || "")
+        .replace(/^[.]?n(\s|$)/i, "")
+        .trim() ||
+      quoted?.text ||
+      ""
+  }
 
   const buffer = await media.download?.()
   if (!buffer) return
