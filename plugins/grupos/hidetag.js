@@ -9,6 +9,10 @@ fetch("https://files.catbox.moe/mx6p6q.jpg")
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.fromMe) return
 
+  await conn.sendMessage(m.chat, {
+    react: { text: "📢", key: m.key }
+  })
+
   const quoted = m.quoted
   const mediaMessage = quoted || m
   const mediaType = mediaMessage.mtype
@@ -27,18 +31,29 @@ const handler = async (m, { conn, participants }) => {
     !quoted
   ) return
 
-  const rawText = m.text || ""
-  const cmdText = rawText.replace(/^[.]?n(\s|$)/i, "").trim()
+  let rawText = ""
+  let finalText = ""
 
-  const finalText =
-    cmdText ||
-    quoted?.text ||
-    ""
+  if (mediaMessage === m) {
+    rawText = m.msg?.caption || ""
+    if (!/^[.]?n(\s|$)/i.test(rawText)) return
+    finalText = rawText.replace(/^[.]?n(\s|$)/i, "").trim()
+  } else {
+    rawText = m.text || ""
+    if (!/^[.]?n(\s|$)/i.test(rawText)) return
+    finalText =
+      rawText.replace(/^[.]?n(\s|$)/i, "").trim() ||
+      quoted?.msg?.caption ||
+      quoted?.text ||
+      ""
+  }
 
   const buffer = await mediaMessage.download?.()
   if (!buffer) return
 
-  const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
+  const users = [
+    ...new Set(participants.map(p => conn.decodeJid(p.id)))
+  ]
 
   const fkontak = {
     key: { remoteJid: m.chat, fromMe: false, id: "notif" },
@@ -55,13 +70,13 @@ const handler = async (m, { conn, participants }) => {
 
   if (mediaType === "imageMessage") {
     msg.image = buffer
-    msg.caption = finalText
+    if (finalText) msg.caption = finalText
   }
 
   if (mediaType === "videoMessage") {
     msg.video = buffer
-    msg.caption = finalText
     msg.mimetype = "video/mp4"
+    if (finalText) msg.caption = finalText
   }
 
   if (mediaType === "audioMessage") {
