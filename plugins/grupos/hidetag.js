@@ -9,6 +9,15 @@ fetch("https://files.catbox.moe/mx6p6q.jpg")
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.fromMe) return
 
+  const caption = m.msg?.caption || ""
+  const text = m.text || ""
+
+  const isCommand =
+    /^[.]?n(\s|$)/i.test(text) ||
+    /^[.]?n(\s|$)/i.test(caption)
+
+  if (!isCommand) return
+
   await conn.sendMessage(m.chat, {
     react: { text: "📢", key: m.key }
   })
@@ -31,16 +40,13 @@ const handler = async (m, { conn, participants }) => {
     !quoted
   ) return
 
-  let rawText = ""
   let finalText = ""
 
   if (mediaMessage === m) {
-    rawText = m.msg?.caption || ""
-    finalText = rawText.replace(/^[.]?n(\s|$)/i, "").trim()
+    finalText = caption.replace(/^[.]?n(\s|$)/i, "").trim()
   } else {
-    rawText = m.text || ""
     finalText =
-      rawText.replace(/^[.]?n(\s|$)/i, "").trim() ||
+      text.replace(/^[.]?n(\s|$)/i, "").trim() ||
       quoted?.msg?.caption ||
       quoted?.text ||
       ""
@@ -80,7 +86,6 @@ const handler = async (m, { conn, participants }) => {
   if (mediaType === "audioMessage") {
     msg.audio = buffer
     msg.mimetype = "audio/mpeg"
-    msg.ptt = false
   }
 
   if (mediaType === "stickerMessage") {
@@ -90,7 +95,6 @@ const handler = async (m, { conn, participants }) => {
   await conn.sendMessage(m.chat, msg, { quoted: fkontak })
 }
 
-handler.customPrefix = /^[.]?n(\s|$)/i
 handler.command = new RegExp()
 handler.group = true
 handler.admin = true
