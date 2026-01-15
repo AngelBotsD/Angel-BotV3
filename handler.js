@@ -97,11 +97,13 @@ setInterval(() => {
 export async function handler(chatUpdate) {
   if (!chatUpdate) return
 
-  let m = chatUpdate.messages?.slice(-1)[0]
-  if (!m) return
-
+  for (let m of chatUpdate.messages || []) {
   m = smsg(this, m)
-  if (!m) return
+  if (!m) continue
+  if (m.isBaileys) continue
+
+  const textMsg = m.text || m.msg?.caption || ""
+  if (!textMsg) continue
 
   const textMsg = m.text || m.msg?.caption || ""
   if (!textMsg) return
