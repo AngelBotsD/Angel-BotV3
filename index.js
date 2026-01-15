@@ -1,36 +1,73 @@
 import './config.js'
 
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
-import readline from 'readline'
-import chalk from 'chalk'
-import lodash from 'lodash'
-import yargs from 'yargs'
-import cfonts from 'cfonts'
-import syntaxerror from 'syntax-error'
-import NodeCache from 'node-cache'
-import pino from 'pino'
+import cluster from 'cluster'
+import fs, {
+  watchFile,
+  unwatchFile,
+  readdirSync,
+  statSync,
+  unlinkSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  watch
+} from 'fs'
 
-import { spawn } from 'child_process'
+import path, { join, dirname } from 'path'
+import { platform } from 'process'
+import { spawn, execSync } from 'child_process'
+import { tmpdir } from 'os'
+import { format } from 'util'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { createRequire } from 'module'
 
+
+
+import * as ws from 'ws'
+import chalk from 'chalk'
+import lodash from 'lodash'
+import boxen from 'boxen'
+import yargs from 'yargs'
+import cfonts from 'cfonts'
+import syntaxerror from 'syntax-error'
+import readline from 'readline'
+import NodeCache from 'node-cache'
+
+
+
+import P from 'pino'
+import pino from 'pino'
+import Pino from 'pino'
+
+
+
+import { Boom } from '@hapi/boom'
+
+
+
 import { makeWASocket } from './lib/simple.js'
+import MongoDB from './lib/mongoDB.js'
 import store from './lib/store.js'
+
+
 
 import pkg from 'google-libphonenumber'
 const { PhoneNumberUtil } = pkg
-const phoneUtil = PhoneNumberUtil.getInstance()
+
+
 
 const {
   DisconnectReason,
   useMultiFileAuthState,
+  MessageRetryMap,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   jidNormalizedUser,
   Browsers
 } = await import('@whiskeysockets/baileys')
+
+
 
 import {
   downloadContentFromMessage,
@@ -39,20 +76,21 @@ import {
   generateWAMessageContent
 } from '@whiskeysockets/baileys'
 
-const __filename = (url = import.meta.url) =>
-  /file:\/\//.test(url) ? fileURLToPath(url) : url
 
-const __dirname = (url) => path.dirname(__filename(url))
 
-global.__filename = __filename
-global.__dirname = __dirname
-global.__require = (url = import.meta.url) => createRequire(url)
+const { proto } = (await import('@whiskeysockets/baileys')).default
 
-global.timestamp = { start: new Date() }
 
-global.opts = yargs(process.argv.slice(2)).exitProcess(false).parse()
-global.prefix = '.'
-global.prefixes = ['.', '!', '#', '/']
+
+const phoneUtil = PhoneNumberUtil.getInstance()
+const { chain } = lodash
+const { CONNECTING } = ws
+
+
+
+const PORT = process.env.PORT || process.env.SERVER_PORT || 3000
+
+
 
 global.wa = {
   downloadContentFromMessage,
@@ -61,153 +99,409 @@ global.wa = {
   generateWAMessageContent
 }
 
-if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp')
 
-cfonts.say('Angel Bot', {
+
+let { say } = cfonts
+
+console.log(chalk.magentaBright('\nMejor Bot Do Momento Start...'))
+
+say('Angel Bot', {
   font: 'block',
   align: 'center',
-  gradient: ['cyan', 'white']
+  gradient: ['grey', 'white']
 })
 
-cfonts.say('Optimized Core', {
+say('Hecho Y Optimizado Por Angel.xyz', {
   font: 'console',
   align: 'center',
-  colors: ['magenta']
+  colors: ['cyan', 'magenta', 'yellow']
 })
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-const ask = (q) => new Promise(r => rl.question(q, r))
 
-let opcion
-const methodQR = process.argv.includes('qr')
-const methodMobile = process.argv.includes('mobile')
 
-if (methodQR) opcion = '1'
-
-if (!methodQR && !fs.existsSync(`./${sessions}/creds.json`)) {
-  do {
-    opcion = await ask(
-      chalk.white('Selecciona método:\n') +
-      chalk.cyan('1. Código QR\n') +
-      chalk.magenta('2. Código de 8 dígitos\n> ')
-    )
-  } while (!/^[12]$/.test(opcion))
+if (!existsSync('./tmp')) {
+  mkdirSync('./tmp')
 }
 
-const { state, saveCreds } = await useMultiFileAuthState(global.sessions)
+
+
+global.__filename = function filename(pathURL = import.meta.url, rmPrefix = platform !== 'win32') {
+  return rmPrefix
+    ? /file:\/\/\//.test(pathURL)
+      ? fileURLToPath(pathURL)
+      : pathURL
+    : pathToFileURL(pathURL).toString()
+}
+
+global.__dirname = function dirname(pathURL) {
+  return path.dirname(global.__filename(pathURL, true))
+}
+
+global.__require = function require(dir = import.meta.url) {
+  return createRequire(dir)
+}
+
+
+
+global.timestamp = { start: new Date }
+const __dirname = global.__dirname(import.meta.url)
+
+
+
+global.opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
+global.prefix = '.'
+global.prefixes = ['.', '!', '#', '/']
+
+
+
+const { state, saveState, saveCreds } = await useMultiFileAuthState(global.sessions)
+
+
+
+const msgRetryCounterMap = new Map()
+const msgRetryCounterCache = new NodeCache({ stdTTL: 0, checkperiod: 0 })
+const userDevicesCache = new NodeCache({ stdTTL: 0, checkperiod: 0 })
+
+
+
 const { version } = await fetchLatestBaileysVersion()
 
-const msgRetryCache = new NodeCache({ stdTTL: 0 })
-const deviceCache = new NodeCache({ stdTTL: 0 })
 
-const socketConfig = {
+
+let phoneNumber = global.botNumber
+const methodCodeQR = process.argv.includes('qr')
+const methodCode = !!phoneNumber || process.argv.includes('code')
+const MethodMobile = process.argv.includes('mobile')
+
+
+
+const colors = chalk.bold.white
+const qrOption = chalk.blueBright
+const textOption = chalk.cyan
+
+
+
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+const question = (texto) => new Promise((resolver) => rl.question(texto, resolver))
+
+
+
+let opcion
+if (methodCodeQR) opcion = '1'
+
+
+
+if (!methodCodeQR && !methodCode && !fs.existsSync(`./${sessions}/creds.json`)) {
+  do {
+    opcion = await question(
+      colors('Seleccione una opción:\n') +
+      qrOption('1. Con código QR\n') +
+      textOption('2. Con código de texto de 8 dígitos\n--> ')
+    )
+
+    if (!/^[1-2]$/.test(opcion)) {
+      console.log(
+        chalk.bold.redBright(
+          'No se permiten numeros que no sean 1 o 2, tampoco letras o símbolos especiales.'
+        )
+      )
+    }
+  } while (opcion !== '1' && opcion !== '2' || fs.existsSync(`./${sessions}/creds.json`))
+}
+
+
+
+const filterStrings = [
+  'Q2xvc2luZyBzdGFsZSBvcGVu',
+  'Q2xvc2luZyBvcGVuIHNlc3Npb24=',
+  'RmFpbGVkIHRvIGRlY3J5cHQ=',
+  'U2Vzc2lvbiBlcnJvcg==',
+  'RXJyb3I6IEJhZCBNQUM=',
+  'RGVjcnlwdGVkIG1lc3NhZ2U='
+]
+
+
+
+const redefineConsoleMethod = (methodName, filterStrings) => {
+  const original = console[methodName]
+
+  console[methodName] = (...args) => {
+    const text = args.join(' ')
+    if (filterStrings.some(s => text.includes(s))) return
+    original.apply(console, args)
+  }
+}
+
+Object.freeze(redefineConsoleMethod)
+
+
+
+console.info = () => { }
+console.debug = () => { }
+
+;['log', 'warn', 'error'].forEach(methodName =>
+  redefineConsoleMethod(methodName, filterStrings)
+)
+
+
+
+const connectionOptions = {
   logger: pino({ level: 'silent' }),
-  printQRInTerminal: opcion === '1',
-  mobile: methodMobile,
-  browser: Browsers.macOS('Desktop'),
+  printQRInTerminal: opcion == '1' ? true : methodCodeQR ? true : false,
+  mobile: MethodMobile,
+
+  browser:
+    opcion == '1'
+      ? Browsers.macOS('Desktop')
+      : methodCodeQR
+        ? Browsers.macOS('Desktop')
+        : Browsers.macOS('Chrome'),
+
   auth: {
     creds: state.creds,
     keys: makeCacheableSignalKeyStore(
       state.keys,
-      pino({ level: 'fatal' })
+      Pino({ level: 'fatal' }).child({ level: 'fatal' })
     )
   },
+
+  markOnlineOnConnect: false,
   generateHighQualityLinkPreview: true,
   syncFullHistory: false,
-  msgRetryCounterCache: msgRetryCache,
-  userDevicesCache: deviceCache,
+
+  getMessage: async (key) => {
+    try {
+      let jid = jidNormalizedUser(key.remoteJid)
+      let msg = await store.loadMessage(jid, key.id)
+      return msg?.message || ''
+    } catch {
+      return ''
+    }
+  },
+
+  msgRetryCounterCache: msgRetryCounterCache || new Map(),
+  userDevicesCache: userDevicesCache || new Map(),
+
+  defaultQueryTimeoutMs: undefined,
   version,
-  keepAliveIntervalMs: 55000
+  keepAliveIntervalMs: 55000,
+  maxIdleTimeMs: 60000
 }
 
-global.conn = makeWASocket(socketConfig)
+
+
+global.conn = makeWASocket(connectionOptions)
+
+
 
 conn.isInit = false
+conn.well = false
+conn.logger.info('[♠] Hecho exitosamente...\n')
+
+
+
+if (!opts['test']) {
+  setInterval(async () => {
+    if (opts['autocleartmp']) {
+      ;([tmpdir(), 'tmp']).forEach((filename) =>
+        spawn('find', [filename, '-amin', '3', '-type', 'f', '-delete'])
+      )
+    }
+  }, 30000)
+}
+
+
 
 async function connectionUpdate(update) {
   const { connection, lastDisconnect, isNewLogin } = update
 
+  global.stopped = connection
   if (isNewLogin) conn.isInit = true
 
-  if (connection === 'open') {
-    const jid = jidNormalizedUser(conn.user.id)
-    console.log(chalk.greenBright(`✔ Conectado como ${conn.user.name || jid}`))
+  const code =
+    lastDisconnect?.error?.output?.statusCode ||
+    lastDisconnect?.error?.output?.payload?.statusCode
+
+  if (code && code !== DisconnectReason.loggedOut && conn?.ws.socket == null) {
+    await global.reloadHandler(true).catch(console.error)
+    global.timestamp.connect = new Date()
   }
 
+  if (update.qr != 0 && update.qr != undefined || methodCodeQR) {
+    if (opcion == '1' || methodCodeQR) {
+      console.log(chalk.green.bold('[ ✿ ]  Escanea este código QR'))
+    }
+  }
+
+  if (connection === 'open') {
+    const userName = conn.user.name || conn.user.verifiedName || 'Desconocido'
+    console.log(chalk.green.bold(`[ ✿ ]  Conectado a: ${userName}`))
+  }
+
+  let reason = new Boom(lastDisconnect?.error)?.output?.statusCode
+
   if (connection === 'close') {
-    const reason = lastDisconnect?.error?.output?.statusCode
-    if (reason !== DisconnectReason.loggedOut) {
-      await reloadHandler(true)
+    if (
+      reason === DisconnectReason.connectionClosed ||
+      reason === DisconnectReason.connectionLost ||
+      reason === DisconnectReason.loggedOut ||
+      reason === DisconnectReason.restartRequired ||
+      reason === DisconnectReason.timedOut
+    ) {
+      await global.reloadHandler(true).catch(console.error)
     }
   }
 }
 
-let handler = await import('./handler.js')
+
+
+process.on('uncaughtException', console.error)
+
+
+
 let isInit = true
+let handler = await import('./handler.js')
 
-global.reloadHandler = async (restart) => {
-  const newHandler = await import(`./handler.js?update=${Date.now()}`)
-  handler = newHandler
 
-  if (restart) {
-    try { conn.ws.close() } catch {}
-    global.conn = makeWASocket(socketConfig)
+
+global.reloadHandler = async function (restatConn) {
+  try {
+    const Handler = await import(`./handler.js?update=${Date.now()}`)
+    if (Object.keys(Handler || {}).length) handler = Handler
+  } catch (e) {
+    console.error(e)
+  }
+
+  if (restatConn) {
+    const oldChats = global.conn.chats
+    try { global.conn.ws.close() } catch { }
+    conn.ev.removeAllListeners()
+    global.conn = makeWASocket(connectionOptions, { chats: oldChats })
     isInit = true
   }
 
   if (!isInit) {
-    conn.ev.removeAllListeners()
+    conn.ev.off('messages.upsert', conn.handler)
+    conn.ev.off('connection.update', conn.connectionUpdate)
+    conn.ev.off('creds.update', conn.credsUpdate)
   }
 
-  conn.handler = handler.handler.bind(conn)
+  conn.handler = handler.handler.bind(global.conn)
+  conn.connectionUpdate = connectionUpdate.bind(global.conn)
+  conn.credsUpdate = saveCreds.bind(global.conn, true)
+
   conn.ev.on('messages.upsert', conn.handler)
-  conn.ev.on('connection.update', connectionUpdate)
-  conn.ev.on('creds.update', saveCreds)
+  conn.ev.on('connection.update', conn.connectionUpdate)
+  conn.ev.on('creds.update', conn.credsUpdate)
 
   isInit = false
+  return true
 }
 
-await reloadHandler()
 
-const pluginRoot = path.join(__dirname(import.meta.url), 'plugins')
+
+const pluginRoot = join(__dirname, './plugins/')
+const pluginFilter = (filename) => filename.endsWith('.js')
 global.plugins = {}
 
-const loadPlugins = async () => {
-  const files = fs.readdirSync(pluginRoot).filter(f => f.endsWith('.js'))
-  for (const file of files) {
-    const full = path.join(pluginRoot, file)
-    try {
-      const plugin = await import(`${full}?update=${Date.now()}`)
-      global.plugins[file] = plugin.default || plugin
-    } catch {}
+
+
+function getAllPluginFiles(dir) {
+  let results = []
+
+  for (const file of readdirSync(dir)) {
+    const fullPath = join(dir, file)
+
+    if (statSync(fullPath).isDirectory()) {
+      results = results.concat(getAllPluginFiles(fullPath))
+    } else if (pluginFilter(file)) {
+      results.push(fullPath)
+    }
   }
+
+  return results
 }
 
-await loadPlugins()
 
-fs.watch(pluginRoot, async (_, file) => {
+
+async function filesInit() {
+  for (const fullPath of getAllPluginFiles(pluginRoot)) {
+    try {
+      const module = await import(`${path.resolve(fullPath)}?update=${Date.now()}`)
+      const keyName = fullPath.replace(pluginRoot, '')
+      global.plugins[keyName] = module.default || module
+    } catch { }
+  }
+
+  global.plugins = Object.fromEntries(
+    Object.entries(global.plugins).sort(([a], [b]) => a.localeCompare(b))
+  )
+}
+
+filesInit()
+
+
+
+global.reload = async (_ev, file) => {
   if (!file.endsWith('.js')) return
-  const full = path.join(pluginRoot, file)
-  if (!fs.existsSync(full)) {
+
+  const fullPath = path.resolve(join(pluginRoot, file))
+
+  if (!existsSync(fullPath)) {
     delete global.plugins[file]
     return
   }
-  const err = syntaxerror(fs.readFileSync(full), file)
-  if (err) return
-  const plugin = await import(`${full}?update=${Date.now()}`)
-  global.plugins[file] = plugin.default || plugin
-})
 
-setInterval(() => {
-  fs.readdirSync('./tmp').forEach(f => fs.unlinkSync(`./tmp/${f}`))
+  const err = syntaxerror(readFileSync(fullPath), file, {
+    sourceType: 'module',
+    allowAwaitOutsideFunction: true
+  })
+
+  if (err) return
+
+  try {
+    const module = await import(`${fullPath}?update=${Date.now()}`)
+    global.plugins[file] = module.default || module
+  } catch { }
+
+  global.plugins = Object.fromEntries(
+    Object.entries(global.plugins).sort(([a], [b]) => a.localeCompare(b))
+  )
+}
+
+Object.freeze(global.reload)
+watch(pluginRoot, global.reload)
+
+
+
+await global.reloadHandler()
+
+
+
+setInterval(async () => {
+  if (stopped === 'close' || !conn || !conn.user) return
+  const tmpDir = join(__dirname, 'tmp')
+  readdirSync(tmpDir).forEach(file => unlinkSync(join(tmpDir, file)))
 }, 1000 * 60 * 4)
 
-async function isValidPhoneNumber(num) {
+
+
+setInterval(async () => {
+  if (stopped === 'close' || !conn || !conn.user) return
+  const directorio = readdirSync(`./${sessions}`)
+  directorio
+    .filter(file => file.startsWith('pre-key-'))
+    .forEach(file => unlinkSync(`./${sessions}/${file}`))
+}, 1000 * 60 * 10)
+
+
+
+async function isValidPhoneNumber(number) {
   try {
-    num = num.replace(/\s+/g, '')
-    if (num.startsWith('+521')) num = num.replace('+521', '+52')
-    const parsed = phoneUtil.parseAndKeepRawInput(num)
-    return phoneUtil.isValidNumber(parsed)
+    number = number.replace(/\s+/g, '')
+    if (number.startsWith('+521')) number = number.replace('+521', '+52')
+    const parsedNumber = phoneUtil.parseAndKeepRawInput(number)
+    return phoneUtil.isValidNumber(parsedNumber)
   } catch {
     return false
   }
