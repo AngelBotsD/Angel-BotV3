@@ -4,24 +4,27 @@ import fs from "fs"
 import chalk from "chalk"
 import fetch from "node-fetch"
 
-const DIGITS = (s = "") => String(s).replace(/\D/g, "")
+const DIGITS = s => String(s || "").replace(/\D/g, "")
 
 const OWNER_NUMBERS = (global.owner || []).map(v =>
   Array.isArray(v) ? DIGITS(v[0]) : DIGITS(v)
 )
 
 let ICON_BUFFER = null
+let ICON_PROMISE = null
 
 async function getIconBuffer() {
   if (ICON_BUFFER) return ICON_BUFFER
-  try {
-    const res = await fetch("https://files.catbox.moe/u1lwcu.jpg")
-    ICON_BUFFER = Buffer.from(await res.arrayBuffer())
-    return ICON_BUFFER
-  } catch {
-    return null
-  }
+  if (ICON_PROMISE) return ICON_PROMISE
+
+  ICON_PROMISE = fetch("https://files.catbox.moe/u1lwcu.jpg")
+    .then(r => r.arrayBuffer())
+    .then(b => (ICON_BUFFER = Buffer.from(b)))
+    .catch(() => null)
+
+  return ICON_PROMISE
 }
+
 getIconBuffer()
 
 function dialogContext() {
@@ -45,7 +48,7 @@ global.dfail = async (type, m, conn) => {
     owner: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋",
     mods: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖽𝖾𝗌𝖺𝗋𝗋𝗈𝗅𝗅𝖺𝖽𝗈𝗋𝖾𝗌",
     premium: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖫𝗈 𝖯𝗎𝖾𝖽𝖾𝗇 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝗋 𝖴𝗌𝖺𝗋𝗂𝗈𝗌 𝖯𝗋𝖾𝗆𝗂𝗎𝗆",
-    group: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖥𝗎𝗇𝖼𝗂𝗈𝗇𝖺 𝖤𝗇 𝖦𝗋𝗎𝗉𝗈𝗌",
+    group: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖥𝗎𝗇𝖼𝗂𝗈𝗇𝖺 𝖤𝗇 𝖦𝗋𝗎𝗉𝖺𝗌",
     private: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖲𝖾 𝖯𝗎𝖾𝖽𝖾 𝖮𝖼𝗎𝗉𝖺𝗋 𝖤𝗇 𝖤𝗅 𝖯𝗋𝗂𝗏𝖺𝖽𝗈",
     admin: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖠𝖽𝗆𝗂𝗇𝗂𝗌𝗍𝗋𝖺𝖽𝗈𝗋𝖾𝗌",
     botAdmin: "𝖭𝖾𝖼𝗌𝗂𝗍𝗈 𝗌𝖾𝗋 𝖠𝖽𝗆𝗂𝗇 𝖯𝖺𝗋𝖺 𝖴𝗌𝖺𝗋 𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈",
@@ -70,36 +73,29 @@ setInterval(() => {
 }, 30000)
 
 export async function handler(chatUpdate) {
-  if (!chatUpdate) return
+  if (!chatUpdate?.messages) return
 
-  for (let m of chatUpdate.messages || []) {
-    m = smsg(this, m)
-    if (!m) continue
-    if (m.isBaileys) continue
+  for (let raw of chatUpdate.messages) {
+    let m = smsg(this, raw)
+    if (!m || m.fromMe || !m.text) continue
 
-    const textMsg = m.text || m.msg?.caption || ""
-    if (!textMsg) continue
-
+    const text = m.text
     const prefixes = Array.isArray(global.prefixes)
       ? global.prefixes
       : [global.prefix || "."]
 
+    const first = text[0]
     let usedPrefix = null
     let command = ""
     let args = []
 
-    const firstChar = textMsg[0]
-
-    if (prefixes.includes(firstChar)) {
-      usedPrefix = firstChar
-      const body = textMsg.slice(1).trim()
+    if (prefixes.includes(first)) {
+      usedPrefix = first
+      const body = text.slice(1).trim()
       if (!body) continue
       args = body.split(/\s+/)
-      command = (args.shift() || "").toLowerCase()
-    } else {
-      args = textMsg.trim().split(/\s+/)
-      command = args[0]?.toLowerCase() || ""
-    }
+      command = args.shift().toLowerCase()
+    } else continue
 
     const senderNumber = DIGITS(m.sender)
     const isROwner = OWNER_NUMBERS.includes(senderNumber)
@@ -127,28 +123,20 @@ export async function handler(chatUpdate) {
       const userP = participants.find(p => p.id === m.sender)
       const botP = participants.find(p => p.id === this.user.jid)
 
-      isAdmin = userP?.admin === "admin" || userP?.admin === "superadmin"
-      isBotAdmin = botP?.admin === "admin" || botP?.admin === "superadmin"
+      isAdmin = userP?.admin
+      isBotAdmin = botP?.admin
     }
 
-    for (const name in global.plugins) {
-      const plugin = global.plugins[name]
+    for (const plugin of Object.values(global.plugins)) {
       if (!plugin || plugin.disabled) continue
 
-      let isAccept = false
+      let match = false
 
-      if (plugin.customPrefix instanceof RegExp) {
-        isAccept = plugin.customPrefix.test(textMsg)
-      } else if (plugin.command) {
-        isAccept =
-          plugin.command instanceof RegExp
-            ? plugin.command.test(command)
-            : Array.isArray(plugin.command)
-              ? plugin.command.includes(command)
-              : plugin.command === command
-      }
+      if (plugin.command instanceof RegExp) match = plugin.command.test(command)
+      else if (Array.isArray(plugin.command)) match = plugin.command.includes(command)
+      else match = plugin.command === command
 
-      if (!isAccept) continue
+      if (!match) continue
 
       if (plugin.group || plugin.admin || plugin.botAdmin)
         await loadGroupData()
@@ -159,13 +147,7 @@ export async function handler(chatUpdate) {
       if (plugin.botAdmin && !isBotAdmin) return global.dfail("botAdmin", m, this)
       if (plugin.admin && !isAdmin) return global.dfail("admin", m, this)
 
-      const exec =
-        typeof plugin === "function"
-          ? plugin
-          : typeof plugin.default === "function"
-            ? plugin.default
-            : null
-
+      const exec = typeof plugin === "function" ? plugin : plugin.default
       if (!exec) continue
 
       await exec.call(this, m, {
@@ -191,6 +173,6 @@ if (process.env.NODE_ENV === "development") {
   const file = fileURLToPath(import.meta.url)
   fs.watchFile(file, () => {
     fs.unwatchFile(file)
-    console.log(chalk.magenta("Se actualizó 'handler.js'"))
+    console.log(chalk.magenta("handler.js actualizado"))
   })
 }
