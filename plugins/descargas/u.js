@@ -48,12 +48,12 @@ Selecciona una opción 👇
         caption,
         buttons: [
           {
-            buttonId: `play_audio ${url}`,
+            buttonId: `playa_audio ${url}`,
             buttonText: { displayText: "🎵 Descargar Audio" },
             type: 1
           },
           {
-            buttonId: `play_video ${url}`,
+            buttonId: `playa_video ${url}`,
             buttonText: { displayText: "🎬 Descargar Video" },
             type: 1
           }
@@ -84,14 +84,14 @@ handler.before = async (m, { conn }) => {
   try {
     const sent = await conn.sendMessage(
       m.chat,
-      { text: cmd === "play_audio" ? "🎵 Descargando audio..." : "🎬 Descargando video..." },
+      { text: cmd === "playa_audio" ? "🎵 Descargando audio..." : "🎬 Descargando video..." },
       { quoted: m }
     )
 
     const res = await axios.get(`${API_BASE}/ytdl`, {
       params: {
         url,
-        type: cmd === "play_audio" ? "mp3" : "mp4",
+        type: cmd === "playa_audio" ? "mp3" : "mp4",
         apikey: API_KEY
       },
       timeout: 20000
@@ -103,7 +103,7 @@ handler.before = async (m, { conn }) => {
 
     const title = (data.result.title || "media").replace(/\.mp3|\.mp4/gi, "")
 
-    if (cmd === "play_audio") {
+    if (cmd === "playq_audio") {
       await conn.sendMessage(
         m.chat,
         {
