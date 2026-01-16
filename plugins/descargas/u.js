@@ -96,7 +96,6 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 
   } catch (e) {
     console.error(e)
-    await m.react("⚠️")
     m.reply("❌ Error: " + e.message)
   }
 }
