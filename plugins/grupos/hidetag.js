@@ -17,12 +17,25 @@ function getText(m) {
 }
 
 async function getBuffer(m) {
-  if (!m?.download) return null
+  if (!m) return null
+
+  const type = m.mtype || ""
+  if (!type.endsWith("Message")) return null
+
+  if (!["imageMessage", "videoMessage", "audioMessage", "stickerMessage"].includes(type))
+    return null
+
+  if (typeof m.download !== "function") return null
+
   const stream = await m.download()
   let buffer = Buffer.alloc(0)
-  for await (const chunk of stream)
+
+  for await (const chunk of stream) {
+    if (!Buffer.isBuffer(chunk)) continue
     buffer = Buffer.concat([buffer, chunk])
-  return buffer
+  }
+
+  return buffer.length ? buffer : null
 }
 
 const handler = async (m, { conn, participants }) => {
@@ -38,14 +51,18 @@ const handler = async (m, { conn, participants }) => {
   const users = [...new Set(participants.map(p => conn.decodeJid(p.id)))]
 
   const fkontak = {
-    key: { remoteJid: m.chat, fromMe: false, id: "notif" },
+    key: {
+      remoteJid: m.chat,
+      fromMe: false,
+      id: "notif",
+      participant: "0@s.whatsapp.net"
+    },
     message: {
       locationMessage: {
         name: `Hola soy ${global.author}`,
         jpegThumbnail: thumb
       }
-    },
-    participant: "0@s.whatsapp.net"
+    }
   }
 
   const target = m.quoted || m
@@ -60,10 +77,10 @@ const handler = async (m, { conn, participants }) => {
   if (!isMedia) {
     if (!finalText) return
     return conn.sendMessage(
-  m.chat,
-  { text: finalText, mentions: users },
-  { quoted: target }
-)
+      m.chat,
+      { text: finalText, mentions: users },
+      { quoted: fkontak }
+    )
   }
 
   if ((mtype === "audioMessage" || mtype === "stickerMessage") && !m.quoted)
