@@ -4,7 +4,8 @@ import fs from "fs"
 import chalk from "chalk"
 import fetch from "node-fetch"
 
-const DIGITS = (s = "") => String(s).replace(/\D/g, "")
+const DIGITS = s => String(s || "").replace(/\D/g, "")
+const PREFIX = "." // 🔥 prefijo fijo (más rápido)
 
 const OWNER_NUMBERS = (global.owner || []).map(v =>
   Array.isArray(v) ? DIGITS(v[0]) : DIGITS(v)
@@ -22,12 +23,10 @@ async function getIconBuffer() {
     return null
   }
 }
-
 getIconBuffer()
 
 function dialogContext() {
-  if (!ICON_BUFFER) return {}
-  return {
+  return ICON_BUFFER ? {
     contextInfo: {
       externalAdReply: {
         title: global.namebot || "𝖠𝗇𝗀𝖾𝗅 𝖡𝗈𝗍",
@@ -37,27 +36,27 @@ function dialogContext() {
         renderLargerThumbnail: false
       }
     }
-  }
+  } : {}
 }
 
 global.dfail = async (type, m, conn) => {
   const msg = {
-    rowner: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋",
-    owner: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋",
-    mods: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖽𝖾𝗌𝖺𝗋𝗋𝗈𝗅𝗅𝖺𝖽𝗈𝗋𝖾𝗌",
-    premium: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖫𝗈 𝖯𝗎𝖾𝖽𝖾𝗇 𝖴𝗍𝗂𝗅𝗂𝗓𝖺𝗋 𝖴𝗌𝖺𝗋𝗂𝗈𝗌 𝖯𝗋𝖾𝗆𝗂𝗎𝗆",
-    group: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖥𝗎𝗇𝖼𝗂𝗈𝗇𝖺 𝖤𝗇 𝖦𝗋𝗎𝗉𝗈𝗌",
-    private: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖲𝖾 𝖯𝗎𝖾𝖽𝖾 𝖮𝖼𝗎𝗉𝖺𝗋 𝖤𝗇 𝖤𝗅 𝖯𝗋𝗂𝗏𝖺𝖽𝗈",
-    admin: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖠𝖽𝗆𝗂𝗇𝗂𝗌𝗍𝗋𝖺𝖽𝗈𝗋𝖾𝗌",
-    botAdmin: "𝖭𝖾𝖼𝗌𝗂𝗍𝗈 𝗌𝖾𝗋 𝖠𝖽𝗆𝗂𝗇 𝖯𝖺𝗋𝖺 𝖴𝗌𝖺𝗋 𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈",
-    restrict: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖧𝖺 𝖲𝗂𝖽𝗈 𝖣𝖾𝗌𝖺𝖻𝗂𝗅𝗂𝗍𝖺𝖽𝗈"
+    rowner: "Este comando solo puede usarlo mi creador",
+    owner: "Este comando solo puede usarlo mi creador",
+    mods: "Solo desarrolladores",
+    premium: "Solo usuarios premium",
+    group: "Este comando solo funciona en grupos",
+    private: "Este comando solo funciona en privado",
+    admin: "Solo admins del grupo",
+    botAdmin: "Necesito ser admin",
+    restrict: "Comando deshabilitado"
   }[type]
-  if (!msg) return
-  await conn.sendMessage(m.chat, { text: msg }, { quoted: m, ...dialogContext() })
+  if (msg) {
+    await conn.sendMessage(m.chat, { text: msg }, { quoted: m, ...dialogContext() })
+  }
 }
 
 global.groupPermCache ||= new Map()
-
 setInterval(() => {
   const now = Date.now()
   for (const [k, v] of global.groupPermCache) {
@@ -71,7 +70,6 @@ global.regexPlugins ||= []
 if (!global._cmdBuilt) {
   for (const p of Object.values(global.plugins || {})) {
     if (!p || p.disabled) continue
-    Object.freeze(p)
     if (p.command instanceof RegExp) {
       global.regexPlugins.push(p)
     } else if (Array.isArray(p.command)) {
@@ -88,28 +86,24 @@ export function handler(chatUpdate) {
   for (const raw of chatUpdate.messages) handleMessage.call(this, raw)
 }
 
-async function handleMessage(m) {
-
-  m = smsg(this, m)
-  if (!m || m.isBaileys) return
+async function handleMessage(raw) {
+  let m = smsg(this, raw)
+  if (!m || m.isBaileys || !m.text) return
 
   const text = m.text
-  if (!text || text.length < 2) return
-
-  const prefixes = global._prefixCache ||= (Array.isArray(global.prefixes) ? global.prefixes : [global.prefix || "."])
-  const first = text[0]
-  if (!prefixes.includes(first)) return
+  if (text[0] !== PREFIX) return
 
   const body = text.slice(1).trim()
   if (!body) return
 
-  const args = body.split(" ")
-  const command = (args.shift() || "").toLowerCase()
+  const [command, ...args] = body.split(/\s+/)
+  const cmd = command.toLowerCase()
 
-  let plugin = global.commandMap.get(command)
+  let plugin = global.commandMap.get(cmd)
+
   if (!plugin) {
     for (const p of global.regexPlugins) {
-      if (p.command.test(command)) {
+      if (p.command.test(body)) {
         plugin = p
         break
       }
@@ -123,30 +117,27 @@ async function handleMessage(m) {
 
   let isAdmin = false
   let isBotAdmin = !m.isGroup
-  let groupMetadata
-  let participants
+  let groupMetadata, participants
 
-  if (m.isGroup && (plugin.group || plugin.admin || plugin.botAdmin)) {
+  if (m.isGroup && (plugin.admin || plugin.botAdmin || plugin.group)) {
     let cached = global.groupPermCache.get(m.chat)
     if (!cached) {
       const meta = await this.groupMetadata(m.chat)
       const admins = new Set()
-      let botAdminFlag = false
       const botNum = DIGITS(this.user.jid)
-      for (const p of meta.participants || []) {
+      let botAdmin = false
+
+      for (const p of meta.participants) {
         if (!p.admin) continue
-        const id = DIGITS(p.id || p.jid || "")
+        const id = DIGITS(p.id || p.jid)
         admins.add(id)
-        if (id === botNum) botAdminFlag = true
+        if (id === botNum) botAdmin = true
       }
-      cached = {
-        ts: Date.now(),
-        admins,
-        botAdmin: botAdminFlag,
-        meta
-      }
+
+      cached = { ts: Date.now(), admins, botAdmin, meta }
       global.groupPermCache.set(m.chat, cached)
     }
+
     groupMetadata = cached.meta
     participants = groupMetadata.participants
     isAdmin = cached.admins.has(senderNumber)
@@ -160,26 +151,26 @@ async function handleMessage(m) {
   if (plugin.admin && !isAdmin) return global.dfail("admin", m, this)
 
   const exec = typeof plugin === "function" ? plugin : plugin.default
-  if (!exec) return
-
-  exec.call(this, m, {
-    conn: this,
-    args,
-    command,
-    isROwner,
-    isOwner,
-    isAdmin,
-    isBotAdmin,
-    groupMetadata,
-    participants,
-    chat: m.chat
-  })
+  if (exec) {
+    exec.call(this, m, {
+      conn: this,
+      args,
+      command: cmd,
+      isOwner,
+      isROwner,
+      isAdmin,
+      isBotAdmin,
+      groupMetadata,
+      participants,
+      chat: m.chat
+    })
+  }
 }
 
 if (process.env.NODE_ENV === "development") {
   const file = fileURLToPath(import.meta.url)
   fs.watchFile(file, () => {
     fs.unwatchFile(file)
-    console.log(chalk.magenta("Se actualizó 'handler.js'"))
+    console.log(chalk.green("handler.js actualizado"))
   })
 }
