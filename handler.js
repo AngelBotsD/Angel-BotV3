@@ -53,7 +53,7 @@ global.dfail = async (type, m, conn) => {
     restrict: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖧𝖺 𝖲𝗂𝖽𝗈 𝖣𝖾𝗌𝖺𝖻𝗂𝗅𝗂𝗍𝖺𝖽𝗈"
   }[type]
 
-  if (!msg) return
+  if (!msg) continue
 
   await conn.sendMessage(
     m.chat,
@@ -72,16 +72,16 @@ setInterval(() => {
 }, 30000)
 
 export async function handler(chatUpdate) {
-  if (!chatUpdate) return
+  if (!chatUpdate) continue
 
   for (let m of chatUpdate.messages || []) {
-  if (!m) return
+  if (!m) continue
 
   m = smsg(this, m)
-  if (!m || m.isBaileys) return
+  if (!m || m.isBaileys) continue
 
   const textMsg = m.text || m.msg?.caption
-  if (!textMsg) return
+  if (!textMsg) continue
 
   const prefixes = global._prefixCache ||= (
     Array.isArray(global.prefixes)
@@ -98,7 +98,7 @@ export async function handler(chatUpdate) {
   if (prefixes.includes(firstChar)) {
     usedPrefix = firstChar
     const body = textMsg.slice(1).trim()
-    if (!body) return
+    if (!body) continue
     args = body.split(/\s+/)
     command = (args.shift() || "").toLowerCase()
   } else {
