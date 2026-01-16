@@ -53,7 +53,7 @@ const handler = async (m, { conn }) => {
       {
         name: "cta_copy",
         buttonParamsJson: JSON.stringify({
-          display_text: "📜 𝗖𝗼𝗽𝗶𝗮𝗿 𝗘𝗻𝗹𝗮𝗰𝗲",
+          display_text: "𝗖𝗼𝗽𝗶𝗮𝗿 𝗘𝗻𝗹𝗮𝗰𝗲",
           copy_code: link
         })
       }
