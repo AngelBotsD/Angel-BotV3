@@ -9,7 +9,9 @@ const DIGITS = (s = "") => String(s).replace(/\D/g, "")
 function lidParser(participants = []) {
   try {
     return participants.map(v => ({
-      id: (typeof v?.id === "string" && v.id.endsWith("@lid") && v.jid) ? v.jid : v.id,
+      id: (typeof v?.id === "string" && v.id.endsWith("@lid") && v.jid)
+        ? v.jid
+        : v.id,
       admin: v?.admin ?? null,
       raw: v
     }))
@@ -64,8 +66,14 @@ global.dfail = async (type, m, conn) => {
     botAdmin: "𝖭𝖾𝖼𝗌𝗂𝗍𝗈 𝗌𝖾𝗋 𝖠𝖽𝗆𝗂𝗇 𝖯𝖺𝗋𝖺 𝖴𝗌𝖺𝗋 𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈",
     restrict: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖧𝖺 𝖲𝗂𝖽𝗈 𝖣𝖾𝗌𝖺𝖻𝗂𝗅𝗂𝗍𝖺𝖽𝗈"
   }[type]
+
   if (!msg) return
-  await conn.sendMessage(m.chat, { text: msg }, { quoted: m, ...dialogContext() })
+
+  conn.sendMessage(
+    m.chat,
+    { text: msg },
+    { quoted: m, ...dialogContext() }
+  )
 }
 
 global.groupMetaCache ||= new Map()
@@ -73,117 +81,178 @@ global.groupMetaCache ||= new Map()
 setInterval(() => {
   const now = Date.now()
   for (const [k, v] of global.groupMetaCache) {
-    if (now - v.ts > 30000) global.groupMetaCache.delete(k)
+    if (now - v.ts > 15000) global.groupMetaCache.delete(k)
   }
-}, 60000)
-
-global.commandMap ||= new Map()
-global.regexPlugins ||= []
-
-if (!global._cmdBuilt) {
-  for (const p of Object.values(global.plugins || {})) {
-    if (!p || p.disabled) continue
-    if (p.command instanceof RegExp) {
-      global.regexPlugins.push(p)
-    } else if (Array.isArray(p.command)) {
-      for (const c of p.command) global.commandMap.set(c, p)
-    } else if (typeof p.command === "string") {
-      global.commandMap.set(p.command, p)
-    }
-  }
-  global._cmdBuilt = true
-}
+}, 30000)
 
 export function handler(chatUpdate) {
   if (!chatUpdate?.messages) return
-  for (const raw of chatUpdate.messages) handleMessage.call(this, raw)
+  for (const raw of chatUpdate.messages) {
+    handleMessage.call(this, raw)
+  }
 }
 
 async function handleMessage(m) {
+  if (!m) return
+
   m = smsg(this, m)
   if (!m || m.isBaileys) return
 
-  const text = m.text
-  if (!text || text.length < 2) return
+  const textMsg = m.text || m.msg?.caption
+  if (!textMsg) return
 
-  const prefixes = global._prefixCache ||= (Array.isArray(global.prefixes) ? global.prefixes : [global.prefix || "."])
-  const first = text[0]
-  if (!prefixes.includes(first)) return
+  const prefixes = global._prefixCache ||= Object.freeze(
+    Array.isArray(global.prefixes)
+      ? global.prefixes
+      : [global.prefix || "."]
+  )
 
-  const body = text.slice(1).trim()
-  if (!body) return
+  let usedPrefix = null
+  let command = ""
+  let args = []
 
-  const args = body.split(" ")
-  const command = (args.shift() || "").toLowerCase()
+  const firstChar = textMsg[0]
 
-  let plugin = global.commandMap.get(command)
-  if (!plugin) {
-    for (const p of global.regexPlugins) {
-      if (p.command.test(command)) {
-        plugin = p
-        break
-      }
-    }
+  if (prefixes.includes(firstChar)) {
+    usedPrefix = firstChar
+    const body = textMsg.slice(1).trim()
+    if (!body) return
+    args = body.split(/\s+/)
+    command = (args.shift() || "").toLowerCase()
+  } else {
+    args = textMsg.trim().split(/\s+/)
+    command = args[0]?.toLowerCase() || ""
   }
-  if (!plugin) return
 
   const senderNumber = DIGITS(m.sender)
   const isROwner = OWNER_NUMBERS.includes(senderNumber)
   const isOwner = isROwner || m.fromMe
 
-  let isAdmin = false
-  let isBotAdmin = !m.isGroup
   let groupMetadata
   let participants
+  let isAdmin = false
+  let isBotAdmin = !m.isGroup
 
-  if (m.isGroup && (plugin.group || plugin.admin || plugin.botAdmin)) {
+  const loadGroupData = async () => {
+    if (!m.isGroup) return
+
     let cached = global.groupMetaCache.get(m.chat)
-    if (!cached) {
-      cached = { ts: Date.now(), meta: await this.groupMetadata(m.chat) }
+
+    if (!cached || Date.now() - cached.ts > 15000) {
+      const meta = await this.groupMetadata(m.chat)
+
+      const raw = meta.participants || []
+      const norm = lidParser(raw)
+      const adminNums = new Set()
+
+      for (let i = 0; i < raw.length; i++) {
+        const r = raw[i]
+        const n = norm[i]
+        const isAdm =
+          r?.admin === "admin" ||
+          r?.admin === "superadmin" ||
+          n?.admin === "admin" ||
+          n?.admin === "superadmin"
+
+        if (!isAdm) continue
+
+        ;[r?.id, r?.jid, n?.id].forEach(x => {
+          const d = DIGITS(x || "")
+          if (d) adminNums.add(d)
+        })
+      }
+
+      cached = {
+        ts: Date.now(),
+        meta,
+        adminNums
+      }
+
       global.groupMetaCache.set(m.chat, cached)
     }
+
     groupMetadata = cached.meta
     participants = groupMetadata.participants || []
-    const raw = participants
-    const norm = lidParser(raw)
+
     const senderNum = DIGITS(m.sender)
     const botNum = DIGITS(this.user.jid)
-    for (let i = 0; i < raw.length; i++) {
-      const r = raw[i]
-      const n = norm[i]
-      const adm = r?.admin || n?.admin
-      if (!adm) continue
-      const ids = [r?.id, r?.jid, n?.id]
-      for (const x of ids) {
-        const d = DIGITS(x || "")
-        if (d === senderNum) isAdmin = true
-        if (d === botNum) isBotAdmin = true
-      }
-      if (isAdmin && isBotAdmin) break
-    }
+
+    isAdmin = cached.adminNums.has(senderNum)
+    isBotAdmin = cached.adminNums.has(botNum)
   }
 
-  if (plugin.rowner && !isROwner) return global.dfail("rowner", m, this)
-  if (plugin.owner && !isOwner) return global.dfail("owner", m, this)
-  if (plugin.group && !m.isGroup) return global.dfail("group", m, this)
-  if (plugin.botAdmin && !isBotAdmin) return global.dfail("botAdmin", m, this)
-  if (plugin.admin && !isAdmin) return global.dfail("admin", m, this)
+  for (const plugin of Object.values(global.plugins)) {
+    if (!plugin || plugin.disabled) continue
 
-  const exec = typeof plugin === "function" ? plugin : plugin.default
-  if (!exec) return
+    let isAccept = false
 
-  exec.call(this, m, {
-    conn: this,
-    args,
-    command,
-    isROwner,
-    isOwner,
-    isAdmin,
-    isBotAdmin,
-    groupMetadata,
-    participants,
-    chat: m.chat
-  })
+    if (plugin.customPrefix instanceof RegExp) {
+      isAccept = plugin.customPrefix.test(textMsg)
+    } else if (plugin.command) {
+      isAccept =
+        plugin.command instanceof RegExp
+          ? plugin.command.test(command)
+          : Array.isArray(plugin.command)
+            ? plugin.command.includes(command)
+            : plugin.command === command
+    }
+
+    if (!isAccept) continue
+
+    if (plugin.group && !m.isGroup) {
+      global.dfail("group", m, this)
+      return
+    }
+
+    if (m.isGroup && (plugin.admin || plugin.botAdmin)) {
+      if (!groupMetadata) await loadGroupData()
+    }
+
+    if (plugin.rowner && !isROwner) {
+      global.dfail("rowner", m, this)
+      return
+    }
+
+    if (plugin.owner && !isOwner) {
+      global.dfail("owner", m, this)
+      return
+    }
+
+    if (plugin.botAdmin && !isBotAdmin) {
+      global.dfail("botAdmin", m, this)
+      return
+    }
+
+    if (plugin.admin && !isAdmin) {
+      global.dfail("admin", m, this)
+      return
+    }
+
+    const exec =
+      typeof plugin === "function"
+        ? plugin
+        : typeof plugin.default === "function"
+          ? plugin.default
+          : null
+
+    if (!exec) return
+
+    exec.call(this, m, {
+      conn: this,
+      args,
+      usedPrefix,
+      command,
+      participants,
+      groupMetadata,
+      isROwner,
+      isOwner,
+      isAdmin,
+      isBotAdmin,
+      chat: m.chat
+    })
+
+    return
+  }
 }
 
 if (process.env.NODE_ENV === "development") {
