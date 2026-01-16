@@ -92,8 +92,6 @@ global.wa = {
 
 
 
-let { say } = cfonts
-
 console.log(chalk.magentaBright('\nMejor Bot Do Momento Start...'))
 
 say('Angel Bot', {
