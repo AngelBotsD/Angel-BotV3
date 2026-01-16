@@ -163,9 +163,9 @@ const methodCode = !!phoneNumber || process.argv.includes('code')
 
 
 
-const colors = chalk.bold.white
-const qrOption = chalk.blueBright
-const textOption = chalk.cyan
+const colors = text => `\x1b[1m\x1b[37m${text}\x1b[0m`
+const qrOption = text => `\x1b[94m${text}\x1b[0m`
+const textOption = text => `\x1b[96m${text}\x1b[0m`
 
 
 
