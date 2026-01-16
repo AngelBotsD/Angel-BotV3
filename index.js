@@ -94,17 +94,17 @@ global.wa = {
 
 console.log('\nMejor Bot Do Momento Start...')
 
-say('Angel Bot', {
-  font: 'block',
-  align: 'center',
-  gradient: ['grey', 'white']
-})
+console.log(`
+\x1b[95m█████╗ ███╗   ██╗ ██████╗ ███████╗██╗     
+██╔══██╗████╗  ██║██╔════╝ ██╔════╝██║     
+███████║██╔██╗ ██║██║  ███╗█████╗  ██║     
+██╔══██║██║╚██╗██║██║   ██║██╔══╝  ██║     
+██║  ██║██║ ╚████║╚██████╔╝███████╗███████╗
+╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝╚══════╝
+\x1b[0m
+`)
 
-say('Hecho Y Optimizado Por Angel.xyz', {
-  font: 'console',
-  align: 'center',
-  colors: ['cyan', 'magenta', 'yellow']
-})
+console.log('\x1b[96mHecho y optimizado por Angel.xyz\x1b[0m')
 
 
 
