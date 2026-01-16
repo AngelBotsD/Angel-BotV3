@@ -27,12 +27,12 @@ global.banner = global.bot.banner
 
 global.APIs = {
 sky: 'https://api-sky.ultraplus.click',
-may: 'https://api-adonix.ultraplus.click'
+may: 'https://mayapi.ooguy.com'
 }
 
 global.APIKeys = {
 sky: process.env.SKY_API_KEY || 'Angxlllll',
-may: process.env.MAY_API_KEY || 'dvyer'
+may: process.env.MAY_API_KEY || 'may-684934ab'
 }
 
 const file = fileURLToPath(import.meta.url)
