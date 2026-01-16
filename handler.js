@@ -1,8 +1,6 @@
 import { smsg } from "./lib/simple.js"
 import { fileURLToPath } from "url"
 import fs from "fs"
-import chalk from "chalk"
-import fetch from "node-fetch"
 
 const DIGITS = (s = "") => String(s).replace(/\D/g, "")
 
