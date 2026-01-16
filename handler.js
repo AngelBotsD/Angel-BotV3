@@ -193,7 +193,7 @@ export async function handler(chatUpdate) {
 
     if (!exec) continue
 
-    await exec.call(this, m, {
+    void exec.call(this, m, ctx)
       conn: this,
       args,
       usedPrefix,
