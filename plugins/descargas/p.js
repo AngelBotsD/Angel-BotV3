@@ -7,9 +7,6 @@ const {
 export async function all(m, chatUpdate = {}) {
   if (!m || m.isBaileys || !m.message) return
 
-handler.before = async (m, { conn }) => {
-  if (!m.message?.buttonsResponseMessage) return
-
   const msgButtons =
     m.message.buttonsResponseMessage ||
     m.message.templateButtonReplyMessage ||
