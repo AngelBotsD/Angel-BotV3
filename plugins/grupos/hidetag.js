@@ -60,10 +60,10 @@ const handler = async (m, { conn, participants }) => {
   if (!isMedia) {
     if (!finalText) return
     return conn.sendMessage(
-      m.chat,
-      { text: finalText, mentions: users },
-      { quoted: fkontak }
-    )
+  m.chat,
+  { text: finalText, mentions: users },
+  { quoted: target }
+)
   }
 
   if ((mtype === "audioMessage" || mtype === "stickerMessage") && !m.quoted)
