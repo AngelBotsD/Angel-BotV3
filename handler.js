@@ -133,11 +133,19 @@ async function handleMessage(m) {
     groupMetadata = cached.meta
     participants = groupMetadata.participants || []
 
-    const userP = participants.find(p => p.id === m.sender)
-    const botP = participants.find(p => p.id === this.user.jid)
+    const jidUser = this.decodeJid(m.sender)
+const jidBot = this.decodeJid(this.user.jid)
 
-    isAdmin = userP?.admin === "admin" || userP?.admin === "superadmin"
-    isBotAdmin = botP?.admin === "admin" || botP?.admin === "superadmin"
+const userP = participants.find(p =>
+  this.decodeJid(p.id) === jidUser
+)
+
+const botP = participants.find(p =>
+  this.decodeJid(p.id) === jidBot
+)
+
+isAdmin = !!userP?.admin
+isBotAdmin = !!botP?.admin
   }
 
   for (const name in global.plugins) {
