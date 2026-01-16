@@ -103,7 +103,7 @@ handler.before = async (m, { conn }) => {
 
     const title = (data.result.title || "media").replace(/\.mp3|\.mp4/gi, "")
 
-    if (cmd === "playq_audio") {
+    if (cmd === "playa_audio") {
       await conn.sendMessage(
         m.chat,
         {
