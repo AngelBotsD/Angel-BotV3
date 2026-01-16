@@ -12,8 +12,6 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     return m.reply("🎶 Ingresa el nombre del video de YouTube.")
   }
 
-  await m.react("🕘")
-
   try {
     let url = query
     let title = "Desconocido"
@@ -26,7 +24,6 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
     if (!/^https?:\/\//i.test(query)) {
       const res = await yts(query)
       if (!res?.videos?.length) {
-        await m.react("❌")
         return m.reply("🚫 No encontré resultados.")
       }
 
@@ -96,7 +93,6 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
       { quoted: fkontak }
     )
 
-    await m.react("✅")
 
   } catch (e) {
     console.error(e)
@@ -168,11 +164,9 @@ const downloadMedia = async (conn, m, url, type) => {
       { text: `✅ Descarga completada\n\n🎼 Título: ${title}`, edit: sent.key }
     )
 
-    await m.react("✅")
 
   } catch (e) {
     console.error(e)
-    await m.react("💀")
     m.reply("❌ Error: " + e.message)
   }
 }
