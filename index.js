@@ -25,8 +25,6 @@ import { createRequire } from 'module'
 
 
 import * as ws from 'ws'
-import chalk from 'chalk'
-import lodash from 'lodash'
 import yargs from 'yargs'
 import syntaxerror from 'syntax-error'
 import readline from 'readline'
