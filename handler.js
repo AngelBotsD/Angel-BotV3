@@ -6,6 +6,20 @@ import fetch from "node-fetch"
 
 const DIGITS = (s = "") => String(s).replace(/\D/g, "")
 
+function lidParser(participants = []) {
+  try {
+    return participants.map(v => ({
+      id: (typeof v?.id === "string" && v.id.endsWith("@lid") && v.jid)
+        ? v.jid
+        : v.id,
+      admin: v?.admin ?? null,
+      raw: v
+    }))
+  } catch {
+    return participants || []
+  }
+}
+
 const OWNER_NUMBERS = (global.owner || []).map(v =>
   Array.isArray(v) ? DIGITS(v[0]) : DIGITS(v)
 )
@@ -133,19 +147,32 @@ async function handleMessage(m) {
     groupMetadata = cached.meta
     participants = groupMetadata.participants || []
 
-    const jidUser = this.decodeJid(m.sender)
-const jidBot = this.decodeJid(this.user.jid)
+   const raw = participants
+const norm = lidParser(raw)
 
-const userP = participants.find(p =>
-  this.decodeJid(p.id) === jidUser
-)
+const senderNum = DIGITS(m.sender)
+const botNum = DIGITS(this.user.jid)
 
-const botP = participants.find(p =>
-  this.decodeJid(p.id) === jidBot
-)
+const isAdminByNumber = (number) => {
+  for (let i = 0; i < raw.length; i++) {
+    const r = raw[i]
+    const n = norm[i]
+    const isAdm =
+      r?.admin === "admin" ||
+      r?.admin === "superadmin" ||
+      n?.admin === "admin" ||
+      n?.admin === "superadmin"
 
-isAdmin = !!userP?.admin
-isBotAdmin = !!botP?.admin
+    if (!isAdm) continue
+
+    const ids = [r?.id, r?.jid, n?.id]
+    if (ids.some(x => DIGITS(x || "") === number)) return true
+  }
+  return false
+}
+
+isAdmin = isAdminByNumber(senderNum)
+isBotAdmin = isAdminByNumber(botNum)
   }
 
   for (const name in global.plugins) {
