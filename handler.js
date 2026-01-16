@@ -53,7 +53,7 @@ global.dfail = async (type, m, conn) => {
     restrict: "𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖧𝖺 𝖲𝗂𝖽𝗈 𝖣𝖾𝗌𝖺𝖻𝗂𝗅𝗂𝗍𝖺𝖽𝗈"
   }[type]
 
-  if (!msg) continue
+  if (!msg) return
 
   await conn.sendMessage(
     m.chat,
@@ -72,7 +72,7 @@ setInterval(() => {
 }, 30000)
 
 export async function handler(chatUpdate) {
-  if (!chatUpdate) continue
+  if (!chatUpdate) return
 
   for (let m of chatUpdate.messages || []) {
   if (!m) continue
