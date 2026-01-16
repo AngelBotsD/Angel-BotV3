@@ -27,9 +27,7 @@ import { createRequire } from 'module'
 import * as ws from 'ws'
 import chalk from 'chalk'
 import lodash from 'lodash'
-import boxen from 'boxen'
 import yargs from 'yargs'
-import cfonts from 'cfonts'
 import syntaxerror from 'syntax-error'
 import readline from 'readline'
 import NodeCache from 'node-cache'
@@ -40,9 +38,6 @@ import P from 'pino'
 import pino from 'pino'
 import Pino from 'pino'
 
-
-
-import { Boom } from '@hapi/boom'
 
 
 
