@@ -53,7 +53,7 @@ const handler = async (m, { conn }) => {
       {
         name: "cta_copy",
         buttonParamsJson: JSON.stringify({
-          display_text: "📋 Copiar enlace",
+          display_text: "𝖢𝖮𝖯𝖨𝖠𝖱 𝖤𝖭𝖫𝖠𝖢𝖤",
           copy_code: link
         })
       }
@@ -73,7 +73,7 @@ const handler = async (m, { conn }) => {
           },
           interactiveMessage: proto.Message.InteractiveMessage.fromObject({
             header: proto.Message.InteractiveMessage.Header.fromObject({
-              title: `🔗 ${groupName}`,
+              title: `_*${groupName}*_`,
               hasMediaAttachment: true,
               imageMessage
             }),
