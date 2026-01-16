@@ -75,7 +75,6 @@ const { proto } = (await import('@whiskeysockets/baileys')).default
 
 
 const phoneUtil = PhoneNumberUtil.getInstance()
-const { chain } = lodash
 const { CONNECTING } = ws
 
 
