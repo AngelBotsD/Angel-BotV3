@@ -56,13 +56,6 @@ const handler = async (m, { conn }) => {
           display_text: "📋 Copiar enlace",
           copy_code: link
         })
-      },
-      {
-        name: "cta_url",
-        buttonParamsJson: JSON.stringify({
-          display_text: "🌐 Abrir enlace",
-          url: link
-        })
       }
     ]
 
@@ -86,9 +79,6 @@ const handler = async (m, { conn }) => {
             }),
             body: proto.Message.InteractiveMessage.Body.create({
               text: `*Aquí tienes el enlace del grupo:*\n\n${link}`
-            }),
-            footer: proto.Message.InteractiveMessage.Footer.create({
-              text: "Usa los botones para copiar o abrir el enlace."
             }),
             nativeFlowMessage:
               proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({
