@@ -89,11 +89,6 @@ export function handler(chatUpdate) {
 }
 
 async function handleMessage(m) {
-  if (
-    !m.message?.conversation &&
-    !m.message?.extendedTextMessage &&
-    !m.message?.imageMessage?.caption
-  ) return
 
   m = smsg(this, m)
   if (!m || m.isBaileys) return
