@@ -69,7 +69,7 @@ global.dfail = async (type, m, conn) => {
 
   if (!msg) return
 
-  await conn.sendMessage(
+  conn.sendMessage(
     m.chat,
     { text: msg },
     { quoted: m, ...dialogContext() }
@@ -101,7 +101,7 @@ async function handleMessage(m) {
   const textMsg = m.text || m.msg?.caption
   if (!textMsg) return
 
-  const prefixes = global._prefixCache ||= (
+  const prefixes = global._prefixCache ||= Object.freeze(
     Array.isArray(global.prefixes)
       ? global.prefixes
       : [global.prefix || "."]
@@ -135,48 +135,53 @@ async function handleMessage(m) {
 
   const loadGroupData = async () => {
     if (!m.isGroup) return
+
     let cached = global.groupMetaCache.get(m.chat)
-    if (!cached) {
+
+    if (!cached || Date.now() - cached.ts > 15000) {
+      const meta = await this.groupMetadata(m.chat)
+
+      const raw = meta.participants || []
+      const norm = lidParser(raw)
+      const adminNums = new Set()
+
+      for (let i = 0; i < raw.length; i++) {
+        const r = raw[i]
+        const n = norm[i]
+        const isAdm =
+          r?.admin === "admin" ||
+          r?.admin === "superadmin" ||
+          n?.admin === "admin" ||
+          n?.admin === "superadmin"
+
+        if (!isAdm) continue
+
+        ;[r?.id, r?.jid, n?.id].forEach(x => {
+          const d = DIGITS(x || "")
+          if (d) adminNums.add(d)
+        })
+      }
+
       cached = {
         ts: Date.now(),
-        meta: await this.groupMetadata(m.chat)
+        meta,
+        adminNums
       }
+
       global.groupMetaCache.set(m.chat, cached)
     }
 
     groupMetadata = cached.meta
     participants = groupMetadata.participants || []
 
-   const raw = participants
-const norm = lidParser(raw)
+    const senderNum = DIGITS(m.sender)
+    const botNum = DIGITS(this.user.jid)
 
-const senderNum = DIGITS(m.sender)
-const botNum = DIGITS(this.user.jid)
-
-const isAdminByNumber = (number) => {
-  for (let i = 0; i < raw.length; i++) {
-    const r = raw[i]
-    const n = norm[i]
-    const isAdm =
-      r?.admin === "admin" ||
-      r?.admin === "superadmin" ||
-      n?.admin === "admin" ||
-      n?.admin === "superadmin"
-
-    if (!isAdm) continue
-
-    const ids = [r?.id, r?.jid, n?.id]
-    if (ids.some(x => DIGITS(x || "") === number)) return true
-  }
-  return false
-}
-
-isAdmin = isAdminByNumber(senderNum)
-isBotAdmin = isAdminByNumber(botNum)
+    isAdmin = cached.adminNums.has(senderNum)
+    isBotAdmin = cached.adminNums.has(botNum)
   }
 
-  for (const name in global.plugins) {
-    const plugin = global.plugins[name]
+  for (const plugin of Object.values(global.plugins)) {
     if (!plugin || plugin.disabled) continue
 
     let isAccept = false
@@ -194,32 +199,32 @@ isBotAdmin = isAdminByNumber(botNum)
 
     if (!isAccept) continue
 
-    if (m.isGroup && (plugin.group || plugin.admin || plugin.botAdmin)) {
+    if (plugin.group && !m.isGroup) {
+      global.dfail("group", m, this)
+      return
+    }
+
+    if (m.isGroup && (plugin.admin || plugin.botAdmin)) {
       if (!groupMetadata) await loadGroupData()
     }
 
     if (plugin.rowner && !isROwner) {
-      await global.dfail("rowner", m, this)
+      global.dfail("rowner", m, this)
       return
     }
 
     if (plugin.owner && !isOwner) {
-      await global.dfail("owner", m, this)
-      return
-    }
-
-    if (plugin.group && !m.isGroup) {
-      await global.dfail("group", m, this)
+      global.dfail("owner", m, this)
       return
     }
 
     if (plugin.botAdmin && !isBotAdmin) {
-      await global.dfail("botAdmin", m, this)
+      global.dfail("botAdmin", m, this)
       return
     }
 
     if (plugin.admin && !isAdmin) {
-      await global.dfail("admin", m, this)
+      global.dfail("admin", m, this)
       return
     }
 
