@@ -212,7 +212,7 @@ export async function handler(chatUpdate) {
     }
   })()
 }
-
+}
 if (process.env.NODE_ENV === "development") {
   const file = fileURLToPath(import.meta.url)
   fs.watchFile(file, () => {
