@@ -78,7 +78,7 @@ const handler = async (m, { conn }) => {
               imageMessage
             }),
             body: proto.Message.InteractiveMessage.Body.create({
-              text: `*Aquí tienes el enlace del grupo:*\n\n${link}`
+              text: `${link}`
             }),
             nativeFlowMessage:
               proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({
