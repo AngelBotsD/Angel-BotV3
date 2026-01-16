@@ -75,142 +75,142 @@ export async function handler(chatUpdate) {
   if (!chatUpdate) return
 
   for (let m of chatUpdate.messages || []) {
-  if (!m) continue
+  void (async () => {
+    if (!m) return
 
-  m = smsg(this, m)
-  if (!m || m.isBaileys) continue
+    m = smsg(this, m)
+    if (!m || m.isBaileys) return
 
-  const textMsg = m.text || m.msg?.caption
-  if (!textMsg) continue
+    const textMsg = m.text || m.msg?.caption
+    if (!textMsg) return
 
-  const prefixes = global._prefixCache ||= (
-    Array.isArray(global.prefixes)
-      ? global.prefixes
-      : [global.prefix || "."]
-  )
+    const prefixes = global._prefixCache ||= (
+      Array.isArray(global.prefixes)
+        ? global.prefixes
+        : [global.prefix || "."]
+    )
 
-  let usedPrefix = null
-  let command = ""
-  let args = []
+    let usedPrefix = null
+    let command = ""
+    let args = []
 
-  const firstChar = textMsg[0]
+    const firstChar = textMsg[0]
 
-  if (prefixes.includes(firstChar)) {
-    usedPrefix = firstChar
-    const body = textMsg.slice(1).trim()
-    if (!body) continue
-    args = body.split(/\s+/)
-    command = (args.shift() || "").toLowerCase()
-  } else {
-    args = textMsg.trim().split(/\s+/)
-    command = args[0]?.toLowerCase() || ""
-  }
+    if (prefixes.includes(firstChar)) {
+      usedPrefix = firstChar
+      const body = textMsg.slice(1).trim()
+      if (!body) return
+      args = body.split(/\s+/)
+      command = (args.shift() || "").toLowerCase()
+    } else {
+      args = textMsg.trim().split(/\s+/)
+      command = args[0]?.toLowerCase() || ""
+    }
 
-  const senderNumber = DIGITS(m.sender)
-  const isROwner = OWNER_NUMBERS.includes(senderNumber)
-  const isOwner = isROwner || m.fromMe
+    const senderNumber = DIGITS(m.sender)
+    const isROwner = OWNER_NUMBERS.includes(senderNumber)
+    const isOwner = isROwner || m.fromMe
 
-  let groupMetadata
-  let participants
-  let isAdmin = false
-  let isBotAdmin = !m.isGroup
+    let groupMetadata
+    let participants
+    let isAdmin = false
+    let isBotAdmin = !m.isGroup
 
-  const loadGroupData = async () => {
-    if (!m.isGroup) return
-    let cached = global.groupMetaCache.get(m.chat)
-    if (!cached) {
-      cached = {
-        ts: Date.now(),
-        meta: await this.groupMetadata(m.chat)
+    const loadGroupData = async () => {
+      if (!m.isGroup) return
+      let cached = global.groupMetaCache.get(m.chat)
+      if (!cached) {
+        cached = {
+          ts: Date.now(),
+          meta: await this.groupMetadata(m.chat)
+        }
+        global.groupMetaCache.set(m.chat, cached)
       }
-      global.groupMetaCache.set(m.chat, cached)
+
+      groupMetadata = cached.meta
+      participants = groupMetadata.participants || []
+
+      const userP = participants.find(p => p.id === m.sender)
+      const botP = participants.find(p => p.id === this.user.jid)
+
+      isAdmin = userP?.admin === "admin" || userP?.admin === "superadmin"
+      isBotAdmin = botP?.admin === "admin" || botP?.admin === "superadmin"
     }
 
-    groupMetadata = cached.meta
-    participants = groupMetadata.participants || []
+    for (const name in global.plugins) {
+      const plugin = global.plugins[name]
+      if (!plugin || plugin.disabled) continue
 
-    const userP = participants.find(p => p.id === m.sender)
-    const botP = participants.find(p => p.id === this.user.jid)
+      let isAccept = false
 
-    isAdmin = userP?.admin === "admin" || userP?.admin === "superadmin"
-    isBotAdmin = botP?.admin === "admin" || botP?.admin === "superadmin"
-  }
+      if (plugin.customPrefix instanceof RegExp) {
+        isAccept = plugin.customPrefix.test(textMsg)
+      } else if (plugin.command) {
+        isAccept =
+          plugin.command instanceof RegExp
+            ? plugin.command.test(command)
+            : Array.isArray(plugin.command)
+              ? plugin.command.includes(command)
+              : plugin.command === command
+      }
 
-  for (const name in global.plugins) {
-    const plugin = global.plugins[name]
-    if (!plugin || plugin.disabled) continue
+      if (!isAccept) continue
 
-    let isAccept = false
+      if (m.isGroup && (plugin.group || plugin.admin || plugin.botAdmin)) {
+        if (!groupMetadata) await loadGroupData()
+      }
 
-    if (plugin.customPrefix instanceof RegExp) {
-      isAccept = plugin.customPrefix.test(textMsg)
-    } else if (plugin.command) {
-      isAccept =
-        plugin.command instanceof RegExp
-          ? plugin.command.test(command)
-          : Array.isArray(plugin.command)
-            ? plugin.command.includes(command)
-            : plugin.command === command
-    }
+      if (plugin.rowner && !isROwner) {
+        await global.dfail("rowner", m, this)
+        break
+      }
 
-    if (!isAccept) continue
+      if (plugin.owner && !isOwner) {
+        await global.dfail("owner", m, this)
+        break
+      }
 
-    if (m.isGroup && (plugin.group || plugin.admin || plugin.botAdmin)) {
-      if (!groupMetadata) await loadGroupData()
-    }
+      if (plugin.group && !m.isGroup) {
+        await global.dfail("group", m, this)
+        break
+      }
 
-    if (plugin.rowner && !isROwner) {
-      await global.dfail("rowner", m, this)
+      if (plugin.botAdmin && !isBotAdmin) {
+        await global.dfail("botAdmin", m, this)
+        break
+      }
+
+      if (plugin.admin && !isAdmin) {
+        await global.dfail("admin", m, this)
+        break
+      }
+
+      const exec =
+        typeof plugin === "function"
+          ? plugin
+          : typeof plugin.default === "function"
+            ? plugin.default
+            : null
+
+      if (!exec) continue
+
+      void exec.call(this, m, {
+        conn: this,
+        args,
+        usedPrefix,
+        command,
+        participants,
+        groupMetadata,
+        isROwner,
+        isOwner,
+        isAdmin,
+        isBotAdmin,
+        chat: m.chat
+      })
+
       break
     }
-
-    if (plugin.owner && !isOwner) {
-      await global.dfail("owner", m, this)
-      break
-    }
-
-    if (plugin.group && !m.isGroup) {
-      await global.dfail("group", m, this)
-      break
-    }
-
-    if (plugin.botAdmin && !isBotAdmin) {
-      await global.dfail("botAdmin", m, this)
-      break
-    }
-
-    if (plugin.admin && !isAdmin) {
-      await global.dfail("admin", m, this)
-      break
-    }
-
-    const exec =
-      typeof plugin === "function"
-        ? plugin
-        : typeof plugin.default === "function"
-          ? plugin.default
-          : null
-
-    if (!exec) continue
-
-    void exec.call(this, m, {
-  conn: this,
-  args,
-  usedPrefix,
-  command,
-  participants,
-  groupMetadata,
-  isROwner,
-  isOwner,
-  isAdmin,
-  isBotAdmin,
-  chat: m.chat
-})
-
-    break
- }
-}
-
+  })()
 }
 
 if (process.env.NODE_ENV === "development") {
