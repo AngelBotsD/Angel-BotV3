@@ -1,90 +1,118 @@
-import { generateWAMessageContent, generateWAMessageFromContent, proto } from '@whiskeysockets/baileys'
+import {
+  generateWAMessageContent,
+  generateWAMessageFromContent,
+  proto
+} from '@whiskeysockets/baileys'
 
-let fkontak = { 
-    "key": { 
-        "participants":"0@s.whatsapp.net", 
-        "remoteJid": "status@broadcast", 
-        "fromMe": false, 
-        "id": "Halo" 
-    }, 
-    "message": { 
-        "contactMessage": { 
-            "vcard": `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:Bot\nitem1.TEL;waid=5219991234567:5219991234567\nitem1.X-ABLabel:Ponsel\nEND:VCARD` 
-        }
-    }, 
-    "participant": "0@s.whatsapp.net" 
-}
+const handler = async (m, { conn }) => {
+  const chat = m.chat
 
-var handler = async (m, { conn, args }) => {
-    let group = m.chat
+  await conn.sendMessage(chat, {
+    react: { text: "🔗", key: m.key }
+  })
+
+  const safeFetch = async (url, timeout = 5000) => {
+    const controller = new AbortController()
+    const id = setTimeout(() => controller.abort(), timeout)
+    try {
+      const res = await fetch(url, { signal: controller.signal })
+      return res.ok ? Buffer.from(await res.arrayBuffer()) : null
+    } catch {
+      return null
+    } finally {
+      clearTimeout(id)
+    }
+  }
+
+  try {
+    const meta = await conn.groupMetadata(chat)
+    const groupName = meta.subject || "Grupo"
+
+    let inviteCode = null
+    try {
+      inviteCode = await conn.groupInviteCode(chat)
+    } catch {}
+
+    if (!inviteCode) return
+
+    const link = `https://chat.whatsapp.com/${inviteCode}`
+
+    const fallbackPP = "https://files.catbox.moe/xr2m6u.jpg"
+    let ppBuffer = null
 
     try {
-        const pp = await conn.profilePictureUrl(group, 'image').catch((_) => 'https://files.catbox.moe/xr2m6u.jpg')
-        let inviteCode = await conn.groupInviteCode(group)
-        let link = 'https://chat.whatsapp.com/' + inviteCode
+      const url = await conn.profilePictureUrl(chat, "image").catch(() => null)
+      if (url) ppBuffer = await safeFetch(url, 6000)
+    } catch {}
 
-        let title = '🔗 Enlace de Invitación del Grupo'
-        let bodyText = `*Aquí tienes el enlace de invitación:*\n\n> \`Link:\` ${link}`
-        let footerText = 'Toca el botón para copiar el link.'
-
-        const buttons = [
-            {
-                name: "cta_copy",
-                buttonParamsJson: JSON.stringify({ 
-                    display_text: "Copiar Enlace", 
-                    copy_code: link 
-                })
-            },
-            {
-                name: "cta_url",
-                buttonParamsJson: JSON.stringify({ 
-                    display_text: "Abrir Enlace", 
-                    url: link 
-                })
-            }
-        ];
-
-        const { imageMessage } = await generateWAMessageContent({ 
-            image: { url: pp } 
-        }, { upload: conn.waUploadToServer })
-
-        const interactive = generateWAMessageFromContent(m.chat, {
-            viewOnceMessage: {
-                message: {
-                    messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
-                    interactiveMessage: proto.Message.InteractiveMessage.fromObject({
-                        body: proto.Message.InteractiveMessage.Body.create({ text: bodyText }),
-                        footer: proto.Message.InteractiveMessage.Footer.create({ text: footerText }),
-                        header: proto.Message.InteractiveMessage.Header.fromObject({ 
-                            title: title, 
-                            hasMediaAttachment: true, 
-                            imageMessage 
-                        }),
-                        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({ 
-                            buttons, 
-                            messageParamsJson: '' 
-                        })
-                    })
-                }
-            }
-        }, { quoted: fkontak });
-
-        await conn.relayMessage(m.chat, interactive.message, { messageId: interactive.key.id })
-
-    } catch (e) {
-        console.error("Error al generar/enviar el enlace interactivo:", e);
-
-        let fallbackLink = 'https://chat.whatsapp.com/' + (await conn.groupInviteCode(group).catch(() => ''))
-        let fallbackPP = await conn.profilePictureUrl(group, 'image').catch((_) => 'https://files.catbox.moe/xr2m6u.jpg')
-        let fallbackMessage = `*❌ Falló al enviar el mensaje interactivo. Asegúrate que el bot sea administrador.*\n\n*➭ Aquí tienes el enlace de todas formas:*\n\n> \`Link:\` ${fallbackLink}`
-
-        await conn.sendMessage(group, { image: { url: fallbackPP }, caption: fallbackMessage }, { quoted: m })
+    if (!ppBuffer) {
+      ppBuffer = await safeFetch(fallbackPP)
     }
+
+    const buttons = [
+      {
+        name: "cta_copy",
+        buttonParamsJson: JSON.stringify({
+          display_text: "📋 Copiar enlace",
+          copy_code: link
+        })
+      },
+      {
+        name: "cta_url",
+        buttonParamsJson: JSON.stringify({
+          display_text: "🌐 Abrir enlace",
+          url: link
+        })
+      }
+    ]
+
+    const { imageMessage } = await generateWAMessageContent(
+      { image: ppBuffer },
+      { upload: conn.waUploadToServer }
+    )
+
+    const interactive = generateWAMessageFromContent(chat, {
+      viewOnceMessage: {
+        message: {
+          messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+          },
+          interactiveMessage: proto.Message.InteractiveMessage.fromObject({
+            header: proto.Message.InteractiveMessage.Header.fromObject({
+              title: `🔗 ${groupName}`,
+              hasMediaAttachment: true,
+              imageMessage
+            }),
+            body: proto.Message.InteractiveMessage.Body.create({
+              text: `*Aquí tienes el enlace del grupo:*\n\n${link}`
+            }),
+            footer: proto.Message.InteractiveMessage.Footer.create({
+              text: "Usa los botones para copiar o abrir el enlace."
+            }),
+            nativeFlowMessage:
+              proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({
+                buttons,
+                messageParamsJson: ""
+              })
+          })
+        }
+      }
+    }, { quoted: m })
+
+    await conn.relayMessage(chat, interactive.message, {
+      messageId: interactive.key.id
+    })
+
+  } catch (err) {
+    console.error("⚠️ Error en comando .link:", err)
+  }
 }
 
-handler.help = ['link']
-handler.tags = ['grupo']
-handler.command = ['link', 'enlace']
-handler.group = true
-
-export default handler
+handler.help = ["𝖫𝗂𝗇𝗄"];
+handler.tags = ["𝖦𝖱𝖴𝖯𝖮𝖲"];
+handler.customPrefix = /^\.?(link)$/i;
+handler.command = new RegExp();
+handler.group = true;
+handler.admin = true;
+export default handler;
