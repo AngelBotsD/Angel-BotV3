@@ -92,7 +92,7 @@ global.wa = {
 
 
 
-console.log(chalk.magentaBright('\nMejor Bot Do Momento Start...'))
+console.log('\nMejor Bot Do Momento Start...')
 
 say('Angel Bot', {
   font: 'block',
