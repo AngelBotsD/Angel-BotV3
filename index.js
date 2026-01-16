@@ -346,10 +346,12 @@ if (opcion === '2' && update.qr === undefined) {
 
   if (connection === 'open') {
     const userName = conn.user.name || conn.user.verifiedName || 'Desconocido'
-    console.log(chalk.green.bold(`[ ✿ ]  Conectado a: ${userName}`))
+console.log(`\x1b[1m\x1b[92m[ ✿ ]  Conectado a: ${userName}\x1b[0m`)
   }
 
-  let reason = new Boom(lastDisconnect?.error)?.output?.statusCode
+  let reason = lastDisconnect?.error?.output?.statusCode 
+          || lastDisconnect?.error?.statusCode
+          || lastDisconnect?.error?.code
 
   if (connection === 'close') {
     if (
