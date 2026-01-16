@@ -66,10 +66,6 @@ const handler = async (m, { conn, text, usedPrefix, command }) => {
 ⚡ 𝑷𝒐𝒘𝒆𝒓𝒆𝒅 𝒃𝒚 𝒀𝒐𝒔𝒖𝒆 ⚡
 `
 
-    const thumb = thumbnail
-      ? (await conn.getFile(thumbnail)).data
-      : thumb3
-
     await conn.sendMessage(
       m.chat,
       {
