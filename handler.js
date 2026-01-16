@@ -193,19 +193,19 @@ export async function handler(chatUpdate) {
 
     if (!exec) continue
 
-    void exec.call(this, m, ctx)
-      conn: this,
-      args,
-      usedPrefix,
-      command,
-      participants,
-      groupMetadata,
-      isROwner,
-      isOwner,
-      isAdmin,
-      isBotAdmin,
-      chat: m.chat
-    })
+    void exec.call(this, m, {
+  conn: this,
+  args,
+  usedPrefix,
+  command,
+  participants,
+  groupMetadata,
+  isROwner,
+  isOwner,
+  isAdmin,
+  isBotAdmin,
+  chat: m.chat
+})
 
     break
  }
