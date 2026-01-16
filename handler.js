@@ -94,6 +94,15 @@ async function handleMessage(m) {
 
   if (!textMsg) return
 
+// 🔒 Evitar reprocesar previews del bot (botones play)
+if (
+  m.quoted &&
+  m.quoted.fromMe &&
+  /título:|autor:|duración:|descargar audio|descargar video/i.test(m.text)
+) {
+  return
+}
+
   const prefixes = global._prefixCache ||= Object.freeze(
     Array.isArray(global.prefixes)
       ? global.prefixes
