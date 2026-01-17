@@ -121,8 +121,6 @@ try {
   console.error("❌ Error Sticker→cmd:", e);
 }
 /* === FIN STICKER → COMANDO === */
-
-const user = global.db.data.users[m.sender]
 try {
 const actual = user.name || ""
 const nuevo = m.pushName || await this.getName(m.sender)
