@@ -74,7 +74,6 @@ global.dfail = async (type, m, conn) => {
   )
 }
 
-global.lastTextMessage ||= new Map()
 global.groupMetaCache ||= new Map()
 
 setInterval(() => {
@@ -96,24 +95,6 @@ async function handleMessage(m) {
 
   m = smsg(this, m)
   if (!m || m.isBaileys) return
-
-const prefixes = global._prefixCache ||= Object.freeze(
-  Array.isArray(global.prefixes)
-    ? global.prefixes
-    : [global.prefix || "."]
-)
-
-// guardar último texto SOLO si NO es comando
-if (
-  m.text &&
-  !prefixes.includes(m.text[0])
-) {
-  global.lastTextMessage.set(m.chat, {
-    text: m.text,
-    sender: m.sender,
-    ts: Date.now()
-  })
-}
 
   let usedPrefix = null
   let command = ""
