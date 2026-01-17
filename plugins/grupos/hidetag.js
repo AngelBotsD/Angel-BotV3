@@ -1,54 +1,234 @@
-const handler = async (m, { conn, args, participants = [] }) => {
+import fs from "fs";
+import path from "path";
 
-  let notifyText = ""
+const DIGITS = (s = "") => String(s || "").replace(/\D/g, "");
 
-  // 1️⃣ Texto escrito después de .n
-  if (args.length > 0) {
-    notifyText = args.join(" ").trim()
-  }
-
-  // 2️⃣ Texto citado (SOLO si es texto real)
-  else if (
-    m.quoted &&
-    typeof m.quoted.text === "string" &&
-    m.quoted.text.trim()
+function unwrapMessage(m) {
+  let n = m;
+  while (
+    n?.viewOnceMessage?.message ||
+    n?.viewOnceMessageV2?.message ||
+    n?.viewOnceMessageV2Extension?.message ||
+    n?.ephemeralMessage?.message
   ) {
-    notifyText = m.quoted.text.trim()
+    n =
+      n.viewOnceMessage?.message ||
+      n.viewOnceMessageV2?.message ||
+      n.viewOnceMessageV2Extension?.message ||
+      n.ephemeralMessage?.message;
   }
-
-  // 3️⃣ Si no hay texto válido → diálogo
-  if (!notifyText) {
-    return conn.sendMessage(
-      m.chat,
-      {
-        text:
-          "❌ *Uso incorrecto del comando*\n\n" +
-          "• `.n texto`\n" +
-          "• Responde a un mensaje de texto con `.n`"
-      },
-      { quoted: m }
-    )
-  }
-
-  // 4️⃣ Validación de grupo
-  if (!participants.length) {
-    return conn.sendMessage(
-      m.chat,
-      { text: "❌ No se pudieron obtener los participantes del grupo." },
-      { quoted: m }
-    )
-  }
-
-  // 5️⃣ Notificación real
-  const mentions = participants.map(p => p.id)
-
-  await conn.sendMessage(m.chat, {
-    text: notifyText,
-    mentions
-  })
+  return n;
 }
 
-handler.command = /^n$/i
-handler.group = true
+function getQuotedMessage(msg) {
+  const root = unwrapMessage(msg?.message) || {};
+  const ctx =
+    root?.extendedTextMessage?.contextInfo ||
+    root?.imageMessage?.contextInfo ||
+    root?.videoMessage?.contextInfo ||
+    root?.documentMessage?.contextInfo ||
+    root?.audioMessage?.contextInfo ||
+    root?.stickerMessage?.contextInfo ||
+    null;
+  return ctx?.quotedMessage ? unwrapMessage(ctx.quotedMessage) : null;
+}
 
-export default handler
+function getBodyRaw(msg) {
+  const m = unwrapMessage(msg?.message) || {};
+  return m?.extendedTextMessage?.text ?? m?.conversation ?? "";
+}
+
+function extractAfterAlias(body, aliases = [], prefixes = ["."]) {
+  const bodyLow = body.toLowerCase();
+  for (const p of prefixes) {
+    for (const a of aliases) {
+      const tag = (p + a).toLowerCase();
+      if (bodyLow.startsWith(tag)) {
+        let out = body.slice(tag.length);
+        return out.startsWith(" ") ? out.slice(1) : out;
+      }
+    }
+  }
+  return "";
+}
+
+async function getDownloader(wa) {
+  if (wa && typeof wa.downloadContentFromMessage === "function")
+    return wa.downloadContentFromMessage;
+  try {
+    const m = await import("@whiskeysockets/baileys");
+    return m.downloadContentFromMessage;
+  } catch {
+    return null;
+  }
+}
+
+const handler = async (msg, { conn, args, text, wa }) => {
+  try {
+    const chatId = msg.key.remoteJid;
+    const isGroup = chatId.endsWith("@g.us");
+    const senderId = msg.key.participant || msg.key.remoteJid;
+    const senderNum = DIGITS(senderId);
+    const isFromMe = !!msg.key.fromMe;
+
+    if (!isGroup) {
+      return conn.sendMessage(
+        chatId,
+        { text: "⚠️ Este comando solo se puede usar en grupos." },
+        { quoted: msg }
+      );
+    }
+
+    const rawID = conn.user?.id || "";
+    const botNum = DIGITS(rawID.split(":")[0]);
+    const isBot = botNum === senderNum;
+    const isOwner =
+      Array.isArray(global.owner) &&
+      global.owner.some(([id]) => id === senderNum);
+
+    let meta;
+    try {
+      meta = await conn.groupMetadata(chatId);
+    } catch (e) {
+      console.error("[tag] metadata error:", e);
+      return conn.sendMessage(
+        chatId,
+        { text: "❌ No pude leer la metadata del grupo." },
+        { quoted: msg }
+      );
+    }
+
+    const participantes = Array.isArray(meta?.participants)
+      ? meta.participants
+      : [];
+
+    const isAdmin = participantes.some((p) => {
+      const ids = [p?.id, p?.jid].filter(Boolean);
+      const matchByDigits = ids.some((id) => DIGITS(id) === senderNum);
+      const roleOK = p?.admin === "admin" || p?.admin === "superadmin";
+      return matchByDigits && roleOK;
+    });
+
+    if (!isAdmin && !isOwner && !isBot && !isFromMe) {
+      return conn.sendMessage(
+        chatId,
+        { text: "❌ Solo admins, el owner o el bot pueden usar este comando." },
+        { quoted: msg }
+      );
+    }
+
+    await conn
+      .sendMessage(chatId, { react: { text: "🔊", key: msg.key } })
+      .catch(() => {});
+
+    const seen = new Set();
+    const mentionsOrdered = [];
+    for (const p of participantes) {
+      const jid = p?.id || p?.jid;
+      if (!jid) continue;
+      const d = DIGITS(jid);
+      if (d && !seen.has(d)) {
+        seen.add(d);
+        mentionsOrdered.push(jid);
+      }
+    }
+
+    const quoted = getQuotedMessage(msg);
+    const DL = await getDownloader(wa);
+    let messageToForward = null;
+
+    if (quoted) {
+      if (quoted.conversation != null) {
+        messageToForward = { text: quoted.conversation };
+      } else if (quoted.extendedTextMessage?.text != null) {
+        messageToForward = { text: quoted.extendedTextMessage.text };
+      } else if (quoted.imageMessage && DL) {
+        const stream = await DL(quoted.imageMessage, "image");
+        let buffer = Buffer.alloc(0);
+        for await (const c of stream) buffer = Buffer.concat([buffer, c]);
+        messageToForward = {
+          image: buffer,
+          mimetype: quoted.imageMessage.mimetype || "image/jpeg",
+          caption: quoted.imageMessage.caption ?? ""
+        };
+      } else if (quoted.videoMessage && DL) {
+        const stream = await DL(quoted.videoMessage, "video");
+        let buffer = Buffer.alloc(0);
+        for await (const c of stream) buffer = Buffer.concat([buffer, c]);
+        messageToForward = {
+          video: buffer,
+          mimetype: quoted.videoMessage.mimetype || "video/mp4",
+          caption: quoted.videoMessage.caption ?? "",
+          gifPlayback: !!quoted.videoMessage.gifPlayback
+        };
+      } else if (quoted.audioMessage && DL) {
+        const stream = await DL(quoted.audioMessage, "audio");
+        let buffer = Buffer.alloc(0);
+        for await (const c of stream) buffer = Buffer.concat([buffer, c]);
+        messageToForward = {
+          audio: buffer,
+          mimetype: quoted.audioMessage.mimetype || "audio/mpeg",
+          ptt: !!quoted.audioMessage.ptt
+        };
+      } else if (quoted.stickerMessage && DL) {
+        const stream = await DL(quoted.stickerMessage, "sticker");
+        let buffer = Buffer.alloc(0);
+        for await (const c of stream) buffer = Buffer.concat([buffer, c]);
+        messageToForward = { sticker: buffer };
+      } else if (quoted.documentMessage && DL) {
+        const stream = await DL(quoted.documentMessage, "document");
+        let buffer = Buffer.alloc(0);
+        for await (const c of stream) buffer = Buffer.concat([buffer, c]);
+        messageToForward = {
+          document: buffer,
+          mimetype:
+            quoted.documentMessage.mimetype || "application/octet-stream",
+          fileName: quoted.documentMessage.fileName || undefined,
+          caption: quoted.documentMessage.caption ?? ""
+        };
+      }
+    }
+
+    if (!messageToForward) {
+      const prefixes = Array.isArray(global.prefixes)
+        ? global.prefixes
+        : ["."];
+      const body = getBodyRaw(msg);
+      const rawText = extractAfterAlias(
+        body,
+        ["tag", "n", "notify"],
+        prefixes
+      );
+      if (rawText && rawText.length > 0) {
+        messageToForward = { text: rawText };
+      }
+    }
+
+    if (!messageToForward) {
+      return conn.sendMessage(
+        chatId,
+        {
+          text:
+            "⚠️ Responde a un mensaje o escribe un texto tras el comando para reenviar."
+        },
+        { quoted: msg }
+      );
+    }
+
+    await conn.sendMessage(
+      chatId,
+      { ...messageToForward, mentions: mentionsOrdered },
+      { quoted: msg }
+    );
+  } catch (err) {
+    console.error("❌ Error en el comando tag:", err);
+    await conn.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ Ocurrió un error al ejecutar el comando." },
+      { quoted: msg }
+    );
+  }
+};
+
+handler.command = ["tag", "n", "notify"];
+export default handler;
