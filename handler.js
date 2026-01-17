@@ -1,6 +1,8 @@
 import { smsg } from "./lib/simple.js"
 import { fileURLToPath } from "url"
 import fs from "fs"
+import chalk from "chalk"
+import fetch from "node-fetch"
 
 const DIGITS = (s = "") => String(s).replace(/\D/g, "")
 
@@ -95,6 +97,15 @@ async function handleMessage(m) {
 
   m = smsg(this, m)
   if (!m || m.isBaileys) return
+
+  const textMsg = m.text || m.msg?.caption
+  if (!textMsg) return
+
+  const prefixes = global._prefixCache ||= Object.freeze(
+    Array.isArray(global.prefixes)
+      ? global.prefixes
+      : [global.prefix || "."]
+  )
 
   let usedPrefix = null
   let command = ""
