@@ -1,34 +1,29 @@
 const handler = async (m, { conn }) => {
   const chat = m.chat
 
-  // 🔗 reacción inmediata
+  // reacción inmediata
   await conn.sendMessage(chat, {
     react: { text: "🔗", key: m.key }
   })
 
   try {
-    // ⏳ cargar TODO primero
-    const [meta, inviteCode] = await Promise.all([
-      conn.groupMetadata(chat),
-      conn.groupInviteCode(chat).catch(() => null)
-    ])
+    // esperar a que todo cargue
+    const inviteCode = await conn.groupInviteCode(chat).catch(() => null)
 
-    // 🔎 detect link
     if (!inviteCode) {
       return m.reply("❌ No pude obtener el enlace del grupo.\n¿Soy admin?")
     }
 
-    const groupName = meta?.subject || "Grupo"
     const link = `https://chat.whatsapp.com/${inviteCode}`
 
-    // 🧠 mensaje final (vista previa automática)
-    const text = `🔗 *Enlace del grupo*\n\n*${groupName}*\n${link}`
-
-    await conn.sendMessage(chat, { text }, { quoted: m })
+    // ⚠️ IMPORTANTE:
+    // SOLO el link, sin texto extra
+    await conn.sendMessage(chat, {
+      text: link
+    }, { quoted: m })
 
   } catch (e) {
     console.error("Error .link:", e)
-    m.reply("⚠️ Ocurrió un error al generar el enlace.")
   }
 }
 
