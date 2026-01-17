@@ -1,37 +1,36 @@
-const handler = async (m, { command, args }) => {
-  if (command !== 'n') return
+const handler = async (m, { conn, text, participants }) => {
 
-  if (!m.hasCommandText)
-    return m.reply('❌ No se puede usar .n en stickers ni audios')
+  let notifyText = ""
 
-  let value = args.join(' ').trim()
-
-  // 1️⃣ texto citado
-  if (!value && m.quoted?.text) {
-    value = m.quoted.text.trim()
+  // 1️⃣ Si escribió texto después de .n
+  if (text && text.trim()) {
+    notifyText = text.trim()
   }
 
-  // 2️⃣ último texto válido del chat
-  if (!value) {
-    const last = global.lastTextMessage?.get(m.chat)
-    if (last?.text) {
-      value = last.text.trim()
-    }
+  // 2️⃣ Si NO escribió texto, pero respondió a un mensaje
+  else if (m.quoted && m.quoted.text) {
+    notifyText = m.quoted.text.trim()
   }
 
-  if (!value)
-    return m.reply('❌ Usa .n <texto> o responde a un mensaje con texto')
+  // 3️⃣ Si no hay nada válido
+  if (!notifyText) {
+    return conn.sendMessage(m.chat, {
+      text: "❌ Usa `.n texto` o responde a un mensaje con `.n`"
+    }, { quoted: m })
+  }
 
-  let from = 'texto'
-  if (m.isImage) from = 'imagen'
-  else if (m.isVideo) from = 'video'
-  else if (m.isDocument) from = 'documento'
-  else if (m.quoted) from = 'respuesta'
+  // 4️⃣ Construimos menciones
+  const mentions = participants.map(p => p.id)
 
-  await m.reply(
-    `✅ .n detectado\n\n📌 Texto: ${value}\n📦 Origen: ${from}`
-  )
+  // 5️⃣ Enviamos notificación
+  await conn.sendMessage(m.chat, {
+    text: notifyText,
+    mentions
+  })
+
 }
 
-handler.command = ['n']
+handler.command = /^n$/i
+handler.group = true
+
 export default handler
