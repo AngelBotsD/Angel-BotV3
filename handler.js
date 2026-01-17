@@ -97,9 +97,16 @@ async function handleMessage(m) {
   m = smsg(this, m)
   if (!m || m.isBaileys) return
 
+const prefixes = global._prefixCache ||= Object.freeze(
+  Array.isArray(global.prefixes)
+    ? global.prefixes
+    : [global.prefix || "."]
+)
+
+// guardar último texto SOLO si NO es comando
 if (
   m.text &&
-  !m.text.startsWith(usedPrefix || ".")
+  !prefixes.includes(m.text[0])
 ) {
   global.lastTextMessage.set(m.chat, {
     text: m.text,
@@ -107,15 +114,6 @@ if (
     ts: Date.now()
   })
 }
-
-  const textMsg = m.text || m.msg?.caption
-  if (!textMsg) return
-
-  const prefixes = global._prefixCache ||= Object.freeze(
-    Array.isArray(global.prefixes)
-      ? global.prefixes
-      : [global.prefix || "."]
-  )
 
   let usedPrefix = null
   let command = ""
