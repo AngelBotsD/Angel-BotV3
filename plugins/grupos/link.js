@@ -1,10 +1,15 @@
-var handler = async (m, { conn, args }) => {
+var handler = async (m, { conn }) => {
+  let group = m.chat
+  let code = await conn.groupInviteCode(group)
+  let link = 'https://chat.whatsapp.com/' + code
 
-let group = m.chat
-let link = 'https://chat.whatsapp.com/' + await conn.groupInviteCode(group)
-conn.quoted(m.chat, '\t\t☆ Aquí está el link del grupo.\n\n\v' + link, m, { detectLink: true })
-
+  await conn.sendMessage(
+    m.chat,
+    { text: link },
+    { quoted: m }
+  )
 }
+
 handler.help = ['link']
 handler.tags = ['grupo']
 handler.command = ['link', 'enlace']
