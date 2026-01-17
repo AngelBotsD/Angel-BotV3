@@ -97,11 +97,13 @@ async function handleMessage(m) {
   m = smsg(this, m)
   if (!m || m.isBaileys) return
 
-if (m.hasCommandText && m.text) {
+if (
+  m.text &&
+  !m.text.startsWith(usedPrefix || ".")
+) {
   global.lastTextMessage.set(m.chat, {
     text: m.text,
     sender: m.sender,
-    fromMe: m.fromMe,
     ts: Date.now()
   })
 }
