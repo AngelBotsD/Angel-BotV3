@@ -74,6 +74,7 @@ global.dfail = async (type, m, conn) => {
   )
 }
 
+global.lastTextMessage ||= new Map()
 global.groupMetaCache ||= new Map()
 
 setInterval(() => {
@@ -95,6 +96,15 @@ async function handleMessage(m) {
 
   m = smsg(this, m)
   if (!m || m.isBaileys) return
+
+if (m.hasCommandText && m.text) {
+  global.lastTextMessage.set(m.chat, {
+    text: m.text,
+    sender: m.sender,
+    fromMe: m.fromMe,
+    ts: Date.now()
+  })
+}
 
   const textMsg = m.text || m.msg?.caption
   if (!textMsg) return
