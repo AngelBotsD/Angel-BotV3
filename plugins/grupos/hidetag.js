@@ -6,9 +6,16 @@ const handler = async (m, { command, args }) => {
 
   let value = args.join(' ').trim()
 
-  if (!value && m.quoted?.text) {
-    value = m.quoted.text.trim()
+if (!value && m.quoted?.text) {
+  value = m.quoted.text.trim()
+}
+
+if (!value) {
+  const last = global.lastTextMessage?.get(m.chat)
+  if (last && last.text && last.sender === m.sender) {
+    value = last.text.trim()
   }
+}
 
   if (!value)
     return m.reply('❌ Usa .n <texto> o responde a un mensaje con texto')
