@@ -16,7 +16,7 @@
 "plugins":"plugins"
 },
 "dependencies":{
-"@whiskeysockets/baileys":"github:ds6/buils",
+"@whiskeysockets/baileys":"github:AngelBotsD/uso-personal-",
 "acrcloud":"^1.4.0",
 "file-type":"^18.0.0",
 "google-libphonenumber":"3.2.38",
