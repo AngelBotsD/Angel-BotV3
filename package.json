@@ -16,11 +16,10 @@
 "plugins":"plugins"
 },
 "dependencies":{
-"@whiskeysockets/baileys":"github:Ado21/bly",
+"@whiskeysockets/baileys":"github:ds6/buils",
 "acrcloud":"^1.4.0",
 "file-type":"^18.0.0",
 "google-libphonenumber":"3.2.38",
-"jimp": "^1.6.0",
 "node-cache":"^5.1.2",
 "chalk": "^4.1.2",
 "pino":"^8.14.1",
