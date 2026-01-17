@@ -368,18 +368,6 @@ const quequeIndex = this.msgqueque.indexOf(m.id || m.key.id)
 if (quequeIndex !== -1)
 this.msgqueque.splice(quequeIndex, 1)
 }
-let user, stats = global.db.data.stats
-if (m) {
-if (m.sender && (user = global.db.data.users[m.sender])) {
-user.exp += m.exp
-}}
-try {
-if (!opts["noprint"]) await (await import("./lib/print.js")).default(m, this)
-} catch (err) {
-console.warn(err)
-console.log(m.message)
-}}}
-
 global.dfail = (type, m, conn) => {
 const msg = {
 rowner: `*𝖤𝗌𝗍𝖾 𝖢𝗈𝗆𝖺𝗇𝖽𝗈 𝖲𝗈𝗅𝗈 𝖯𝗎𝖾𝖽𝖾 𝖲𝖾𝗋 𝖴𝗌𝖺𝖽𝗈 𝖯𝗈𝗋 𝖬𝗂 𝖢𝗋𝖾𝖺𝖽𝗈𝗋*`,
