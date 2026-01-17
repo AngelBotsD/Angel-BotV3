@@ -6,22 +6,23 @@ const handler = async (m, { command, args }) => {
 
   let value = args.join(' ').trim()
 
-if (!value && m.quoted?.text) {
-  value = m.quoted.text.trim()
-}
-
-if (!value) {
-  const last = global.lastTextMessage?.get(m.chat)
-  if (last && last.text && last.sender === m.sender) {
-    value = last.text.trim()
+  // 1️⃣ texto citado
+  if (!value && m.quoted?.text) {
+    value = m.quoted.text.trim()
   }
-}
+
+  // 2️⃣ último texto válido del chat
+  if (!value) {
+    const last = global.lastTextMessage?.get(m.chat)
+    if (last?.text) {
+      value = last.text.trim()
+    }
+  }
 
   if (!value)
     return m.reply('❌ Usa .n <texto> o responde a un mensaje con texto')
 
   let from = 'texto'
-
   if (m.isImage) from = 'imagen'
   else if (m.isVideo) from = 'video'
   else if (m.isDocument) from = 'documento'
@@ -33,5 +34,4 @@ if (!value) {
 }
 
 handler.command = ['n']
-
 export default handler
