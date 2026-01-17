@@ -1,4 +1,4 @@
-const handler = async (m, { conn, args, participants }) => {
+const handler = async (m, { conn, args, participants = [] }) => {
 
   let notifyText = ""
 
@@ -7,21 +7,39 @@ const handler = async (m, { conn, args, participants }) => {
     notifyText = args.join(" ").trim()
   }
 
-  // 2️⃣ Si no hay args, usar texto citado
-  else if (m.quoted && m.quoted.text) {
+  // 2️⃣ Texto citado (SOLO si es texto real)
+  else if (
+    m.quoted &&
+    typeof m.quoted.text === "string" &&
+    m.quoted.text.trim()
+  ) {
     notifyText = m.quoted.text.trim()
   }
 
-  // 3️⃣ Validación final
+  // 3️⃣ Si no hay texto válido → diálogo
   if (!notifyText) {
     return conn.sendMessage(
       m.chat,
-      { text: "❌ Usa `.n texto` o responde a un mensaje con `.n`" },
+      {
+        text:
+          "❌ *Uso incorrecto del comando*\n\n" +
+          "• `.n texto`\n" +
+          "• Responde a un mensaje de texto con `.n`"
+      },
       { quoted: m }
     )
   }
 
-  // 4️⃣ Menciones (notificación real)
+  // 4️⃣ Validación de grupo
+  if (!participants.length) {
+    return conn.sendMessage(
+      m.chat,
+      { text: "❌ No se pudieron obtener los participantes del grupo." },
+      { quoted: m }
+    )
+  }
+
+  // 5️⃣ Notificación real
   const mentions = participants.map(p => p.id)
 
   await conn.sendMessage(m.chat, {
