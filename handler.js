@@ -17,62 +17,11 @@ this.uptime = this.uptime || Date.now()
 if (!chatUpdate) return
 let m = chatUpdate.messages[chatUpdate.messages.length - 1]
 if (!m) return
-if (global.db.data == null)
-await global.loadDatabase()
 try {
 m = smsg(this, m) || m
 if (!m) return
 m.exp = 0
 try {
-const user = global.db.data.users[m.sender]
-if (typeof user !== "object") {
-global.db.data.users[m.sender] = {}
-}
-if (user) {
-if (!("name" in user)) user.name = m.name
-if (!("exp" in user) || !isNumber(user.exp)) user.exp = 0
-if (!("coin" in user) || !isNumber(user.coin)) user.coin = 0
-if (!("bank" in user) || !isNumber(user.bank)) user.bank = 0
-if (!("level" in user) || !isNumber(user.level)) user.level = 0
-if (!("health" in user) || !isNumber(user.health)) user.health = 100
-if (!("genre" in user)) user.genre = ""
-if (!("birth" in user)) user.birth = ""
-if (!("marry" in user)) user.marry = ""
-if (!("description" in user)) user.description = ""
-if (!("packstickers" in user)) user.packstickers = null
-if (!("premium" in user)) user.premium = false
-if (!("premiumTime" in user)) user.premiumTime = 0
-if (!("banned" in user)) user.banned = false
-if (!("bannedReason" in user)) user.bannedReason = ""
-if (!("commands" in user) || !isNumber(user.commands)) user.commands = 0
-if (!("afk" in user) || !isNumber(user.afk)) user.afk = -1
-if (!("afkReason" in user)) user.afkReason = ""
-if (!("warn" in user) || !isNumber(user.warn)) user.warn = 0
-} else global.db.data.users[m.sender] = {
-name: m.name,
-exp: 0,
-coin: 0,
-bank: 0,
-level: 0,
-health: 100,
-genre: "",
-birth: "",
-marry: "",
-description: "",
-packstickers: null,
-premium: false,
-premiumTime: 0,
-banned: false,
-bannedReason: "",
-commands: 0,
-afk: -1,
-afkReason: "",
-warn: 0
-}
-const chat = global.db.data.chats[m.chat]
-if (typeof chat !== "object") {
-global.db.data.chats[m.chat] = {}
-}
 if (chat) {
 if (!("isBanned" in chat)) chat.isBanned = false
 if (!("isMute" in chat)) chat.isMute = false;
