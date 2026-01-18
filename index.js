@@ -29,7 +29,7 @@ import yargs from 'yargs'
 import syntaxerror from 'syntax-error'
 import readline from 'readline'
 import NodeCache from 'node-cache'
-
+import chalk from 'chalk'
 
 
 import P from 'pino'
