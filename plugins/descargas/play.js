@@ -73,5 +73,5 @@ const handler = async (m, { conn, text }) => {
   }
 }
 
-handler.command = ["play"]
+handler.command = ["playa"]
 export default handler
