@@ -1,125 +1,93 @@
-"use strict"
-
 import axios from "axios"
 import yts from "yt-search"
 
-const DOWNLOAD_APIS = [
-  {
-    name: "api-adonix",
-    url: "https://api-adonix.ultraplus.click/download/ytaudio",
-    key: "Mikeywilker1"
-  },
-  {
-    name: "ytmp3",
-    url: "https://ytmp3.xyz/api/convert"
-  }
-]
+const SYLPHY_API = "https://sylphy.xyz/download/ytmp3"
+const API_KEY = "sylphy-c4e327"
 
-function getText(m) {
-  if (!m) return ""
-  if (typeof m === "string") return m
-  if (m.conversation) return m.conversation
-  if (m.extendedTextMessage?.text) return m.extendedTextMessage.text
-  if (m.message?.conversation) return m.message.conversation
-  return ""
-}
+const handler = async (msg, { conn, args, usedPrefix, command }) => {
+  const chatId = msg.key.remoteJid
+  const query = args.join(" ").trim()
 
-async function getAudioUrl(url) {
-  for (const api of DOWNLOAD_APIS) {
-    try {
-      const params = new URLSearchParams()
-      if (api.name === "api-adonix") {
-        params.append("apikey", api.key)
-        params.append("url", url)
-        const { data } = await axios.post(api.url, params.toString(), {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          timeout: 10000
-        })
-        if (data?.url) return data.url
-      } else {
-        params.append("format", "mp3")
-        params.append("url", url)
-        const { data } = await axios.post(api.url, params.toString(), {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          timeout: 10000
-        })
-        if (data?.link) return data.link
-      }
-    } catch {}
+  if (!query) {
+    return conn.sendMessage(chatId, {
+      text: `✳️ Usa:\n${usedPrefix}${command} <canción>\nEj:\n${usedPrefix}${command} Karma Police`
+    }, { quoted: msg })
   }
 
+  await conn.sendMessage(chatId, {
+    react: { text: "🔎", key: msg.key }
+  })
+
   try {
-    const { data } = await axios.get(
-      `https://api.tiklydown.eu.org/api/download/audio?url=${encodeURIComponent(url)}`,
-      { timeout: 10000 }
-    )
-    if (data?.url) return data.url
-  } catch {}
+    /* 🔎 BÚSQUEDA */
+    const search = await yts(query)
+    if (!search?.videos?.length) throw "Sin resultados"
 
-  return null
-}
+    const video = search.videos[0]
+    const title = video.title
+    const author = video.author?.name || "Desconocido"
+    const duration = video.timestamp || "—"
+    const thumb = video.thumbnail
+    const videoUrl = video.url
 
-const handler = async (m, { conn }) => {
-  try {
-    const chat = m.key.remoteJid
-    const text = getText(m.message || m)
+    /* 🖼️ INFO + IMAGEN */
+    const caption = `
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *Título:* ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *Artista:* ${author}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *Duración:* ${duration}
 
-    let query = ""
-    if (text.startsWith(".play ")) query = text.slice(6).trim()
-    else if (text.startsWith(".yt ")) query = text.slice(4).trim()
-    else if (text.startsWith(".ytsearch ")) query = text.slice(10).trim()
+» Enviando audio 🎧
+`.trim()
 
-    if (!query) {
-      return conn.sendMessage(chat, { text: "🎵 Uso: .play <canción>" }, { quoted: m })
-    }
+    await conn.sendMessage(chatId, {
+      image: { url: thumb },
+      caption
+    }, { quoted: msg })
 
-    await conn.sendMessage(chat, { text: `🔍 Buscando: ${query}` }, { quoted: m })
-
-    const res = await yts(query)
-    const video = res.videos?.[0]
-    if (!video) {
-      return conn.sendMessage(chat, { text: "❌ No se encontraron resultados" }, { quoted: m })
-    }
-
-    await conn.sendMessage(
-      chat,
-      {
-        image: { url: video.thumbnail },
-        caption: `🎶 ${video.title}\n⏱ ${video.timestamp}\n⬇️ Descargando audio...`
+    /* 🚀 API SYLPHY */
+    const res = await axios.get(SYLPHY_API, {
+      params: {
+        url: videoUrl,
+        api_key: API_KEY
       },
-      { quoted: m }
-    )
-
-    const audioUrl = await getAudioUrl(video.url)
-    if (!audioUrl) throw new Error("No se pudo obtener el audio")
-
-    const audioRes = await axios.get(audioUrl, {
-      responseType: "arraybuffer",
-      timeout: 60000
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+      },
+      timeout: 20000
     })
 
-    if (audioRes.data.length > 50 * 1024 * 1024) {
-      throw new Error("Audio demasiado grande")
+    if (
+      !res?.data?.status ||
+      !res.data.result?.dl_url ||
+      !/^https?:\/\//i.test(res.data.result.dl_url)
+    ) {
+      throw "La API no devolvió link válido"
     }
 
-    await conn.sendMessage(
-      chat,
-      {
-        audio: audioRes.data,
-        mimetype: "audio/mpeg",
-        ptt: false,
-        fileName: `${video.title.slice(0, 50)}.mp3`
-      },
-      { quoted: m }
-    )
+    const audioUrl = res.data.result.dl_url
+
+    /* 🎧 AUDIO */
+    await conn.sendMessage(chatId, {
+      audio: { url: audioUrl },
+      mimetype: "audio/mpeg",
+      fileName: `${title}.mp3`,
+      ptt: false
+    }, { quoted: msg })
+
+    await conn.sendMessage(chatId, {
+      react: { text: "✅", key: msg.key }
+    })
+
   } catch (e) {
-    await conn.sendMessage(
-      m.key.remoteJid,
-      { text: `❌ Error: ${e.message || "Error desconocido"}` },
-      { quoted: m }
-    )
+    await conn.sendMessage(chatId, {
+      text: "❌ Error al procesar la canción."
+    }, { quoted: msg })
   }
 }
 
-handler.command = ["play", "yt", "ytsearch"]
+handler.command = ["play"]
+handler.help = ["play <texto>"]
+handler.tags = ["descargas"]
+
 export default handler
