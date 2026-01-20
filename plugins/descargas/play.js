@@ -1,77 +1,90 @@
 import axios from "axios"
-import cheerio from "cheerio"
 import yts from "yt-search"
 
-async function y2mateMp3(url) {
-  const form = new URLSearchParams()
-  form.append("url", url)
-  form.append("q_auto", 0)
-  form.append("ajax", 1)
+const API_BASE = (global.APIs?.may || "").replace(/\/+$/, "")
+const API_KEY  = global.APIKeys?.may || ""
 
-  const { data } = await axios.post(
-    "https://www.y2mate.com/mates/analyzeV2/ajax",
-    form.toString(),
-    {
-      headers: {
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "user-agent": "Mozilla/5.0"
-      }
-    }
-  )
+const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
-  const $ = cheerio.load(data.result)
-  const vid = $("button").attr("data-id")
-  if (!vid) throw "No se pudo obtener el ID"
+  const chatId = msg.key.remoteJid
+  const query = args.join(" ").trim()
 
-  const mp3Form = new URLSearchParams()
-  mp3Form.append("type", "youtube")
-  mp3Form.append("_id", vid)
-  mp3Form.append("v_id", vid)
-  mp3Form.append("ajax", 1)
-  mp3Form.append("token", "")
-  mp3Form.append("ftype", "mp3")
-  mp3Form.append("fquality", "128")
+  if (!query)
+    return conn.sendMessage(chatId, {
+      text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree`
+    }, { quoted: msg })
 
-  const res = await axios.post(
-    "https://www.y2mate.com/mates/convertV2/index",
-    mp3Form.toString(),
-    {
-      headers: {
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "user-agent": "Mozilla/5.0"
-      }
-    }
-  )
-
-  if (!res.data?.dlink) throw "No se pudo generar el MP3"
-  return res.data.dlink
-}
-
-const handler = async (m, { conn, text }) => {
-  if (!text) return m.reply("🎧 Escribe el nombre de la canción")
+  conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } }).catch(() => {})
 
   try {
-    const search = await yts(text)
-    if (!search.videos.length) return m.reply("❌ No encontré resultados")
+    /* 🔍 BÚSQUEDA (rápida) */
+    const search = await yts(query)
+    const video = search?.videos?.[0]
+    if (!video) throw "No se encontró ningún resultado"
 
-    const video = search.videos[0]
-    const mp3 = await y2mateMp3(video.url)
+    const title    = video.title
+    const author   = video.author?.name || "Desconocido"
+    const duration = video.timestamp || "Desconocida"
+    const thumb    = video.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg"
+    const link     = video.url
 
-    await conn.sendMessage(
-      m.chat,
-      {
-        audio: { url: mp3 },
-        mimetype: "audio/mpeg",
-        fileName: `${video.title}.mp3`
+    /* 🖼 INFO (NO BLOQUEANTE) */
+    conn.sendMessage(chatId, {
+      image: { url: thumb },
+      caption: `
+⭒ ִֶָ७ ꯭🎵˙⋆｡ - *Título:* ${title}
+⭒ ִֶָ७ ꯭🎤˙⋆｡ - *Artista:* ${author}
+⭒ ִֶָ७ ꯭🕑˙⋆｡ - *Duración:* ${duration}
+
+» Enviando audio 🎧
+`.trim()
+    }, { quoted: msg }).catch(() => {})
+
+    /* 🎧 DESCARGA (blindada) */
+    const res = await axios.get(`${API_BASE}/ytdl`, {
+      params: {
+        url: link,
+        type: "Mp3",
+        apikey: API_KEY
       },
-      { quoted: m }
-    )
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+      },
+      timeout: 20000
+    })
+
+    const data = res?.data
+    const audioUrl = data?.result?.url
+
+    if (
+      !data?.status ||
+      !audioUrl ||
+      typeof audioUrl !== "string" ||
+      !audioUrl.startsWith("http")
+    ) throw "La API no devolvió un audio válido"
+
+    const cleanTitle = (data.result.title || title).replace(/\.mp3$/i, "")
+
+    /* ▶️ AUDIO */
+    await conn.sendMessage(chatId, {
+      audio: { url: audioUrl },
+      mimetype: "audio/mpeg",
+      fileName: `${cleanTitle}.mp3`,
+      ptt: false
+    }, { quoted: msg })
+
+    conn.sendMessage(chatId, { react: { text: "✅", key: msg.key } }).catch(() => {})
 
   } catch (e) {
-    console.error(e)
-    m.reply("⚠️ Error al descargar el audio")
+    conn.sendMessage(chatId, {
+      text: `❌ Error: ${typeof e === "string" ? e : "Fallo interno"}`
+    }, { quoted: msg })
   }
 }
 
-handler.command = ["playa"]
+handler.command = ["play", "ytplay"]
+handler.help    = ["play <texto>"]
+handler.tags    = ["descargas"]
+
 export default handler
