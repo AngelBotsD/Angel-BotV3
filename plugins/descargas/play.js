@@ -11,13 +11,12 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
   if (!query)
     return conn.sendMessage(chatId, {
-      text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} Lemon Tree`
+      text: `✳️ Usa:\n${usedPrefix}${command} <nombre de canción>\nEj:\n${usedPrefix}${command} no surprises`
     }, { quoted: msg })
 
   conn.sendMessage(chatId, { react: { text: "🕒", key: msg.key } }).catch(() => {})
 
   try {
-    /* 🔍 BÚSQUEDA (rápida) */
     const search = await yts(query)
     const video = search?.videos?.[0]
     if (!video) throw "No se encontró ningún resultado"
@@ -28,19 +27,15 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
     const thumb    = video.thumbnail || "https://i.ibb.co/3vhYnV0/default.jpg"
     const link     = video.url
 
-    /* 🖼 INFO (NO BLOQUEANTE) */
     conn.sendMessage(chatId, {
       image: { url: thumb },
       caption: `
 ⭒ ִֶָ७ ꯭🎵˙⋆｡ - *Título:* ${title}
 ⭒ ִֶָ७ ꯭🎤˙⋆｡ - *Artista:* ${author}
 ⭒ ִֶָ७ ꯭🕑˙⋆｡ - *Duración:* ${duration}
-
-» Enviando audio 🎧
 `.trim()
     }, { quoted: msg }).catch(() => {})
 
-    /* 🎧 DESCARGA (blindada) */
     const res = await axios.get(`${API_BASE}/ytdl`, {
       params: {
         url: link,
@@ -66,7 +61,6 @@ const handler = async (msg, { conn, args, usedPrefix, command }) => {
 
     const cleanTitle = (data.result.title || title).replace(/\.mp3$/i, "")
 
-    /* ▶️ AUDIO */
     await conn.sendMessage(chatId, {
       audio: { url: audioUrl },
       mimetype: "audio/mpeg",
