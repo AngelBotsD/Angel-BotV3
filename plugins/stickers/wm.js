@@ -39,12 +39,15 @@ async function addExif(stickerBuffer, packname = '') {
 
 let handler = async (m, { conn, args = [] }) => {
   try {
-    await conn.sendMessage(m.chat, { react: { text: '🕒', key: m.key } })
+    await conn.sendMessage(m.chat, {
+      react: { text: '🕒', key: m.key }
+    })
 
-    let q = m.quoted ? m.quoted : m
-    let mime = (q.msg || q).mimetype || ''
+    // 👉 MENSAJE OBJETIVO (respondido o propio)
+    let q = m.quoted || m
 
-    if (!/webp/.test(mime)) {
+    // 👉 DETECCIÓN CORRECTA DEL STICKER
+    if (q.mtype !== 'stickerMessage') {
       return conn.sendMessage(
         m.chat,
         { text: '*𝖱𝖾𝗌𝗉𝗈𝗇𝖽𝖾 𝖺 𝗎𝗇 𝖲𝗍𝗂𝖼𝗄𝖾𝗋 𝗉𝖺𝗋𝖺 𝖼𝖺𝗆𝖻𝗂𝖺𝗋 𝖾𝗅 𝖶𝗆*' },
@@ -52,18 +55,18 @@ let handler = async (m, { conn, args = [] }) => {
       )
     }
 
-    const quotedText =
-      m.quoted?.text ||
-      m.quoted?.caption ||
-      m.quoted?.conversation ||
-      ''
-
+    // 👉 TEXTO DEL PACK
     const text = args.join(' ').trim()
-    const packname = String(text || quotedText || m.pushName || 'Usuario').trim()
+    const packname = String(
+      text || m.pushName || 'Usuario'
+    ).trim()
 
-    let media = await q.download?.()
+    // 👉 DESCARGA SEGURA DEL STICKER
+    if (!q.download) throw 'No se puede descargar el sticker'
+    const media = await q.download()
     if (!Buffer.isBuffer(media)) throw 'Media inválida'
 
+    // 👉 AÑADIR EXIF
     let buffer
     try {
       buffer = await addExif(media, packname)
@@ -75,13 +78,16 @@ let handler = async (m, { conn, args = [] }) => {
       )
     }
 
+    // 👉 ENVIAR STICKER NUEVO
     await conn.sendMessage(
       m.chat,
       { sticker: buffer },
       { quoted: m }
     )
 
-    await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
+    await conn.sendMessage(m.chat, {
+      react: { text: '✅', key: m.key }
+    })
 
   } catch (e) {
     console.error(e)
