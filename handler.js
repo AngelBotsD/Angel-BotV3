@@ -209,7 +209,6 @@ async function handleMessage(m) {
       exec.call(this, m, {
         conn: this,
         args,
-        text,
         usedPrefix,
         command,
         participants,
